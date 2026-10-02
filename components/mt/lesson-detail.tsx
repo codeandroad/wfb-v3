@@ -30,6 +30,7 @@ export function LessonDetail({
   onClose,
   extraActions,
   inDayRecord,
+  embedded,
 }: {
   lesson: LessonView
   task: STask
@@ -38,6 +39,8 @@ export function LessonDetail({
   onClose: () => void
   extraActions?: React.ReactNode
   inDayRecord?: boolean
+  /** 在日记录弹窗内作为一个内容面板显示，不再叠加模态窗口 */
+  embedded?: boolean
 }) {
   const mt = useMt()
   const tx = useTextWriters()
@@ -59,7 +62,7 @@ export function LessonDetail({
   const classObs = mt.biz.observations[obsKey(lesson.id, null)]
   const stuObs = Object.values(mt.biz.observations).filter((o) => o.lessonId === lesson.id && o.studentId)
   const selDay = days.find((d) => d.studentId === sid) ?? null
-  const dayHref = `/teaching/task/${task.id}/day/${date}?back=${encodeURIComponent(back)}`
+  const dayHref = `/teaching?${new URLSearchParams({ view: "days", week: String(week), day: `${task.id}|${date}` }).toString()}`
   const weekHref = `/teaching/task/${task.id}?week=${week}&from=schedule&lesson=${encodeURIComponent(lesson.id)}&back=${encodeURIComponent(back)}`
   const base = {
     lessonId: lesson.id,
@@ -71,33 +74,43 @@ export function LessonDetail({
     allowedStudents: allowed,
   }
 
-  return (
-    <Modal
-      wide
-      title={`${title} · 第${lesson.period.number}节`}
-      desc={`${fmtMD(date)}（${WEEKDAY_CN[weekdayIdx(date)]}）· ${lesson.period.start}–${lesson.period.end}${lesson.room ? ` · ${lesson.room}` : ""}`}
-      onClose={onClose}
-      footer={
-        <>
-          {extraActions}
-          <Link href={weekHref} className="inline-flex h-9 items-center rounded-lg border border-input bg-card px-3.5 text-sm font-medium hover:bg-muted">
-            打开整周反馈
-          </Link>
-          {inDayRecord ? (
-            <Btn variant="primary" onClick={onClose}>
-              返回本日正式评价
-            </Btn>
-          ) : (
-            <Link
-              href={dayHref}
-              className="inline-flex h-9 items-center rounded-lg bg-primary px-3.5 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-            >
-              进入本日正式评价
-            </Link>
-          )}
-        </>
-      }
-    >
+  const heading = `${title} · 第${lesson.period.number}节`
+  const sub = `${fmtMD(date)}（${WEEKDAY_CN[weekdayIdx(date)]}）· ${lesson.period.start}–${lesson.period.end}${lesson.room ? ` · ${lesson.room}` : ""}`
+  const footer = embedded ? (
+    <Btn variant="primary" onClick={onClose}>
+      返回本日记录
+    </Btn>
+  ) : (
+    <>
+      {extraActions}
+      <Link href={weekHref} className="inline-flex h-9 items-center rounded-lg border border-input bg-card px-3.5 text-sm font-medium hover:bg-muted">
+        打开整周反馈
+      </Link>
+      {inDayRecord ? (
+        <Btn variant="primary" onClick={onClose}>
+          返回本日正式评价
+        </Btn>
+      ) : (
+        <Link
+          href={dayHref}
+          className="inline-flex h-9 items-center rounded-lg bg-primary px-3.5 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+        >
+          打开本日记录
+        </Link>
+      )}
+    </>
+  )
+  const assignBlock = assignOpen ? (
+    <AssignForm
+      task={task}
+      sourceDate={date}
+      onDone={(hid) => {
+        setAssignOpen(false)
+        if (hid) setAssigned(hid)
+      }}
+    />
+  ) : null
+  const body = (
       <div className="flex flex-col gap-5" data-testid="lesson-detail">
         <div className="flex flex-wrap items-center gap-2 text-xs">
           <Badge tone={elapsed ? "success" : live ? "info" : "neutral"}>{elapsed ? "已结束" : live ? "正在上课" : "未开始"}</Badge>
@@ -170,16 +183,33 @@ export function LessonDetail({
           ) : null}
         </section>
       </div>
+  )
+
+  if (embedded) {
+    return (
+      <div className="flex flex-col gap-4">
+        <div>
+          <h3 className="text-base font-semibold">{heading}</h3>
+          <p className="text-xs text-muted-foreground">{sub}</p>
+        </div>
+        {assignOpen ? (
+          <section aria-label="布置作业" className="rounded-lg border border-border p-3">
+            {assignBlock}
+          </section>
+        ) : (
+          body
+        )}
+        <div className="flex justify-end gap-2 border-t border-border pt-3">{footer}</div>
+      </div>
+    )
+  }
+
+  return (
+    <Modal wide title={heading} desc={sub} onClose={onClose} footer={footer}>
+      {body}
       {assignOpen ? (
         <Modal title="布置作业" desc={`${title} · 来源 ${fmtMD(date)} 第${lesson.period.number}节`} onClose={() => setAssignOpen(false)}>
-          <AssignForm
-            task={task}
-            sourceDate={date}
-            onDone={(hid) => {
-              setAssignOpen(false)
-              if (hid) setAssigned(hid)
-            }}
-          />
+          {assignBlock}
         </Modal>
       ) : null}
     </Modal>

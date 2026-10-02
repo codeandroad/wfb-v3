@@ -20,30 +20,18 @@ import {
 import { weekStart } from "@/lib/mt/model"
 import { useMt } from "@/lib/mt/store"
 import { cn } from "@/lib/utils"
-import { ArrowLeft, CalendarRange, X } from "lucide-react"
-import Link from "next/link"
+import { CalendarRange, X } from "lucide-react"
 import { useRouter, useSearchParams } from "next/navigation"
+import type { ReactNode } from "react"
 import { DayCardsView } from "@/components/mt/day-cards-view"
+import { DayRecordDialog, paneToParam, type DayPane } from "@/components/mt/day-record"
 import { LessonDetail } from "@/components/mt/lesson-detail"
+import { Modal } from "@/components/mt/ui"
+import { dayCardsOfWeek } from "@/lib/mt/daycards"
 
 type ScheduleView = "lessons" | "days"
-const VIEW_PREF = "tgs-mt:schedule-view"
-function readViewPref(): ScheduleView {
-  try {
-    return window.localStorage.getItem(VIEW_PREF) === "days" ? "days" : "lessons"
-  } catch {
-    return "lessons"
-  }
-}
-function writeViewPref(v: ScheduleView) {
-  try {
-    window.localStorage.setItem(VIEW_PREF, v)
-  } catch {
-    /* 偏好写入失败不影响当前视图 */
-  }
-}
 
-export function WeekSchedulePage() {
+export function WeekSchedulePage({ view, switcher }: { view: ScheduleView; switcher: ReactNode }) {
   const mt = useMt()
   const teacherId = useTeacherId()
   const sp = useSearchParams()
@@ -61,7 +49,7 @@ export function WeekSchedulePage() {
     const p = new URLSearchParams(sp.toString())
     for (const [k, v] of Object.entries(patch)) if (!v) p.delete(k)
     else p.set(k, v)
-    router.replace(`/teaching/schedule?${p.toString()}`, { scroll: false })
+    router.replace(`/teaching?${p.toString()}`, { scroll: false })
   }
 
   const tasks = permittedTasks(mt.biz, teacherId)
@@ -75,62 +63,42 @@ export function WeekSchedulePage() {
   const back = sp.toString()
   const myTimetableHref = `/timetable/my?${new URLSearchParams({ from: "schedule", week: weekStart(week), back }).toString()}`
   const taskOfFilter = taskFilter ? tasks.find((t) => t.id === taskFilter) : null
-  const vq = sp.get("view")
-  const view: ScheduleView = vq === "days" || vq === "lessons" ? vq : readViewPref()
+  const dayParam = sp.get("day")
+  const [dayTaskId, dayDate] = dayParam ? dayParam.split("|") : [null, null]
+  const dayTask = dayTaskId ? tasks.find((t) => t.id === dayTaskId) ?? null : null
+  const dayValid = !!dayTask && !!dayDate && /^\d{4}-\d{2}-\d{2}$/.test(dayDate) && dates.includes(dayDate)
+  const weekCards = dayCardsOfWeek(mt.biz, scoped.length ? scoped : tasks, week).sort((a, b) => a.date.localeCompare(b.date) || a.lessons[0].startTs - b.lessons[0].startTs)
+  const dayKnown = dayValid && weekCards.some((c) => c.task.id === dayTaskId && c.date === dayDate)
+  const paneQ = sp.get("pane")
+  const studentQ = sp.get("student")
+  const initialPane: DayPane = studentQ
+    ? { kind: "student", sid: studentQ, from: paneQ === "preview" ? "preview" : "record" }
+    : paneQ === "preview"
+      ? { kind: "preview" }
+      : { kind: "record" }
   const lessonParam = sp.get("lesson")
   const openLesson = lessonParam ? lessons.find((l) => l.id === lessonParam) ?? null : null
   const openTask = openLesson ? tasks.find((t) => t.id === openLesson.task_id) ?? null : null
   const backParams = new URLSearchParams(back)
   backParams.delete("lesson")
   const backNoLesson = backParams.toString()
-  const setView = (v: ScheduleView) => {
-    writeViewPref(v)
-    setParam({ view: v })
-  }
 
   return (
     <div>
       <PageHeader
-        title="本周教学安排"
-        desc={`第 ${week} 周 · ${weekRangeLabel(week)} · ${view === "days" ? "点击日卡进入该任务当天的按日记录" : "点击课卡在原位查看课次详情，可记录可选观察或更正本节考勤"}`}
+        title="我的教学"
+        desc={`第 ${week} 周 · ${weekRangeLabel(week)} · ${view === "days" ? "点击日卡在原位打开本日记录" : "点击课卡在原位查看课次详情，可记录可选观察或更正本节考勤"}`}
         actions={
-          <>
-            <LinkButton href={`/teaching?week=${week}`} variant="outline">
-              <ArrowLeft className="size-3.5" aria-hidden />
-              返回我的教学
-            </LinkButton>
-            <LinkButton href={myTimetableHref} variant="outline">
-              <CalendarRange className="size-3.5" aria-hidden />
-              我的完整课表
-            </LinkButton>
-          </>
+          <LinkButton href={myTimetableHref} variant="outline">
+            <CalendarRange className="size-3.5" aria-hidden />
+            我的完整课表
+          </LinkButton>
         }
       />
       <MtDemoBar />
 
       <div className="mb-4 flex flex-wrap items-center gap-3">
-        <div role="radiogroup" aria-label="视图" className="inline-flex rounded-lg border border-border bg-muted p-0.5">
-          {(
-            [
-              ["lessons", "课次安排"],
-              ["days", "按日记录"],
-            ] as const
-          ).map(([k, label]) => (
-            <button
-              key={k}
-              type="button"
-              role="radio"
-              aria-checked={view === k}
-              onClick={() => setView(k)}
-              className={cn(
-                "h-8 rounded-md px-3 text-sm font-medium",
-                view === k ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
-              )}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
+        {switcher}
         <WeekPicker week={week} current={cw} onChange={(w) => setParam({ week: String(w) })} />
         <select
           aria-label="筛选教学班"
@@ -173,7 +141,15 @@ export function WeekSchedulePage() {
           desc="按已应用的安排与校历，本周无本人课次。可切换周次或清除筛选。"
         />
       ) : view === "days" ? (
-        <DayCardsView tasks={scoped} allTasks={tasks} teacherId={teacherId} week={week} cols={cols} back={back} focus={sp.get("focus")} />
+        <DayCardsView
+          tasks={scoped}
+          allTasks={tasks}
+          teacherId={teacherId}
+          week={week}
+          cols={cols}
+          focus={sp.get("focus")}
+          onOpen={(key) => setParam({ day: key, focus: null, pane: null, student: null })}
+        />
       ) : (
         <div className={cn("grid gap-3", showWeekend ? "md:grid-cols-7" : "md:grid-cols-5")}>
           {cols.map((d, i) => {
@@ -229,6 +205,26 @@ export function WeekSchedulePage() {
           back={backNoLesson}
           onClose={() => setParam({ lesson: null, focus: openLesson.id })}
         />
+      ) : null}
+      {dayParam && teacherId ? (
+        dayKnown && dayTask && dayDate ? (
+          <DayRecordDialog
+            key={dayParam}
+            task={dayTask}
+            date={dayDate}
+            cards={weekCards}
+            initialPane={initialPane}
+            onPane={(p) => setParam(paneToParam(p))}
+            onNav={(key) => setParam({ day: key, pane: null, student: null })}
+            onClose={() => setParam({ day: null, pane: null, student: null, focus: dayParam })}
+          />
+        ) : (
+          <Modal title="无法打开这一天的课堂记录" onClose={() => setParam({ day: null, pane: null, student: null })}>
+            <p className="text-sm text-muted-foreground">
+              {!dayTask ? "任务不存在、已失效或无权访问。" : "该日期不在当前周期，或没有本任务的已应用课次。"}已为你保留“我的教学”当前视图。
+            </p>
+          </Modal>
+        )
       ) : null}
     </div>
   )

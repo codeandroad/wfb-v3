@@ -27,13 +27,24 @@ export function Btn({
   )
 }
 
-function useEsc(onClose: () => void) {
+/** 只关闭最上层的对话框 / 抽屉，避免一次 Esc 同时关掉多层 */
+const escStack: { current: () => void }[] = []
+let escBound = false
+export function useEsc(onClose: () => void) {
   const ref = useRef(onClose)
   ref.current = onClose
   useEffect(() => {
-    const h = (e: KeyboardEvent) => e.key === "Escape" && ref.current()
-    window.addEventListener("keydown", h)
-    return () => window.removeEventListener("keydown", h)
+    if (!escBound && typeof window !== "undefined") {
+      escBound = true
+      window.addEventListener("keydown", (e) => {
+        if (e.key === "Escape" && escStack.length) escStack[escStack.length - 1].current()
+      })
+    }
+    escStack.push(ref)
+    return () => {
+      const i = escStack.lastIndexOf(ref)
+      if (i >= 0) escStack.splice(i, 1)
+    }
   }, [])
 }
 

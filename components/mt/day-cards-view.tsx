@@ -6,7 +6,6 @@ import { Layers } from "lucide-react"
 import { fmtMD, personalDisplay, WEEKDAY_CN, type STask } from "@/lib/mt/model"
 import { useMt } from "@/lib/mt/store"
 import { cn } from "@/lib/utils"
-import Link from "next/link"
 
 /** 按日记录视图：同一教学任务同一日期的原课次合并为一张日卡 */
 export function DayCardsView({
@@ -15,16 +14,17 @@ export function DayCardsView({
   teacherId,
   week,
   cols,
-  back,
   focus,
+  onOpen,
 }: {
   tasks: STask[]
   allTasks: STask[]
   teacherId: string
   week: number
   cols: string[]
-  back: string
+  back?: string
   focus: string | null
+  onOpen: (key: string) => void
 }) {
   const mt = useMt()
   const cards = dayCardsOfWeek(mt.biz, tasks, week)
@@ -47,11 +47,13 @@ export function DayCardsView({
               const perLessonRoom = roomSet.length > 1
               const nowTs = Date.parse(mt.biz.clock)
               const allFuture = c.timing.key === "FUTURE"
-              const href = `/teaching/task/${t.id}/day/${c.date}?week=${week}&from=schedule&back=${encodeURIComponent(back)}`
               return (
-                <Link
+                <button
+                  type="button"
                   key={c.key}
-                  href={href}
+                  onClick={() => onOpen(c.key)}
+                  aria-haspopup="dialog"
+                  data-testid="day-card"
                   id={`day-${c.key}`}
                   data-merged={c.merged}
                   data-eval={c.status.key}
@@ -95,7 +97,7 @@ export function DayCardsView({
                     ) : null}
                     {c.attTodo > 0 ? <Badge tone="warning">考勤待核对 {c.attTodo} 人</Badge> : null}
                   </span>
-                </Link>
+                </button>
               )
             })}
           </section>

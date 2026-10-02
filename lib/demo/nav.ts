@@ -68,7 +68,7 @@ export function pageTitle(pathname: string): string {
     "/home": "系统主页",
     "/catalog": "课程管理",
     "/teaching": "我的教学",
-    "/teaching/schedule": "我的课表",
+    "/teaching/schedule": "我的教学",
     "/homework": "作业管理",
     "/observe": "我的听课",
     "/observe/record": "听课记录",

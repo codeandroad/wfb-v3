@@ -90,11 +90,11 @@ export function TaskWorkspacePage({ id }: { id: string }) {
   const lesson = sp.get("lesson")
   const backHref =
     from === "schedule"
-      ? `/teaching/schedule?${back}${lesson ? `${back ? "&" : ""}focus=${encodeURIComponent(lesson)}` : ""}`
+      ? `/teaching?${back}${lesson ? `${back ? "&" : ""}focus=${encodeURIComponent(lesson)}` : ""}`
       : from === "workbench"
         ? "/"
         : `/teaching${back ? `?${back}` : ""}`
-  const backLabel = from === "schedule" ? "返回本周教学安排" : from === "workbench" ? "返回工作台" : "返回我的教学"
+  const backLabel = from === "workbench" ? "返回工作台" : "返回我的教学"
 
   const task = taskById(id)
   const permitted = task && teacherId ? permittedTasks(mt.biz, teacherId).some((t) => t.id === id) : false
@@ -205,7 +205,7 @@ export function TaskWorkspacePage({ id }: { id: string }) {
             )}
           >
             {t.label}
-            {t.k === "homework" && tw.hwPending ? <span className="ml-1 text-xs text-[#8a5a12]">{tw.hwPending} 项结果待确认</span> : null}
+            {t.k === "homework" && tw.hwPending ? <span className="ml-1 text-xs text-[#8a5a12]">{tw.hwPending} 项���果待确认</span> : null}
             {t.k === "publish" && tw.unpublishedChanges ? <span className="ml-1 text-xs text-[#8a5a12]">有未发布修改</span> : null}
           </button>
         ))}
