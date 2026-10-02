@@ -23,7 +23,9 @@ import {
 } from "@/lib/mt/view"
 import { levelText } from "@/lib/mt/schemes"
 import { classroomStandard } from "@/lib/mt/use-schemes"
-import { obsKey, scopeStudent, useMt, useRecordWriters, useTextWriters } from "@/lib/mt/store"
+import { highlightStatus, obsKey, scopeStudent, useMt, useRecordWriters, useTextWriters } from "@/lib/mt/store"
+import { ELIG_REASON } from "@/lib/mt/model"
+import { validHighlights } from "@/lib/mt/publish"
 import { CheckCheck, ChevronLeft, ChevronRight, Plus, Trash2, X } from "lucide-react"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
@@ -110,13 +112,13 @@ function DrawerBody({ tw, sid }: { tw: TaskWeek; sid: string }) {
   const days = tw.byStudent[sid] ?? []
   const hws = tw.assignments.filter((a) => a.recipients.includes(sid))
   const k = entryKeyOf(tw.task.id, tw.week, sid)
-  const highlights = mt.biz.highlights[k]?.items ?? []
+  const highlights = validHighlights(mt.biz, tw, sid)
   const comment = useAutoText(mt.biz.comments[k]?.text ?? "", (v) => tx.setComment(tw.task.id, tw.week, sid, v))
   const nowTs = Date.parse(mt.biz.clock)
   const std = classroomStandard(mt.biz, tw.task, tw.week)
 
-  const graded = days.filter((d) => d.rec.gradeHandling === "CONFIRMED" && d.rec.grade)
-  const gradeCount = (std.rev?.levels ?? []).map((l) => ({ g: { v: l.id, label: levelText(l) }, n: graded.filter((d) => d.rec.grade === l.id).length })).filter((x) => x.n)
+  const graded = days.filter((d) => d.elig.kind === "ELIGIBLE" && d.handlingEff === "CONFIRMED" && d.gradeEff)
+  const gradeCount = (std.rev?.levels ?? []).map((l) => ({ g: { v: l.id, label: levelText(l) }, n: graded.filter((d) => d.gradeEff === l.id).length })).filter((x) => x.n)
   const suggestion = [
     graded.length ? `本周记录课堂 ${graded.length} 次，课堂评价：${gradeCount.map((x) => `${x.g.label}×${x.n}`).join("、")}。` : "",
     highlights.length ? `亮点：${highlights.map((h) => h.text).join("；")}。` : "",
@@ -262,10 +264,25 @@ function DayBlock({ d, week }: { d: StudentDay; week: number }) {
         {d.elapsed.length ? (
           <div className="flex flex-wrap items-center gap-2 text-xs">
             <span className="w-40 text-muted-foreground">课堂评价（本日）</span>
-            <GradeSelect rev={std.rev} label={`${d.date} 课堂评价`} value={d.rec.grade} handling={d.rec.gradeHandling} onChange={(v) => rw.setGrade(d, week, v, std.revId)} />
-            {d.rec.gradeHandling === "CONFIRMED" && d.rec.gradeCovered.length < d.elapsed.length ? (
-              <span className="text-[#8a5a12]">评价只覆盖先前已发生的课次</span>
-            ) : null}
+            {d.elig.kind === "ELIGIBLE" ? (
+              <>
+                <GradeSelect rev={std.rev} label={`${d.date} 课堂评价`} value={d.gradeEff} handling={d.handlingEff} onChange={(v) => rw.setGrade(d, week, v, std.revId)} />
+                {d.coverageReview ? (
+                  <span className="flex items-center gap-1 text-[#8a5a12]" data-testid="coverage-review">
+                    出勤已更正，评价覆盖待核对
+                    <button type="button" className="underline" onClick={() => rw.confirmCoverage(d, week)}>
+                      确认保留
+                    </button>
+                  </span>
+                ) : d.handlingEff === "CONFIRMED" && d.elig.attended.some((id) => !d.rec.gradeCovered.includes(id)) ? (
+                  <span className="text-[#8a5a12]">评价只覆盖先前已发生的出席课次</span>
+                ) : null}
+              </>
+            ) : (
+              <span className="text-muted-foreground" data-testid="eval-na">
+                {d.elig.kind === "ABSENT" ? "未出席 · 无需评价" : ELIG_REASON[d.elig.kind]}
+              </span>
+            )}
           </div>
         ) : null}
         <label className="text-xs">
@@ -309,16 +326,30 @@ function Highlights({ tw, sid }: { tw: TaskWeek; sid: string }) {
   const tx = useTextWriters()
   const [draft, setDraft] = useState("")
   const items = mt.biz.highlights[entryKeyOf(tw.task.id, tw.week, sid)]?.items ?? []
+  const days = tw.byStudent[sid] ?? []
   return (
     <div className="flex flex-col gap-1.5">
-      {items.map((h) => (
-        <div key={h.id} className="flex items-center gap-2">
-          <span className="w-12 shrink-0 font-mono text-[11px] text-muted-foreground">{h.date ? fmtMD(h.date) : "本周"}</span>
-          <div className="min-w-0 flex-1">
-            <HighlightRow text={h.text} onSave={(v) => tx.editHighlight(tw.task.id, tw.week, sid, h.id, v)} />
+      {items.map((h) => {
+        const st = highlightStatus(h, h.date ? days.find((d) => d.date === h.date)?.elig : undefined)
+        return (
+          <div key={h.id} className="flex items-center gap-2" data-hl-status={st}>
+            <span className="w-12 shrink-0 font-mono text-[11px] text-muted-foreground">{h.date ? fmtMD(h.date) : "本周"}</span>
+            {st === "VALID" ? (
+              <div className="min-w-0 flex-1">
+                <HighlightRow text={h.text} onSave={(v) => tx.editHighlight(tw.task.id, tw.week, sid, h.id, v)} />
+              </div>
+            ) : (
+              <span className="flex min-w-0 flex-1 items-center gap-1.5 text-xs text-muted-foreground" data-testid="void-highlight">
+                <span className="truncate line-through">{h.text}</span>
+                <span className="shrink-0">{st === "REVIEW" ? "待核对，不发布" : "已失效（未出席），不发布"}</span>
+                <button type="button" className="shrink-0 underline" onClick={() => tx.editHighlight(tw.task.id, tw.week, sid, h.id, null)}>
+                  删除
+                </button>
+              </span>
+            )}
           </div>
-        </div>
-      ))}
+        )
+      })}
       <div className="flex gap-2">
         <PhrasePicker kind="HIGHLIGHT" label="亮点" saveText={draft} onPick={(t, pid) => tx.addHighlight(tw.task.id, tw.week, sid, t, pid ? { phraseId: pid } : undefined)} />
         <input

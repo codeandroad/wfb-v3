@@ -12,7 +12,17 @@ import {
   applyRoutineItem,
   blankRec,
   dateOfClock,
+  dayEligibility,
+  ELIG_REASON,
   feedbackPeriodId,
+  isAbsentAtt,
+  isAttendedAtt,
+  isMemberOn,
+  lessonParticipation,
+  lessonsOfWeek,
+  PARTICIPATION_REASON,
+  reconcileGrade,
+  type DayElig,
   planRoutine,
   prefKey,
   seedAssignments,
@@ -64,6 +74,99 @@ export interface Highlight {
   date?: string
   /** 选用的常用短语（仅来源记录；文字以本条保存为准） */
   phraseId?: string
+  /** r4：明确关联的课次（如从课次观察采用）；该课次必须确认参加 */
+  lessonId?: string
+  /** r4：来源课次观察 */
+  obsKey?: string
+  /** r4：因出勤更正失效：不再进入有效统计、预览与发布；只能删除或重新添加，不能直接改写为有效 */
+  void?: { at: string; reason: string }
+  /** r4：存量无日期亮点，所在周有未出席日且无法确定依据：需教师关联参加日期后才计入 */
+  review?: boolean
+}
+
+/** 亮点当前有效性（唯一判定；输入为该亮点日期对应的学生日资格） */
+export type HlStatus = "VALID" | "VOID" | "REVIEW" | "INELIGIBLE"
+export function highlightStatus(h: Highlight, e: DayElig | undefined): HlStatus {
+  if (h.void) return "VOID"
+  if (h.review) return "REVIEW"
+  if (!h.date) return "VALID"
+  if (!e) return "INELIGIBLE"
+  if (h.lessonId) return lessonParticipation(e, h.lessonId) === "ATTENDED" ? "VALID" : "INELIGIBLE"
+  return e.kind === "ELIGIBLE" ? "VALID" : "INELIGIBLE"
+}
+
+export interface RepairLog {
+  id: string
+  at: string
+  grades: string[]
+  coverage: string[]
+  highlights: string[]
+  review: string[]
+}
+
+/**
+ * r4 存量修复（幂等，只处理能确定的情形）：
+ * - 记录中出现的课次（出勤 + 覆盖）全部确认未出席却保留等级 → 等级转入失效历史，处理为不适用；
+ * - 仍有参加但覆盖包含未出席课次 → 移出该课次并标记核对，不删除合法等级；
+ * - 确定未出席日的有日期亮点 → 失效；关联未出席课次的亮点 → 失效；
+ * - 同周存在确定未出席日的无日期旧亮点 → 标记待核对，不擅自删除或计入。
+ * 运行时投影另以真实课次兜底，修复未覆盖的情形也不会进入有效输出。
+ */
+export function repairEligibility(b: MtBiz): { biz: MtBiz; log: RepairLog | null } {
+  const log: RepairLog = { id: `REPAIR_R4_${b.seq}`, at: b.clock, grades: [], coverage: [], highlights: [], review: [] }
+  const records = { ...b.records }
+  const absentDays = new Map<string, Set<string>>()
+  const attendedLessons = new Map<string, Set<string>>()
+  const absentLessons = new Map<string, Set<string>>()
+  for (const [k, r] of Object.entries(b.records)) {
+    const ids = [...new Set([...Object.keys(r.att), ...r.gradeCovered])]
+    const att = ids.filter((id) => isAttendedAtt(r.att[id]))
+    const abs = ids.filter((id) => isAbsentAtt(r.att[id]))
+    const hk = entryKey(r.taskId, weekOfDate(r.date), r.studentId)
+    attendedLessons.set(`${hk}|${r.date}`, new Set(att))
+    absentLessons.set(`${hk}|${r.date}`, new Set(abs))
+    const certainAbsent = ids.length > 0 && abs.length === ids.length
+    if (certainAbsent) {
+      if (!absentDays.has(hk)) absentDays.set(hk, new Set())
+      absentDays.get(hk)!.add(r.date)
+    }
+    const confirmed = r.gradeHandling === "CONFIRMED" || r.gradeHandling === "EXPLICIT_EMPTY"
+    if (certainAbsent && (confirmed || r.grade !== null)) {
+      const e: DayElig = { kind: "ABSENT", attended: [], absent: abs, unknown: [], future: [] }
+      records[k] = reconcileGrade(r, e, b.clock, "存量修复：未出席日不应保留课堂评价")
+      log.grades.push(k)
+    } else if (confirmed && att.length && r.gradeCovered.some((id) => abs.includes(id))) {
+      records[k] = { ...r, gradeCovered: r.gradeCovered.filter((id) => !abs.includes(id)), coverageReview: true }
+      log.coverage.push(k)
+    }
+  }
+  const highlights = { ...b.highlights }
+  for (const [hk, entry] of Object.entries(b.highlights)) {
+    let changed = false
+    const items = entry.items.map((h) => {
+      if (h.void || h.review) return h
+      if (h.date) {
+        const dayAbsent = absentDays.get(hk)?.has(h.date)
+        const lessonAbsent = h.lessonId ? absentLessons.get(`${hk}|${h.date}`)?.has(h.lessonId) : false
+        if (dayAbsent || lessonAbsent) {
+          changed = true
+          log.highlights.push(`${hk}|${h.id}`)
+          return { ...h, void: { at: b.clock, reason: "存量修复：学生该日未出席" } }
+        }
+        return h
+      }
+      if (absentDays.get(hk)?.size) {
+        changed = true
+        log.review.push(`${hk}|${h.id}`)
+        return { ...h, review: true }
+      }
+      return h
+    })
+    if (changed) highlights[hk] = { items, stamp: b.stamp + 1 }
+  }
+  const n = log.grades.length + log.coverage.length + log.highlights.length + log.review.length
+  if (!n) return { biz: b, log: null }
+  return { biz: { ...b, records, highlights, stamp: b.stamp + 1, repairLog: [...(b.repairLog ?? []), log] }, log }
 }
 export interface RoutineOp {
   id: string
@@ -106,6 +209,8 @@ export interface MtBiz {
   observations: Record<string, Observation>
   /** r3 常用内容：按教师隔离的个人常用原因 / 亮点与收藏 */
   phrases: Record<string, PhraseLib>
+  /** r4：出勤—评价资格存量修复记录（可审计） */
+  repairLog?: RepairLog[]
 }
 
 export interface Observation {
@@ -318,7 +423,16 @@ export function MtProvider({ children }: { children: ReactNode }) {
       setReady(true)
       return
     }
-    const b = readBiz(variant)
+    const loaded = readBiz(variant)
+    const repaired = repairEligibility(loaded)
+    const b = repaired.biz
+    if (repaired.log) {
+      try {
+        window.localStorage.setItem(bizKey(b.variant), JSON.stringify(b))
+      } catch {
+        /* 写入失败时仅本次会话使用修复后的投影 */
+      }
+    }
     syncRevRegistry(b.schemes.revs)
     bizRef.current = b
     setBiz(b)
@@ -440,6 +554,12 @@ export function MtProvider({ children }: { children: ReactNode }) {
             bindings[bk] = it.revId
           }
           const after = applyRoutineItem(before, it, d.elapsed.map((l) => l.id), stamp)
+          // 写入后再判定：任何未出席课次都不能获得等级或覆盖
+          if (it.writeGrade || it.extendGrade.length) {
+            const e = dayEligibility(after, d.lessons, Date.parse(cur.clock))
+            if (e.kind !== "ELIGIBLE") continue
+            if (after.gradeCovered.some((id) => !e.attended.includes(id))) after.gradeCovered = after.gradeCovered.filter((id) => e.attended.includes(id))
+          }
           records[it.key] = after
           entries.push({ key: it.key, before, afterRevision: after.revision })
         }
@@ -686,6 +806,49 @@ function patchRec(s: MtBiz, key: string, base: Rec, fn: (r: Rec) => Rec, fieldNa
   return { ...s, records: { ...s.records, [key]: next } }
 }
 
+type LessonRef = { id: string; endTs: number }
+/** 写入时自行解析当日真实课次（不信任调用方传入的范围）；课表未载入时退回已记录课次 */
+function eligAt(s: MtBiz, key: string, taskId: string, date: string, fallback?: LessonRef[]): DayElig {
+  const rec = s.records[key]
+  let lessons: LessonRef[] = lessonsOfWeek(s.variant, weekOfDate(date), [taskId]).filter((l) => l.actual_date === date)
+  if (!lessons.length) lessons = fallback?.length ? fallback : Object.keys(rec?.att ?? {}).map((id) => ({ id, endTs: 0 }))
+  return dayEligibility(rec, lessons, Date.parse(s.clock))
+}
+
+/** 出勤变化后的同一原子写入：评价失效 / 覆盖核对 / 亮点失效，旧值留痕，不自动复活 */
+function applyEligibility(prev: MtBiz, s: MtBiz, key: string, fallback: LessonRef[] | undefined, why: string): MtBiz {
+  const r = s.records[key]
+  if (!r) return s
+  const before = eligAt(prev, key, r.taskId, r.date, fallback)
+  const e = eligAt(s, key, r.taskId, r.date, fallback)
+  const r2 = reconcileGrade(r, e, s.clock, why)
+  let out = r2 === r ? s : { ...s, records: { ...s.records, [key]: { ...r2, fieldRev: { ...r2.fieldRev, grade: (r2.fieldRev.grade ?? 0) + 1 } } } }
+  const hk = entryKey(r.taskId, weekOfDate(r.date), r.studentId)
+  const items = out.highlights[hk]?.items
+  if (items?.length) {
+    let changed = false
+    const next = items.map((h) => {
+      if (h.void) return h
+      if (h.date === r.date) {
+        if (e.kind === "ABSENT" || (h.lessonId && e.absent.includes(h.lessonId))) {
+          changed = true
+          return { ...h, void: { at: s.clock, reason: why } }
+        }
+        return h
+      }
+      if (!h.date && !h.review && e.kind === "ABSENT" && before.kind !== "ABSENT") {
+        changed = true
+        return { ...h, review: true }
+      }
+      return h
+    })
+    if (changed) out = { ...out, highlights: { ...out.highlights, [hk]: { items: next, stamp: s.stamp + 1 } } }
+  }
+  return out
+}
+
+const rejected = (error: string) => ({ error, kind: "rejected" as const })
+
 export function useRecordWriters() {
   const mt = useMt()
   return useMemo(
@@ -698,7 +861,7 @@ export function useRecordWriters() {
           value: v,
           taskId: d.taskId,
           run: (s) =>
-            patchRec(
+            applyEligibility(s, patchRec(
               s,
               d.rec.key,
               blankRec(d.taskId, d.date, d.studentId),
@@ -717,7 +880,7 @@ export function useRecordWriters() {
                 return { ...r, att }
               },
               lessonIds.map((l) => `att:${l}`),
-            ),
+            ), d.rec.key, d.lessons, `${d.date} 出勤确认为未出席`),
         })
       },
       setReason(d: StudentDay, week: number, lessonId: string, reason: string) {
@@ -745,7 +908,7 @@ export function useRecordWriters() {
           value: leaveId,
           taskId: d.taskId,
           run: (s) =>
-            patchRec(
+            applyEligibility(s, patchRec(
               s,
               d.rec.key,
               blankRec(d.taskId, d.date, d.studentId),
@@ -755,12 +918,11 @@ export function useRecordWriters() {
                 return { ...r, att, leaveSourceId: leaveId }
               },
               lessonIds.map((l) => `att:${l}`),
-            ),
+            ), d.rec.key, d.lessons, `${d.date} 采用请假来源，未出席`),
         })
       },
       /** value: 等级标识 | "EMPTY"（明确清空，不评价）；revId：界面呈现选项所用的对象标准 */
       setGrade(d: StudentDay, week: number, value: string, revId: string) {
-        const covered = d.elapsed.map((l) => l.id)
         mt.save({
           field: `rec:${d.rec.key}:grade`,
           scope: [scopeTask(d.taskId), scopeStudent(d.taskId, week, d.studentId)],
@@ -768,6 +930,11 @@ export function useRecordWriters() {
           value,
           taskId: d.taskId,
           run: (s) => {
+            // 提交时按当前已保存出勤重新判定：页面状态过期、旧请求或直接调用都不能给未出席学生写评价
+            if (!isMemberOn(s.memberships[d.taskId] ?? [], d.studentId, d.date)) return rejected("该学生当天不在本任务适用名单中")
+            const e = eligAt(s, d.rec.key, d.taskId, d.date, d.lessons)
+            if (e.kind !== "ELIGIBLE") return rejected(ELIG_REASON[e.kind])
+            const covered = e.attended
             const bk = bindingKey(d.taskId, feedbackPeriodId(weekOfDate(d.date)))
             const bound = s.schemes.bindings[bk]
             if (bound && bound !== revId) return { error: "本周期评价标准已固定为另一修订，请刷新后重试", kind: "conflict" as const }
@@ -779,10 +946,27 @@ export function useRecordWriters() {
               blankRec(d.taskId, d.date, d.studentId),
               (r) =>
                 value === "EMPTY"
-                  ? { ...r, grade: null, gradeHandling: "EXPLICIT_EMPTY", gradeOrigin: "EXPLICIT_EMPTY", gradeCovered: covered }
-                  : { ...r, grade: value, gradeHandling: "CONFIRMED", gradeOrigin: "MANUAL", gradeCovered: covered },
+                  ? { ...r, grade: null, gradeHandling: "EXPLICIT_EMPTY", gradeOrigin: "EXPLICIT_EMPTY", gradeCovered: covered, coverageReview: false }
+                  : { ...r, grade: value, gradeHandling: "CONFIRMED", gradeOrigin: "MANUAL", gradeCovered: covered, coverageReview: false },
               ["grade"],
             )
+          },
+        })
+      },
+      /** 覆盖核对：保留现有评价，确认其只覆盖当前确认参加的课次 */
+      confirmCoverage(d: StudentDay, week: number) {
+        mt.save({
+          field: `rec:${d.rec.key}:grade`,
+          scope: [scopeTask(d.taskId), scopeStudent(d.taskId, week, d.studentId)],
+          label: `${d.date} 核对评价覆盖`,
+          value: "COVERAGE",
+          taskId: d.taskId,
+          run: (s) => {
+            const e = eligAt(s, d.rec.key, d.taskId, d.date, d.lessons)
+            if (e.kind !== "ELIGIBLE") return rejected(ELIG_REASON[e.kind])
+            const r = s.records[d.rec.key]
+            if (!r || (r.gradeHandling !== "CONFIRMED" && r.gradeHandling !== "EXPLICIT_EMPTY")) return rejected("没有需要核对的评价")
+            return patchRec(s, d.rec.key, r, (x) => ({ ...x, gradeCovered: [...e.attended], coverageReview: false }), ["grade"])
           },
         })
       },
@@ -829,7 +1013,7 @@ export function useTextWriters() {
       },
       /**
        * 课次参考观察：按实际课次稳定身份 + 作者（+ 学生）唯一，重复重试为覆盖而非新增；空文本即清除误填。
-       * 只写 observations，不触碰 records / summaries / comments / publications / 排课。
+       * 只写 observations，���触碰 records / summaries / comments / publications / 排课。
        */
       setObservation(
         o: { lessonId: string; taskId: string; date: string; periodNo: number; endTs: number; authorId: string; studentId: string | null; allowedStudents: string[] },
@@ -882,20 +1066,41 @@ export function useTextWriters() {
        * 教师明确选择 / 输入后加入一条亮点。同一学生、任务、日期（周级为无日期）的同一文字视为同一次操作的重试或误双击，不重复创建；
        * 不同日期的同类行为可以再次记录。
        */
-      addHighlight(taskId: string, week: number, sid: string, text: string, opts?: { date?: string; phraseId?: string }) {
+      addHighlight(
+        taskId: string,
+        week: number,
+        sid: string,
+        text: string,
+        opts?: { date?: string; phraseId?: string; lessonId?: string; obsKey?: string },
+      ) {
         const k = entryKey(taskId, week, sid)
         const clean = text.trim()
         if (!clean) return
         mt.save({
-          field: `hl:${k}:add:${opts?.date ?? "W"}:${clean}`,
+          field: `hl:${k}:add:${opts?.date ?? "W"}:${opts?.lessonId ?? ""}:${clean}`,
           scope: [scopeTask(taskId), scopeStudent(taskId, week, sid)],
           label: "新增亮点",
           value: clean,
           taskId,
           run: (s) => {
+            if (opts?.date) {
+              if (!isMemberOn(s.memberships[taskId] ?? [], sid, opts.date)) return rejected("该学生当天不在本任务适用名单中")
+              const e = eligAt(s, `${taskId}|${opts.date}|${sid}`, taskId, opts.date)
+              if (opts.lessonId) {
+                const p = lessonParticipation(e, opts.lessonId)
+                if (p !== "ATTENDED") return rejected(PARTICIPATION_REASON[p])
+              } else if (e.kind !== "ELIGIBLE") return rejected(ELIG_REASON[e.kind])
+            }
             const cur = s.highlights[k]?.items ?? []
-            if (cur.some((h) => h.text === clean && (h.date ?? null) === (opts?.date ?? null))) return s
-            const item: Highlight = { id: `HL_${s.seq}`, text: clean, ...(opts?.date ? { date: opts.date } : {}), ...(opts?.phraseId ? { phraseId: opts.phraseId } : {}) }
+            if (cur.some((h) => !h.void && h.text === clean && (h.date ?? null) === (opts?.date ?? null) && (h.lessonId ?? null) === (opts?.lessonId ?? null))) return s
+            const item: Highlight = {
+              id: `HL_${s.seq}`,
+              text: clean,
+              ...(opts?.date ? { date: opts.date } : {}),
+              ...(opts?.phraseId ? { phraseId: opts.phraseId } : {}),
+              ...(opts?.lessonId ? { lessonId: opts.lessonId } : {}),
+              ...(opts?.obsKey ? { obsKey: opts.obsKey } : {}),
+            }
             return {
               ...s,
               highlights: { ...s.highlights, [k]: { items: [...cur, item], stamp: s.stamp + 1 } },
@@ -914,7 +1119,36 @@ export function useTextWriters() {
           taskId,
           run: (s) => {
             const cur = s.highlights[k]?.items ?? []
+            if (text !== null) {
+              const h = cur.find((x) => x.id === id)
+              if (!h) return rejected("找不到该亮点")
+              if (h.void) return rejected("已失效的亮点不能改写为有效亮点，请删除或在参加日重新添加")
+              if (h.date) {
+                const e = eligAt(s, `${taskId}|${h.date}|${sid}`, taskId, h.date)
+                if (highlightStatus(h, e) !== "VALID") return rejected(ELIG_REASON[e.kind === "ELIGIBLE" ? "ABSENT" : e.kind])
+              }
+            }
             const items = text === null ? cur.filter((h) => h.id !== id) : cur.map((h) => (h.id === id ? { ...h, text } : h))
+            return { ...s, highlights: { ...s.highlights, [k]: { items, stamp: s.stamp + 1 } } }
+          },
+        })
+      },
+      /** 待核对的旧亮点：教师关联到确认参加的日期后才重新计入 */
+      linkHighlight(taskId: string, week: number, sid: string, id: string, date: string) {
+        const k = entryKey(taskId, week, sid)
+        mt.save({
+          field: `hl:${k}:${id}:link`,
+          scope: [scopeTask(taskId), scopeStudent(taskId, week, sid)],
+          label: "关联亮点日期",
+          value: date,
+          taskId,
+          run: (s) => {
+            const e = eligAt(s, `${taskId}|${date}|${sid}`, taskId, date)
+            if (e.kind !== "ELIGIBLE") return rejected(ELIG_REASON[e.kind])
+            const cur = s.highlights[k]?.items ?? []
+            const h = cur.find((x) => x.id === id)
+            if (!h || h.void) return rejected("该亮点不可关联")
+            const items = cur.map((x) => (x.id === id ? { ...x, date, review: false } : x))
             return { ...s, highlights: { ...s.highlights, [k]: { items, stamp: s.stamp + 1 } } }
           },
         })

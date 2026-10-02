@@ -17,7 +17,7 @@ import {
   type StudentDay,
 } from "@/lib/mt/model"
 import { classroomRevFor, levelOf, parentText, revById } from "@/lib/mt/schemes"
-import { entryKey, type MtBiz } from "@/lib/mt/store"
+import { entryKey, highlightStatus, type Highlight, type MtBiz } from "@/lib/mt/store"
 
 export interface Draft {
   publicSummary: string
@@ -35,14 +35,16 @@ function parentGrade(revId: string, v: string | null): string | null {
 }
 
 function snapDay(d: StudentDay, prefix: string, revId: string): SnapDay {
+  // r4：只读有效投影；未出席日即使存量记录残留等级，也不进入家长快照
   const status: SnapDay["status"] =
-    d.state === "NOT_APPLICABLE"
+    d.state === "NOT_APPLICABLE" || d.elig.kind === "ABSENT"
       ? "NOT_APPLICABLE"
       : d.state === "PROCESSED"
-        ? d.rec.gradeHandling === "EXPLICIT_EMPTY"
+        ? d.handlingEff === "EXPLICIT_EMPTY"
           ? "EXPLICIT_EMPTY"
           : "RECORDED"
         : "UNRECORDED"
+  const gradeOk = d.handlingEff === "CONFIRMED" && d.elig.kind === "ELIGIBLE" && !!d.gradeEff
   return {
     date: d.date,
     lessons: d.elapsed.map((l) => `${prefix}${lessonTimeLabel(l)}`),
@@ -53,10 +55,18 @@ function snapDay(d: StudentDay, prefix: string, revId: string): SnapDay {
         const leave = a.origin === "APPROVED_LEAVE" ? d.leaves.find((x) => x.id === d.rec.leaveSourceId) : undefined
         return { lesson: `${prefix}第${l.period.number}节`, v: ATT_LABEL[a.v], outboundReason: leave?.outbound_reason ?? null }
       }),
-    grade: d.rec.gradeHandling === "CONFIRMED" ? parentGrade(revId, d.rec.grade) : null,
-    gradeRef: d.rec.gradeHandling === "CONFIRMED" && d.rec.grade ? { revId, levelId: d.rec.grade } : undefined,
+    grade: gradeOk ? parentGrade(revId, d.gradeEff) : null,
+    gradeRef: gradeOk ? { revId, levelId: d.gradeEff! } : undefined,
     status,
   }
+}
+
+/** r4：唯一的有效亮点出口（预览、发布、统计共用）；失效 / 待核对 / 未出席日亮点一律排除 */
+export function validHighlights(biz: MtBiz, tw: TaskWeek, sid: string): Highlight[] {
+  const days = tw.byStudent[sid] ?? []
+  return (biz.highlights[entryKey(tw.task.id, tw.week, sid)]?.items ?? []).filter(
+    (h) => highlightStatus(h, h.date ? days.find((d) => d.date === h.date)?.elig : undefined) === "VALID",
+  )
 }
 
 /** 由已保存事实生成不可变快照；内部原因、内部备注、他生信息不进入。 */
@@ -97,7 +107,7 @@ export function buildStudents(biz: MtBiz, tws: TaskWeek[], draft: Draft, base: P
       hasContact: base?.students.find((s) => s.studentId === sid)?.hasContact ?? st.has_verified_guardian_contact,
       days,
       homework,
-      highlights: tws.flatMap((tw) => biz.highlights[entryKey(tw.task.id, tw.week, sid)]?.items.map((h) => h.text) ?? []),
+      highlights: tws.flatMap((tw) => validHighlights(biz, tw, sid).map((h) => h.text)),
       comment: tws
         .map((tw) => biz.comments[entryKey(tw.task.id, tw.week, sid)]?.text.trim() ?? "")
         .filter(Boolean)

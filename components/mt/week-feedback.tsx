@@ -6,7 +6,8 @@ import { AttSelect, FieldMark, GradeSelect, SaveState } from "@/components/mt/sh
 import { Btn } from "@/components/mt/ui"
 import { FILTER_LABEL, filterStudents, nameOf, studentHwPending, type FilterKey, type TaskWeek } from "@/lib/mt/derive"
 import { ReasonInput } from "@/components/mt/student-drawer"
-import { ATT_LABEL, taskById } from "@/lib/mt/model"
+import { ATT_LABEL, ELIG_REASON, taskById } from "@/lib/mt/model"
+import { validHighlights } from "@/lib/mt/publish"
 import { gradeDisplay } from "@/lib/mt/schemes"
 import { classroomStandard } from "@/lib/mt/use-schemes"
 import {
@@ -132,7 +133,7 @@ export function WeekFeedback({
               {rows.map((sid) => {
                 const ds = tw.byStudent[sid] ?? []
                 const hw = studentHwPending(mt.biz, tw, sid)
-                const hl = mt.biz.highlights[entryKeyOf(tw.task.id, tw.week, sid)]?.items.length ?? 0
+                const hl = validHighlights(mt.biz, tw, sid).length
                 return (
                   <tr key={sid} className="border-b border-border last:border-0">
                     <td className="px-3 py-2">
@@ -208,10 +209,19 @@ function DayCell({ d, week, onOpenStudent }: { d?: StudentDay; week: number; onO
   const att = dayAtt(d)
   const std = classroomStandard(mt.biz, taskById(d.taskId)!, week)
   const pv = mt.pendingValue<string>(`rec:${d.rec.key}:grade`)
-  const gv = pv.has ? (pv.value === "EMPTY" ? null : (pv.value ?? null)) : d.rec.grade
-  const gh = pv.has ? (pv.value === "EMPTY" ? "EXPLICIT_EMPTY" : "CONFIRMED") : d.rec.gradeHandling
+  const canEval = d.elig.kind === "ELIGIBLE"
+  const gv = canEval && pv.has ? (pv.value === "EMPTY" ? null : (pv.value ?? null)) : d.gradeEff
+  const gh = canEval && pv.has ? (pv.value === "EMPTY" ? "EXPLICIT_EMPTY" : "CONFIRMED") : d.handlingEff
   const attText = att.mixed ? "各节不同" : att.value ? ATT_LABEL[att.value] : "出勤待处理"
-  const gradeText = gh === "EXPLICIT_EMPTY" ? "不评价" : gh === "CONFIRMED" && gv ? (gradeDisplay(std.revId, gv)?.text ?? gv) : "评价待处理"
+  const gradeText = !canEval
+    ? d.elig.kind === "ABSENT"
+      ? "无需评价"
+      : ELIG_REASON[d.elig.kind]
+    : gh === "EXPLICIT_EMPTY"
+      ? "不评价"
+      : gh === "CONFIRMED" && gv
+        ? (gradeDisplay(std.revId, gv)?.text ?? gv)
+        : "评价待处理"
   const attPending = !att.value && !att.mixed
   const gradePending = gradeText === "评价待处理"
   const name = nameOf(d.studentId)
@@ -258,7 +268,13 @@ function DayCell({ d, week, onOpenStudent }: { d?: StudentDay; week: number; onO
           })}
           <div className="flex flex-col gap-1">
             <span className="text-[11px] text-muted-foreground">课堂评价（当日）</span>
-            <GradeSelect rev={std.rev} label={`${name} ${d.date} 课堂评价`} value={gv} handling={gh} onChange={(v) => rw.setGrade(d, week, v, std.revId)} />
+            {canEval ? (
+              <GradeSelect rev={std.rev} label={`${name} ${d.date} 课堂评价`} value={gv} handling={gh} onChange={(v) => rw.setGrade(d, week, v, std.revId)} />
+            ) : (
+              <span className="text-xs text-muted-foreground" data-testid="eval-na">
+                {ELIG_REASON[d.elig.kind]}
+              </span>
+            )}
           </div>
           <div className="flex items-center justify-between border-t border-border pt-2">
             <button type="button" onClick={() => (setOpen(false), onOpenStudent())} className="text-xs font-medium text-primary hover:underline">
