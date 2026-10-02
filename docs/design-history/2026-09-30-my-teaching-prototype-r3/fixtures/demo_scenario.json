@@ -1,0 +1,2575 @@
+{
+  "metadata": {
+    "date": "2026-09-30",
+    "revision": "r3",
+    "kind": "SYNTHETIC_DESIGN_SCENARIO_NOT_PRODUCTION_SEED",
+    "origin": "r2统一模拟场景，保留其任务/名单/课次，补显式确认覆盖及交互测试说明；r1/r2未被宣称已实施。",
+    "note": "所有示例名称、课表与校历仅用于功能核验。展示必须从事实计算；expected为断言，不是UI数据。时钟为明确原型时钟，不是运行系统日期。",
+    "prior_fixture_revision_notes": [
+      "保留12/16/8/8人及原完整关系，增加任务默认与显式课次覆盖和按课次导航测试。",
+      "移除可直接写入的record_confirmed测试字段，改以出勤确认与评价处理及原课次来源推导。",
+      "合成学生02的已批准全天请假同时映射当天计算机课和数学课，避免示例自相矛盾。",
+      "为原必做任务中的学生03明确提供个人选做覆盖，不靠未参与结果偷偷免除必做。",
+      "增加人工等级、明确空白保护与逐生可确认集合；基础统计仍56个已发生日记录、42个已处理。",
+      "连堂与不连续双课采用独立变体，不更改基础2/4/2/2课节摘要。"
+    ]
+  },
+  "school": {
+    "id": "SCHOOL_TGS_DEMO",
+    "name": "天行创世纪学校（合成验证）",
+    "timezone": "Asia/Shanghai"
+  },
+  "term": {
+    "id": "TERM_DEMO",
+    "start": "2026-09-01",
+    "end": "2027-01-31"
+  },
+  "period": {
+    "id": "WEEK_DEMO_5",
+    "start": "2026-09-28",
+    "end_inclusive": "2026-10-04",
+    "week_number": 5
+  },
+  "clock": {
+    "now": "2026-09-30T18:00:00+08:00",
+    "mode": "EXPLICIT_DEMO_CLOCK"
+  },
+  "homerooms": [
+    {
+      "id": "HR_1",
+      "name": "高一1班",
+      "student_ids": [
+        "DEMO_STU_01",
+        "DEMO_STU_02",
+        "DEMO_STU_03",
+        "DEMO_STU_04",
+        "DEMO_STU_05",
+        "DEMO_STU_06",
+        "DEMO_STU_07",
+        "DEMO_STU_08",
+        "DEMO_STU_09",
+        "DEMO_STU_10",
+        "DEMO_STU_11",
+        "DEMO_STU_12"
+      ]
+    },
+    {
+      "id": "HR_2",
+      "name": "高一2班",
+      "student_ids": [
+        "DEMO_STU_13",
+        "DEMO_STU_14",
+        "DEMO_STU_15",
+        "DEMO_STU_16",
+        "DEMO_STU_17",
+        "DEMO_STU_18",
+        "DEMO_STU_19",
+        "DEMO_STU_20",
+        "DEMO_STU_21",
+        "DEMO_STU_22",
+        "DEMO_STU_23",
+        "DEMO_STU_24"
+      ]
+    }
+  ],
+  "teachers": [
+    {
+      "id": "TEACHER_LYNN",
+      "account_id": "ACCOUNT_LYNN",
+      "display_name": "示例 Lynn 老师",
+      "permitted_task_ids": [
+        "TASK_CS_WHOLE",
+        "TASK_MATH_G1_P1",
+        "TASK_MATH_G2_P1",
+        "TASK_MATH_G2_S1"
+      ]
+    },
+    {
+      "id": "TEACHER_PEER",
+      "account_id": "ACCOUNT_PEER",
+      "display_name": "示例同事",
+      "permitted_task_ids": [
+        "TASK_OTHER_M1"
+      ]
+    }
+  ],
+  "courses": [
+    {
+      "id": "COURSE_CS_9618",
+      "name": "CIE 计算机科学",
+      "subject": "计算机"
+    },
+    {
+      "id": "COURSE_MATH_9709",
+      "name": "CIE 数学",
+      "subject": "数学"
+    }
+  ],
+  "classes": [
+    {
+      "id": "CLASS_CS_G1_2",
+      "name": "高一2班 • 计算机",
+      "subject": "计算机",
+      "scheduling_homeroom_id": "HR_2"
+    },
+    {
+      "id": "CLASS_MATH_G1_1",
+      "name": "高一1班 • 数学",
+      "subject": "数学",
+      "scheduling_homeroom_id": "HR_1"
+    },
+    {
+      "id": "CLASS_MATH_G1_2",
+      "name": "高一2班 • 数学",
+      "subject": "数学",
+      "scheduling_homeroom_id": "HR_2"
+    }
+  ],
+  "duties": [
+    {
+      "id": "DUTY_G1_P1",
+      "class_id": "CLASS_MATH_G1_1",
+      "normative_label": "P1"
+    },
+    {
+      "id": "DUTY_G2_P1",
+      "class_id": "CLASS_MATH_G1_2",
+      "normative_label": "P1"
+    },
+    {
+      "id": "DUTY_G2_S1",
+      "class_id": "CLASS_MATH_G1_2",
+      "normative_label": "S1"
+    },
+    {
+      "id": "DUTY_OTHER_M1",
+      "class_id": "CLASS_MATH_G1_1",
+      "normative_label": "M1"
+    }
+  ],
+  "students": [
+    {
+      "id": "DEMO_STU_01",
+      "name": "示例学生01",
+      "homeroom_id": "HR_1",
+      "membership_from": "2026-09-01",
+      "membership_until": "2027-01-31",
+      "has_verified_guardian_contact": true
+    },
+    {
+      "id": "DEMO_STU_02",
+      "name": "示例学生02",
+      "homeroom_id": "HR_1",
+      "membership_from": "2026-09-01",
+      "membership_until": "2027-01-31",
+      "has_verified_guardian_contact": true
+    },
+    {
+      "id": "DEMO_STU_03",
+      "name": "示例学生03",
+      "homeroom_id": "HR_1",
+      "membership_from": "2026-09-01",
+      "membership_until": "2027-01-31",
+      "has_verified_guardian_contact": true
+    },
+    {
+      "id": "DEMO_STU_04",
+      "name": "示例学生04",
+      "homeroom_id": "HR_1",
+      "membership_from": "2026-09-01",
+      "membership_until": "2027-01-31",
+      "has_verified_guardian_contact": true
+    },
+    {
+      "id": "DEMO_STU_05",
+      "name": "示例学生05",
+      "homeroom_id": "HR_1",
+      "membership_from": "2026-09-01",
+      "membership_until": "2027-01-31",
+      "has_verified_guardian_contact": true
+    },
+    {
+      "id": "DEMO_STU_06",
+      "name": "示例学生06",
+      "homeroom_id": "HR_1",
+      "membership_from": "2026-09-01",
+      "membership_until": "2027-01-31",
+      "has_verified_guardian_contact": true
+    },
+    {
+      "id": "DEMO_STU_07",
+      "name": "示例学生07",
+      "homeroom_id": "HR_1",
+      "membership_from": "2026-09-01",
+      "membership_until": "2027-01-31",
+      "has_verified_guardian_contact": true
+    },
+    {
+      "id": "DEMO_STU_08",
+      "name": "示例学生08",
+      "homeroom_id": "HR_1",
+      "membership_from": "2026-09-01",
+      "membership_until": "2027-01-31",
+      "has_verified_guardian_contact": true
+    },
+    {
+      "id": "DEMO_STU_09",
+      "name": "示例学生09",
+      "homeroom_id": "HR_1",
+      "membership_from": "2026-09-01",
+      "membership_until": "2027-01-31",
+      "has_verified_guardian_contact": true
+    },
+    {
+      "id": "DEMO_STU_10",
+      "name": "示例学生10",
+      "homeroom_id": "HR_1",
+      "membership_from": "2026-09-01",
+      "membership_until": "2027-01-31",
+      "has_verified_guardian_contact": true
+    },
+    {
+      "id": "DEMO_STU_11",
+      "name": "示例学生11",
+      "homeroom_id": "HR_1",
+      "membership_from": "2026-09-01",
+      "membership_until": "2027-01-31",
+      "has_verified_guardian_contact": true
+    },
+    {
+      "id": "DEMO_STU_12",
+      "name": "示例学生12",
+      "homeroom_id": "HR_1",
+      "membership_from": "2026-09-01",
+      "membership_until": "2027-01-31",
+      "has_verified_guardian_contact": false
+    },
+    {
+      "id": "DEMO_STU_13",
+      "name": "示例学生13",
+      "homeroom_id": "HR_2",
+      "membership_from": "2026-09-01",
+      "membership_until": "2027-01-31",
+      "has_verified_guardian_contact": true
+    },
+    {
+      "id": "DEMO_STU_14",
+      "name": "示例学生14",
+      "homeroom_id": "HR_2",
+      "membership_from": "2026-09-01",
+      "membership_until": "2027-01-31",
+      "has_verified_guardian_contact": true
+    },
+    {
+      "id": "DEMO_STU_15",
+      "name": "示例学生15",
+      "homeroom_id": "HR_2",
+      "membership_from": "2026-09-01",
+      "membership_until": "2027-01-31",
+      "has_verified_guardian_contact": true
+    },
+    {
+      "id": "DEMO_STU_16",
+      "name": "示例学生16",
+      "homeroom_id": "HR_2",
+      "membership_from": "2026-09-01",
+      "membership_until": "2027-01-31",
+      "has_verified_guardian_contact": true
+    },
+    {
+      "id": "DEMO_STU_17",
+      "name": "示例学生17",
+      "homeroom_id": "HR_2",
+      "membership_from": "2026-09-01",
+      "membership_until": "2027-01-31",
+      "has_verified_guardian_contact": true
+    },
+    {
+      "id": "DEMO_STU_18",
+      "name": "示例学生18",
+      "homeroom_id": "HR_2",
+      "membership_from": "2026-09-01",
+      "membership_until": "2027-01-31",
+      "has_verified_guardian_contact": true
+    },
+    {
+      "id": "DEMO_STU_19",
+      "name": "示例学生19",
+      "homeroom_id": "HR_2",
+      "membership_from": "2026-09-01",
+      "membership_until": "2027-01-31",
+      "has_verified_guardian_contact": true
+    },
+    {
+      "id": "DEMO_STU_20",
+      "name": "示例学生20",
+      "homeroom_id": "HR_2",
+      "membership_from": "2026-09-01",
+      "membership_until": "2027-01-31",
+      "has_verified_guardian_contact": true
+    },
+    {
+      "id": "DEMO_STU_21",
+      "name": "示例学生21",
+      "homeroom_id": "HR_2",
+      "membership_from": "2026-09-01",
+      "membership_until": "2027-01-31",
+      "has_verified_guardian_contact": true
+    },
+    {
+      "id": "DEMO_STU_22",
+      "name": "示例学生22",
+      "homeroom_id": "HR_2",
+      "membership_from": "2026-09-01",
+      "membership_until": "2027-01-31",
+      "has_verified_guardian_contact": true
+    },
+    {
+      "id": "DEMO_STU_23",
+      "name": "示例学生23",
+      "homeroom_id": "HR_2",
+      "membership_from": "2026-09-01",
+      "membership_until": "2027-01-31",
+      "has_verified_guardian_contact": true
+    },
+    {
+      "id": "DEMO_STU_24",
+      "name": "示例学生24",
+      "homeroom_id": "HR_2",
+      "membership_from": "2026-09-01",
+      "membership_until": "2027-01-31",
+      "has_verified_guardian_contact": true
+    }
+  ],
+  "tasks": [
+    {
+      "id": "TASK_CS_WHOLE",
+      "class_id": "CLASS_CS_G1_2",
+      "duty_id": null,
+      "teacher_id": "TEACHER_LYNN",
+      "student_ids": [
+        "DEMO_STU_01",
+        "DEMO_STU_02",
+        "DEMO_STU_03",
+        "DEMO_STU_04",
+        "DEMO_STU_17",
+        "DEMO_STU_18",
+        "DEMO_STU_19",
+        "DEMO_STU_20",
+        "DEMO_STU_21",
+        "DEMO_STU_22",
+        "DEMO_STU_23",
+        "DEMO_STU_24"
+      ],
+      "label": "高一2班 • 计算机",
+      "course_id": "COURSE_CS_9618",
+      "valid_from": "2026-09-01",
+      "valid_through": "2027-01-31"
+    },
+    {
+      "id": "TASK_MATH_G1_P1",
+      "class_id": "CLASS_MATH_G1_1",
+      "duty_id": "DUTY_G1_P1",
+      "teacher_id": "TEACHER_LYNN",
+      "student_ids": [
+        "DEMO_STU_01",
+        "DEMO_STU_02",
+        "DEMO_STU_03",
+        "DEMO_STU_04",
+        "DEMO_STU_05",
+        "DEMO_STU_06",
+        "DEMO_STU_07",
+        "DEMO_STU_08",
+        "DEMO_STU_09",
+        "DEMO_STU_10",
+        "DEMO_STU_11",
+        "DEMO_STU_12",
+        "DEMO_STU_13",
+        "DEMO_STU_14",
+        "DEMO_STU_15",
+        "DEMO_STU_16"
+      ],
+      "label": "高一1班 • 数学",
+      "course_id": "COURSE_MATH_9709",
+      "valid_from": "2026-09-01",
+      "valid_through": "2027-01-31"
+    },
+    {
+      "id": "TASK_MATH_G2_P1",
+      "class_id": "CLASS_MATH_G1_2",
+      "duty_id": "DUTY_G2_P1",
+      "teacher_id": "TEACHER_LYNN",
+      "student_ids": [
+        "DEMO_STU_13",
+        "DEMO_STU_14",
+        "DEMO_STU_15",
+        "DEMO_STU_16",
+        "DEMO_STU_17",
+        "DEMO_STU_18",
+        "DEMO_STU_19",
+        "DEMO_STU_20"
+      ],
+      "label": "高一2班 • 数学",
+      "course_id": "COURSE_MATH_9709",
+      "valid_from": "2026-09-01",
+      "valid_through": "2027-01-31"
+    },
+    {
+      "id": "TASK_MATH_G2_S1",
+      "class_id": "CLASS_MATH_G1_2",
+      "duty_id": "DUTY_G2_S1",
+      "teacher_id": "TEACHER_LYNN",
+      "student_ids": [
+        "DEMO_STU_17",
+        "DEMO_STU_18",
+        "DEMO_STU_19",
+        "DEMO_STU_20",
+        "DEMO_STU_21",
+        "DEMO_STU_22",
+        "DEMO_STU_23",
+        "DEMO_STU_24"
+      ],
+      "label": "高一2班 • 数学",
+      "course_id": "COURSE_MATH_9709",
+      "valid_from": "2026-09-01",
+      "valid_through": "2027-01-31"
+    },
+    {
+      "id": "TASK_OTHER_M1",
+      "class_id": "CLASS_MATH_G1_1",
+      "duty_id": "DUTY_OTHER_M1",
+      "teacher_id": "TEACHER_PEER",
+      "student_ids": [
+        "DEMO_STU_17",
+        "DEMO_STU_18",
+        "DEMO_STU_19",
+        "DEMO_STU_20"
+      ],
+      "label": "高一1班 • 数学",
+      "course_id": "COURSE_MATH_9709",
+      "valid_from": "2026-09-01",
+      "valid_through": "2027-01-31"
+    }
+  ],
+  "period_definitions": [
+    {
+      "id": "PERIOD_1",
+      "number": 1,
+      "start": "08:00",
+      "end": "08:40"
+    },
+    {
+      "id": "PERIOD_3",
+      "number": 3,
+      "start": "09:40",
+      "end": "10:20"
+    },
+    {
+      "id": "PERIOD_5",
+      "number": 5,
+      "start": "11:20",
+      "end": "12:00"
+    }
+  ],
+  "rooms": [
+    {
+      "id": "ROOM_CS",
+      "name": "机房1"
+    },
+    {
+      "id": "ROOM_M1",
+      "name": "D101"
+    },
+    {
+      "id": "ROOM_M2",
+      "name": "D102"
+    }
+  ],
+  "lessons": [
+    {
+      "id": "LESSON_001",
+      "task_id": "TASK_CS_WHOLE",
+      "actual_date": "2026-09-28",
+      "period_id": "PERIOD_1",
+      "room_id": "ROOM_CS",
+      "status": "EFFECTIVE",
+      "applied": true,
+      "normative_source": "DEMO_SCHOOL_SCHEDULE",
+      "is_non_teaching_activity": false
+    },
+    {
+      "id": "LESSON_002",
+      "task_id": "TASK_CS_WHOLE",
+      "actual_date": "2026-09-30",
+      "period_id": "PERIOD_1",
+      "room_id": "ROOM_CS",
+      "status": "EFFECTIVE",
+      "applied": true,
+      "normative_source": "DEMO_SCHOOL_SCHEDULE",
+      "is_non_teaching_activity": false
+    },
+    {
+      "id": "LESSON_003",
+      "task_id": "TASK_MATH_G1_P1",
+      "actual_date": "2026-09-28",
+      "period_id": "PERIOD_3",
+      "room_id": "ROOM_M1",
+      "status": "EFFECTIVE",
+      "applied": true,
+      "normative_source": "DEMO_SCHOOL_SCHEDULE",
+      "is_non_teaching_activity": false
+    },
+    {
+      "id": "LESSON_004",
+      "task_id": "TASK_MATH_G1_P1",
+      "actual_date": "2026-10-01",
+      "period_id": "PERIOD_3",
+      "room_id": "ROOM_M1",
+      "status": "EFFECTIVE",
+      "applied": true,
+      "normative_source": "DEMO_SCHOOL_SCHEDULE",
+      "is_non_teaching_activity": false
+    },
+    {
+      "id": "LESSON_005",
+      "task_id": "TASK_MATH_G1_P1",
+      "actual_date": "2026-10-02",
+      "period_id": "PERIOD_3",
+      "room_id": "ROOM_M1",
+      "status": "EFFECTIVE",
+      "applied": true,
+      "normative_source": "DEMO_SCHOOL_SCHEDULE",
+      "is_non_teaching_activity": false
+    },
+    {
+      "id": "LESSON_006",
+      "task_id": "TASK_MATH_G1_P1",
+      "actual_date": "2026-10-03",
+      "period_id": "PERIOD_3",
+      "room_id": "ROOM_M1",
+      "status": "EFFECTIVE",
+      "applied": true,
+      "normative_source": "DEMO_SCHOOL_SCHEDULE",
+      "is_non_teaching_activity": false
+    },
+    {
+      "id": "LESSON_007",
+      "task_id": "TASK_MATH_G2_P1",
+      "actual_date": "2026-09-29",
+      "period_id": "PERIOD_3",
+      "room_id": "ROOM_M2",
+      "status": "EFFECTIVE",
+      "applied": true,
+      "normative_source": "DEMO_SCHOOL_SCHEDULE",
+      "is_non_teaching_activity": false
+    },
+    {
+      "id": "LESSON_008",
+      "task_id": "TASK_MATH_G2_P1",
+      "actual_date": "2026-10-02",
+      "period_id": "PERIOD_5",
+      "room_id": "ROOM_M2",
+      "status": "EFFECTIVE",
+      "applied": true,
+      "normative_source": "DEMO_SCHOOL_SCHEDULE",
+      "is_non_teaching_activity": false
+    },
+    {
+      "id": "LESSON_009",
+      "task_id": "TASK_MATH_G2_S1",
+      "actual_date": "2026-09-30",
+      "period_id": "PERIOD_3",
+      "room_id": "ROOM_M2",
+      "status": "EFFECTIVE",
+      "applied": true,
+      "normative_source": "DEMO_SCHOOL_SCHEDULE",
+      "is_non_teaching_activity": false
+    },
+    {
+      "id": "LESSON_010",
+      "task_id": "TASK_MATH_G2_S1",
+      "actual_date": "2026-10-01",
+      "period_id": "PERIOD_5",
+      "room_id": "ROOM_M2",
+      "status": "EFFECTIVE",
+      "applied": true,
+      "normative_source": "DEMO_SCHOOL_SCHEDULE",
+      "is_non_teaching_activity": false
+    },
+    {
+      "id": "LESSON_011",
+      "task_id": "TASK_OTHER_M1",
+      "actual_date": "2026-09-29",
+      "period_id": "PERIOD_1",
+      "room_id": "ROOM_M1",
+      "status": "EFFECTIVE",
+      "applied": true,
+      "normative_source": "DEMO_SCHOOL_SCHEDULE",
+      "is_non_teaching_activity": false
+    }
+  ],
+  "classroom_records": [
+    {
+      "id": "RECORD_TASK_CS_WHOLE_2026-09-28_DEMO_STU_01",
+      "task_id": "TASK_CS_WHOLE",
+      "date": "2026-09-28",
+      "student_id": "DEMO_STU_01",
+      "attendance": "NORMAL",
+      "attendance_confirmed": true,
+      "classroom_grade": "A",
+      "grade_handling": "CONFIRMED",
+      "revision": 1,
+      "source_lesson_ids": [
+        "LESSON_001"
+      ],
+      "pending_conflict": false,
+      "field_origins": {
+        "attendance": "EXPLICIT",
+        "grade": "EXPLICIT"
+      },
+      "attendance_covered_lesson_ids": [
+        "LESSON_001"
+      ],
+      "grade_covered_lesson_ids": [
+        "LESSON_001"
+      ]
+    },
+    {
+      "id": "RECORD_TASK_CS_WHOLE_2026-09-28_DEMO_STU_02",
+      "task_id": "TASK_CS_WHOLE",
+      "date": "2026-09-28",
+      "student_id": "DEMO_STU_02",
+      "attendance": "LEAVE",
+      "attendance_confirmed": true,
+      "classroom_grade": null,
+      "grade_handling": "NOT_APPLICABLE",
+      "revision": 1,
+      "source_lesson_ids": [
+        "LESSON_001"
+      ],
+      "pending_conflict": false,
+      "field_origins": {
+        "attendance": "APPROVED_LEAVE",
+        "grade": "NOT_APPLICABLE"
+      },
+      "leave_source_id": "LEAVE_001",
+      "attendance_covered_lesson_ids": [
+        "LESSON_001"
+      ],
+      "grade_covered_lesson_ids": [
+        "LESSON_001"
+      ]
+    },
+    {
+      "id": "RECORD_TASK_CS_WHOLE_2026-09-28_DEMO_STU_03",
+      "task_id": "TASK_CS_WHOLE",
+      "date": "2026-09-28",
+      "student_id": "DEMO_STU_03",
+      "attendance": "NORMAL",
+      "attendance_confirmed": true,
+      "classroom_grade": "A",
+      "grade_handling": "CONFIRMED",
+      "revision": 1,
+      "source_lesson_ids": [
+        "LESSON_001"
+      ],
+      "pending_conflict": false,
+      "field_origins": {
+        "attendance": "EXPLICIT",
+        "grade": "EXPLICIT"
+      },
+      "attendance_covered_lesson_ids": [
+        "LESSON_001"
+      ],
+      "grade_covered_lesson_ids": [
+        "LESSON_001"
+      ]
+    },
+    {
+      "id": "RECORD_TASK_CS_WHOLE_2026-09-28_DEMO_STU_04",
+      "task_id": "TASK_CS_WHOLE",
+      "date": "2026-09-28",
+      "student_id": "DEMO_STU_04",
+      "attendance": "NORMAL",
+      "attendance_confirmed": true,
+      "classroom_grade": "A",
+      "grade_handling": "CONFIRMED",
+      "revision": 1,
+      "source_lesson_ids": [
+        "LESSON_001"
+      ],
+      "pending_conflict": false,
+      "field_origins": {
+        "attendance": "EXPLICIT",
+        "grade": "EXPLICIT"
+      },
+      "attendance_covered_lesson_ids": [
+        "LESSON_001"
+      ],
+      "grade_covered_lesson_ids": [
+        "LESSON_001"
+      ]
+    },
+    {
+      "id": "RECORD_TASK_CS_WHOLE_2026-09-28_DEMO_STU_17",
+      "task_id": "TASK_CS_WHOLE",
+      "date": "2026-09-28",
+      "student_id": "DEMO_STU_17",
+      "attendance": "NORMAL",
+      "attendance_confirmed": true,
+      "classroom_grade": "A",
+      "grade_handling": "CONFIRMED",
+      "revision": 1,
+      "source_lesson_ids": [
+        "LESSON_001"
+      ],
+      "pending_conflict": false,
+      "field_origins": {
+        "attendance": "EXPLICIT",
+        "grade": "EXPLICIT"
+      },
+      "attendance_covered_lesson_ids": [
+        "LESSON_001"
+      ],
+      "grade_covered_lesson_ids": [
+        "LESSON_001"
+      ]
+    },
+    {
+      "id": "RECORD_TASK_CS_WHOLE_2026-09-28_DEMO_STU_18",
+      "task_id": "TASK_CS_WHOLE",
+      "date": "2026-09-28",
+      "student_id": "DEMO_STU_18",
+      "attendance": "NORMAL",
+      "attendance_confirmed": true,
+      "classroom_grade": "A",
+      "grade_handling": "CONFIRMED",
+      "revision": 1,
+      "source_lesson_ids": [
+        "LESSON_001"
+      ],
+      "pending_conflict": false,
+      "field_origins": {
+        "attendance": "EXPLICIT",
+        "grade": "EXPLICIT"
+      },
+      "attendance_covered_lesson_ids": [
+        "LESSON_001"
+      ],
+      "grade_covered_lesson_ids": [
+        "LESSON_001"
+      ]
+    },
+    {
+      "id": "RECORD_TASK_CS_WHOLE_2026-09-28_DEMO_STU_19",
+      "task_id": "TASK_CS_WHOLE",
+      "date": "2026-09-28",
+      "student_id": "DEMO_STU_19",
+      "attendance": "NORMAL",
+      "attendance_confirmed": true,
+      "classroom_grade": "A",
+      "grade_handling": "CONFIRMED",
+      "revision": 1,
+      "source_lesson_ids": [
+        "LESSON_001"
+      ],
+      "pending_conflict": false,
+      "field_origins": {
+        "attendance": "EXPLICIT",
+        "grade": "EXPLICIT"
+      },
+      "attendance_covered_lesson_ids": [
+        "LESSON_001"
+      ],
+      "grade_covered_lesson_ids": [
+        "LESSON_001"
+      ]
+    },
+    {
+      "id": "RECORD_TASK_CS_WHOLE_2026-09-28_DEMO_STU_20",
+      "task_id": "TASK_CS_WHOLE",
+      "date": "2026-09-28",
+      "student_id": "DEMO_STU_20",
+      "attendance": "NORMAL",
+      "attendance_confirmed": true,
+      "classroom_grade": "A",
+      "grade_handling": "CONFIRMED",
+      "revision": 1,
+      "source_lesson_ids": [
+        "LESSON_001"
+      ],
+      "pending_conflict": false,
+      "field_origins": {
+        "attendance": "EXPLICIT",
+        "grade": "EXPLICIT"
+      },
+      "attendance_covered_lesson_ids": [
+        "LESSON_001"
+      ],
+      "grade_covered_lesson_ids": [
+        "LESSON_001"
+      ]
+    },
+    {
+      "id": "RECORD_TASK_CS_WHOLE_2026-09-28_DEMO_STU_21",
+      "task_id": "TASK_CS_WHOLE",
+      "date": "2026-09-28",
+      "student_id": "DEMO_STU_21",
+      "attendance": "NORMAL",
+      "attendance_confirmed": true,
+      "classroom_grade": "A",
+      "grade_handling": "CONFIRMED",
+      "revision": 1,
+      "source_lesson_ids": [
+        "LESSON_001"
+      ],
+      "pending_conflict": false,
+      "field_origins": {
+        "attendance": "EXPLICIT",
+        "grade": "EXPLICIT"
+      },
+      "attendance_covered_lesson_ids": [
+        "LESSON_001"
+      ],
+      "grade_covered_lesson_ids": [
+        "LESSON_001"
+      ]
+    },
+    {
+      "id": "RECORD_TASK_CS_WHOLE_2026-09-28_DEMO_STU_22",
+      "task_id": "TASK_CS_WHOLE",
+      "date": "2026-09-28",
+      "student_id": "DEMO_STU_22",
+      "attendance": "NORMAL",
+      "attendance_confirmed": true,
+      "classroom_grade": "A",
+      "grade_handling": "CONFIRMED",
+      "revision": 1,
+      "source_lesson_ids": [
+        "LESSON_001"
+      ],
+      "pending_conflict": false,
+      "field_origins": {
+        "attendance": "EXPLICIT",
+        "grade": "EXPLICIT"
+      },
+      "attendance_covered_lesson_ids": [
+        "LESSON_001"
+      ],
+      "grade_covered_lesson_ids": [
+        "LESSON_001"
+      ]
+    },
+    {
+      "id": "RECORD_TASK_CS_WHOLE_2026-09-28_DEMO_STU_23",
+      "task_id": "TASK_CS_WHOLE",
+      "date": "2026-09-28",
+      "student_id": "DEMO_STU_23",
+      "attendance": "NORMAL",
+      "attendance_confirmed": true,
+      "classroom_grade": "A",
+      "grade_handling": "CONFIRMED",
+      "revision": 1,
+      "source_lesson_ids": [
+        "LESSON_001"
+      ],
+      "pending_conflict": false,
+      "field_origins": {
+        "attendance": "EXPLICIT",
+        "grade": "EXPLICIT"
+      },
+      "attendance_covered_lesson_ids": [
+        "LESSON_001"
+      ],
+      "grade_covered_lesson_ids": [
+        "LESSON_001"
+      ]
+    },
+    {
+      "id": "RECORD_TASK_CS_WHOLE_2026-09-28_DEMO_STU_24",
+      "task_id": "TASK_CS_WHOLE",
+      "date": "2026-09-28",
+      "student_id": "DEMO_STU_24",
+      "attendance": "NORMAL",
+      "attendance_confirmed": true,
+      "classroom_grade": "A",
+      "grade_handling": "CONFIRMED",
+      "revision": 1,
+      "source_lesson_ids": [
+        "LESSON_001"
+      ],
+      "pending_conflict": false,
+      "field_origins": {
+        "attendance": "EXPLICIT",
+        "grade": "EXPLICIT"
+      },
+      "attendance_covered_lesson_ids": [
+        "LESSON_001"
+      ],
+      "grade_covered_lesson_ids": [
+        "LESSON_001"
+      ]
+    },
+    {
+      "id": "RECORD_TASK_CS_WHOLE_2026-09-30_DEMO_STU_01",
+      "task_id": "TASK_CS_WHOLE",
+      "date": "2026-09-30",
+      "student_id": "DEMO_STU_01",
+      "attendance": "NORMAL",
+      "attendance_confirmed": true,
+      "classroom_grade": "A",
+      "grade_handling": "CONFIRMED",
+      "revision": 1,
+      "source_lesson_ids": [
+        "LESSON_002"
+      ],
+      "pending_conflict": false,
+      "field_origins": {
+        "attendance": "EXPLICIT",
+        "grade": "EXPLICIT"
+      },
+      "attendance_covered_lesson_ids": [
+        "LESSON_002"
+      ],
+      "grade_covered_lesson_ids": [
+        "LESSON_002"
+      ]
+    },
+    {
+      "id": "RECORD_TASK_CS_WHOLE_2026-09-30_DEMO_STU_02",
+      "task_id": "TASK_CS_WHOLE",
+      "date": "2026-09-30",
+      "student_id": "DEMO_STU_02",
+      "attendance": "NORMAL",
+      "attendance_confirmed": true,
+      "classroom_grade": "A",
+      "grade_handling": "CONFIRMED",
+      "revision": 1,
+      "source_lesson_ids": [
+        "LESSON_002"
+      ],
+      "pending_conflict": false,
+      "field_origins": {
+        "attendance": "EXPLICIT",
+        "grade": "EXPLICIT"
+      },
+      "attendance_covered_lesson_ids": [
+        "LESSON_002"
+      ],
+      "grade_covered_lesson_ids": [
+        "LESSON_002"
+      ]
+    },
+    {
+      "id": "RECORD_TASK_CS_WHOLE_2026-09-30_DEMO_STU_03",
+      "task_id": "TASK_CS_WHOLE",
+      "date": "2026-09-30",
+      "student_id": "DEMO_STU_03",
+      "attendance": "LATE",
+      "attendance_confirmed": true,
+      "classroom_grade": "A",
+      "grade_handling": "CONFIRMED",
+      "revision": 1,
+      "internal_reason": null,
+      "source_lesson_ids": [
+        "LESSON_002"
+      ],
+      "pending_conflict": false,
+      "field_origins": {
+        "attendance": "EXPLICIT",
+        "grade": "EXPLICIT"
+      },
+      "attendance_covered_lesson_ids": [
+        "LESSON_002"
+      ],
+      "grade_covered_lesson_ids": [
+        "LESSON_002"
+      ]
+    },
+    {
+      "id": "RECORD_TASK_CS_WHOLE_2026-09-30_DEMO_STU_04",
+      "task_id": "TASK_CS_WHOLE",
+      "date": "2026-09-30",
+      "student_id": "DEMO_STU_04",
+      "attendance": "NORMAL",
+      "attendance_confirmed": true,
+      "classroom_grade": "A",
+      "grade_handling": "CONFIRMED",
+      "revision": 1,
+      "source_lesson_ids": [
+        "LESSON_002"
+      ],
+      "pending_conflict": false,
+      "field_origins": {
+        "attendance": "EXPLICIT",
+        "grade": "EXPLICIT"
+      },
+      "attendance_covered_lesson_ids": [
+        "LESSON_002"
+      ],
+      "grade_covered_lesson_ids": [
+        "LESSON_002"
+      ]
+    },
+    {
+      "id": "RECORD_TASK_CS_WHOLE_2026-09-30_DEMO_STU_17",
+      "task_id": "TASK_CS_WHOLE",
+      "date": "2026-09-30",
+      "student_id": "DEMO_STU_17",
+      "attendance": "NORMAL",
+      "attendance_confirmed": true,
+      "classroom_grade": "A",
+      "grade_handling": "CONFIRMED",
+      "revision": 1,
+      "source_lesson_ids": [
+        "LESSON_002"
+      ],
+      "pending_conflict": false,
+      "field_origins": {
+        "attendance": "EXPLICIT",
+        "grade": "EXPLICIT"
+      },
+      "attendance_covered_lesson_ids": [
+        "LESSON_002"
+      ],
+      "grade_covered_lesson_ids": [
+        "LESSON_002"
+      ]
+    },
+    {
+      "id": "RECORD_TASK_CS_WHOLE_2026-09-30_DEMO_STU_18",
+      "task_id": "TASK_CS_WHOLE",
+      "date": "2026-09-30",
+      "student_id": "DEMO_STU_18",
+      "attendance": "NORMAL",
+      "attendance_confirmed": true,
+      "classroom_grade": "A",
+      "grade_handling": "CONFIRMED",
+      "revision": 1,
+      "source_lesson_ids": [
+        "LESSON_002"
+      ],
+      "pending_conflict": false,
+      "field_origins": {
+        "attendance": "EXPLICIT",
+        "grade": "EXPLICIT"
+      },
+      "attendance_covered_lesson_ids": [
+        "LESSON_002"
+      ],
+      "grade_covered_lesson_ids": [
+        "LESSON_002"
+      ]
+    },
+    {
+      "id": "RECORD_TASK_CS_WHOLE_2026-09-30_DEMO_STU_19",
+      "task_id": "TASK_CS_WHOLE",
+      "date": "2026-09-30",
+      "student_id": "DEMO_STU_19",
+      "attendance": null,
+      "attendance_confirmed": false,
+      "classroom_grade": null,
+      "grade_handling": "PENDING",
+      "revision": 1,
+      "source_lesson_ids": [
+        "LESSON_002"
+      ],
+      "pending_conflict": false,
+      "field_origins": {
+        "attendance": "UNSET",
+        "grade": "UNSET"
+      },
+      "attendance_covered_lesson_ids": [],
+      "grade_covered_lesson_ids": []
+    },
+    {
+      "id": "RECORD_TASK_CS_WHOLE_2026-09-30_DEMO_STU_20",
+      "task_id": "TASK_CS_WHOLE",
+      "date": "2026-09-30",
+      "student_id": "DEMO_STU_20",
+      "attendance": null,
+      "attendance_confirmed": false,
+      "classroom_grade": null,
+      "grade_handling": "PENDING",
+      "revision": 1,
+      "source_lesson_ids": [
+        "LESSON_002"
+      ],
+      "pending_conflict": false,
+      "field_origins": {
+        "attendance": "UNSET",
+        "grade": "UNSET"
+      },
+      "attendance_covered_lesson_ids": [],
+      "grade_covered_lesson_ids": []
+    },
+    {
+      "id": "RECORD_TASK_CS_WHOLE_2026-09-30_DEMO_STU_21",
+      "task_id": "TASK_CS_WHOLE",
+      "date": "2026-09-30",
+      "student_id": "DEMO_STU_21",
+      "attendance": null,
+      "attendance_confirmed": false,
+      "classroom_grade": null,
+      "grade_handling": "PENDING",
+      "revision": 1,
+      "source_lesson_ids": [
+        "LESSON_002"
+      ],
+      "pending_conflict": false,
+      "field_origins": {
+        "attendance": "UNSET",
+        "grade": "UNSET"
+      },
+      "attendance_covered_lesson_ids": [],
+      "grade_covered_lesson_ids": []
+    },
+    {
+      "id": "RECORD_TASK_CS_WHOLE_2026-09-30_DEMO_STU_22",
+      "task_id": "TASK_CS_WHOLE",
+      "date": "2026-09-30",
+      "student_id": "DEMO_STU_22",
+      "attendance": null,
+      "attendance_confirmed": false,
+      "classroom_grade": null,
+      "grade_handling": "PENDING",
+      "revision": 1,
+      "source_lesson_ids": [
+        "LESSON_002"
+      ],
+      "pending_conflict": false,
+      "field_origins": {
+        "attendance": "UNSET",
+        "grade": "UNSET"
+      },
+      "attendance_covered_lesson_ids": [],
+      "grade_covered_lesson_ids": []
+    },
+    {
+      "id": "RECORD_TASK_CS_WHOLE_2026-09-30_DEMO_STU_23",
+      "task_id": "TASK_CS_WHOLE",
+      "date": "2026-09-30",
+      "student_id": "DEMO_STU_23",
+      "attendance": null,
+      "attendance_confirmed": false,
+      "classroom_grade": null,
+      "grade_handling": "PENDING",
+      "revision": 1,
+      "source_lesson_ids": [
+        "LESSON_002"
+      ],
+      "pending_conflict": false,
+      "field_origins": {
+        "attendance": "UNSET",
+        "grade": "UNSET"
+      },
+      "attendance_covered_lesson_ids": [],
+      "grade_covered_lesson_ids": []
+    },
+    {
+      "id": "RECORD_TASK_CS_WHOLE_2026-09-30_DEMO_STU_24",
+      "task_id": "TASK_CS_WHOLE",
+      "date": "2026-09-30",
+      "student_id": "DEMO_STU_24",
+      "attendance": null,
+      "attendance_confirmed": false,
+      "classroom_grade": null,
+      "grade_handling": "PENDING",
+      "revision": 1,
+      "source_lesson_ids": [
+        "LESSON_002"
+      ],
+      "pending_conflict": false,
+      "field_origins": {
+        "attendance": "UNSET",
+        "grade": "UNSET"
+      },
+      "attendance_covered_lesson_ids": [],
+      "grade_covered_lesson_ids": []
+    },
+    {
+      "id": "RECORD_TASK_MATH_G1_P1_2026-09-28_DEMO_STU_01",
+      "task_id": "TASK_MATH_G1_P1",
+      "date": "2026-09-28",
+      "student_id": "DEMO_STU_01",
+      "attendance": "NORMAL",
+      "attendance_confirmed": true,
+      "classroom_grade": "A",
+      "grade_handling": "CONFIRMED",
+      "revision": 1,
+      "source_lesson_ids": [
+        "LESSON_003"
+      ],
+      "pending_conflict": false,
+      "field_origins": {
+        "attendance": "EXPLICIT",
+        "grade": "EXPLICIT"
+      },
+      "attendance_covered_lesson_ids": [
+        "LESSON_003"
+      ],
+      "grade_covered_lesson_ids": [
+        "LESSON_003"
+      ]
+    },
+    {
+      "id": "RECORD_TASK_MATH_G1_P1_2026-09-28_DEMO_STU_02",
+      "task_id": "TASK_MATH_G1_P1",
+      "date": "2026-09-28",
+      "student_id": "DEMO_STU_02",
+      "attendance": "LEAVE",
+      "attendance_confirmed": true,
+      "classroom_grade": null,
+      "grade_handling": "NOT_APPLICABLE",
+      "revision": 1,
+      "source_leave_id": "LEAVE_001",
+      "source_lesson_ids": [
+        "LESSON_003"
+      ],
+      "pending_conflict": false,
+      "field_origins": {
+        "attendance": "APPROVED_LEAVE",
+        "grade": "NOT_APPLICABLE"
+      },
+      "leave_source_id": "LEAVE_001",
+      "attendance_covered_lesson_ids": [
+        "LESSON_003"
+      ],
+      "grade_covered_lesson_ids": [
+        "LESSON_003"
+      ]
+    },
+    {
+      "id": "RECORD_TASK_MATH_G1_P1_2026-09-28_DEMO_STU_03",
+      "task_id": "TASK_MATH_G1_P1",
+      "date": "2026-09-28",
+      "student_id": "DEMO_STU_03",
+      "attendance": "NORMAL",
+      "attendance_confirmed": true,
+      "classroom_grade": "A",
+      "grade_handling": "CONFIRMED",
+      "revision": 1,
+      "source_lesson_ids": [
+        "LESSON_003"
+      ],
+      "pending_conflict": false,
+      "field_origins": {
+        "attendance": "EXPLICIT",
+        "grade": "EXPLICIT"
+      },
+      "attendance_covered_lesson_ids": [
+        "LESSON_003"
+      ],
+      "grade_covered_lesson_ids": [
+        "LESSON_003"
+      ]
+    },
+    {
+      "id": "RECORD_TASK_MATH_G1_P1_2026-09-28_DEMO_STU_04",
+      "task_id": "TASK_MATH_G1_P1",
+      "date": "2026-09-28",
+      "student_id": "DEMO_STU_04",
+      "attendance": "NORMAL",
+      "attendance_confirmed": true,
+      "classroom_grade": "A",
+      "grade_handling": "CONFIRMED",
+      "revision": 1,
+      "source_lesson_ids": [
+        "LESSON_003"
+      ],
+      "pending_conflict": false,
+      "field_origins": {
+        "attendance": "EXPLICIT",
+        "grade": "EXPLICIT"
+      },
+      "attendance_covered_lesson_ids": [
+        "LESSON_003"
+      ],
+      "grade_covered_lesson_ids": [
+        "LESSON_003"
+      ]
+    },
+    {
+      "id": "RECORD_TASK_MATH_G1_P1_2026-09-28_DEMO_STU_05",
+      "task_id": "TASK_MATH_G1_P1",
+      "date": "2026-09-28",
+      "student_id": "DEMO_STU_05",
+      "attendance": "NORMAL",
+      "attendance_confirmed": true,
+      "classroom_grade": "A",
+      "grade_handling": "CONFIRMED",
+      "revision": 1,
+      "source_lesson_ids": [
+        "LESSON_003"
+      ],
+      "pending_conflict": false,
+      "field_origins": {
+        "attendance": "EXPLICIT",
+        "grade": "EXPLICIT"
+      },
+      "attendance_covered_lesson_ids": [
+        "LESSON_003"
+      ],
+      "grade_covered_lesson_ids": [
+        "LESSON_003"
+      ]
+    },
+    {
+      "id": "RECORD_TASK_MATH_G1_P1_2026-09-28_DEMO_STU_06",
+      "task_id": "TASK_MATH_G1_P1",
+      "date": "2026-09-28",
+      "student_id": "DEMO_STU_06",
+      "attendance": "NORMAL",
+      "attendance_confirmed": true,
+      "classroom_grade": "A",
+      "grade_handling": "CONFIRMED",
+      "revision": 1,
+      "source_lesson_ids": [
+        "LESSON_003"
+      ],
+      "pending_conflict": false,
+      "field_origins": {
+        "attendance": "EXPLICIT",
+        "grade": "EXPLICIT"
+      },
+      "attendance_covered_lesson_ids": [
+        "LESSON_003"
+      ],
+      "grade_covered_lesson_ids": [
+        "LESSON_003"
+      ]
+    },
+    {
+      "id": "RECORD_TASK_MATH_G1_P1_2026-09-28_DEMO_STU_07",
+      "task_id": "TASK_MATH_G1_P1",
+      "date": "2026-09-28",
+      "student_id": "DEMO_STU_07",
+      "attendance": "NORMAL",
+      "attendance_confirmed": true,
+      "classroom_grade": "A",
+      "grade_handling": "CONFIRMED",
+      "revision": 1,
+      "source_lesson_ids": [
+        "LESSON_003"
+      ],
+      "pending_conflict": false,
+      "field_origins": {
+        "attendance": "EXPLICIT",
+        "grade": "EXPLICIT"
+      },
+      "attendance_covered_lesson_ids": [
+        "LESSON_003"
+      ],
+      "grade_covered_lesson_ids": [
+        "LESSON_003"
+      ]
+    },
+    {
+      "id": "RECORD_TASK_MATH_G1_P1_2026-09-28_DEMO_STU_08",
+      "task_id": "TASK_MATH_G1_P1",
+      "date": "2026-09-28",
+      "student_id": "DEMO_STU_08",
+      "attendance": "NORMAL",
+      "attendance_confirmed": true,
+      "classroom_grade": "A",
+      "grade_handling": "CONFIRMED",
+      "revision": 1,
+      "source_lesson_ids": [
+        "LESSON_003"
+      ],
+      "pending_conflict": false,
+      "field_origins": {
+        "attendance": "EXPLICIT",
+        "grade": "EXPLICIT"
+      },
+      "attendance_covered_lesson_ids": [
+        "LESSON_003"
+      ],
+      "grade_covered_lesson_ids": [
+        "LESSON_003"
+      ]
+    },
+    {
+      "id": "RECORD_TASK_MATH_G1_P1_2026-09-28_DEMO_STU_09",
+      "task_id": "TASK_MATH_G1_P1",
+      "date": "2026-09-28",
+      "student_id": "DEMO_STU_09",
+      "attendance": "NORMAL",
+      "attendance_confirmed": true,
+      "classroom_grade": "A",
+      "grade_handling": "CONFIRMED",
+      "revision": 1,
+      "source_lesson_ids": [
+        "LESSON_003"
+      ],
+      "pending_conflict": false,
+      "field_origins": {
+        "attendance": "EXPLICIT",
+        "grade": "EXPLICIT"
+      },
+      "attendance_covered_lesson_ids": [
+        "LESSON_003"
+      ],
+      "grade_covered_lesson_ids": [
+        "LESSON_003"
+      ]
+    },
+    {
+      "id": "RECORD_TASK_MATH_G1_P1_2026-09-28_DEMO_STU_10",
+      "task_id": "TASK_MATH_G1_P1",
+      "date": "2026-09-28",
+      "student_id": "DEMO_STU_10",
+      "attendance": "NORMAL",
+      "attendance_confirmed": true,
+      "classroom_grade": "A",
+      "grade_handling": "CONFIRMED",
+      "revision": 1,
+      "source_lesson_ids": [
+        "LESSON_003"
+      ],
+      "pending_conflict": false,
+      "field_origins": {
+        "attendance": "EXPLICIT",
+        "grade": "EXPLICIT"
+      },
+      "attendance_covered_lesson_ids": [
+        "LESSON_003"
+      ],
+      "grade_covered_lesson_ids": [
+        "LESSON_003"
+      ]
+    },
+    {
+      "id": "RECORD_TASK_MATH_G1_P1_2026-09-28_DEMO_STU_11",
+      "task_id": "TASK_MATH_G1_P1",
+      "date": "2026-09-28",
+      "student_id": "DEMO_STU_11",
+      "attendance": "NORMAL",
+      "attendance_confirmed": true,
+      "classroom_grade": "A",
+      "grade_handling": "CONFIRMED",
+      "revision": 1,
+      "source_lesson_ids": [
+        "LESSON_003"
+      ],
+      "pending_conflict": false,
+      "field_origins": {
+        "attendance": "EXPLICIT",
+        "grade": "EXPLICIT"
+      },
+      "attendance_covered_lesson_ids": [
+        "LESSON_003"
+      ],
+      "grade_covered_lesson_ids": [
+        "LESSON_003"
+      ]
+    },
+    {
+      "id": "RECORD_TASK_MATH_G1_P1_2026-09-28_DEMO_STU_12",
+      "task_id": "TASK_MATH_G1_P1",
+      "date": "2026-09-28",
+      "student_id": "DEMO_STU_12",
+      "attendance": "NORMAL",
+      "attendance_confirmed": true,
+      "classroom_grade": "A",
+      "grade_handling": "CONFIRMED",
+      "revision": 1,
+      "source_lesson_ids": [
+        "LESSON_003"
+      ],
+      "pending_conflict": false,
+      "field_origins": {
+        "attendance": "EXPLICIT",
+        "grade": "EXPLICIT"
+      },
+      "attendance_covered_lesson_ids": [
+        "LESSON_003"
+      ],
+      "grade_covered_lesson_ids": [
+        "LESSON_003"
+      ]
+    },
+    {
+      "id": "RECORD_TASK_MATH_G1_P1_2026-09-28_DEMO_STU_13",
+      "task_id": "TASK_MATH_G1_P1",
+      "date": "2026-09-28",
+      "student_id": "DEMO_STU_13",
+      "attendance": "NORMAL",
+      "attendance_confirmed": true,
+      "classroom_grade": "A",
+      "grade_handling": "CONFIRMED",
+      "revision": 1,
+      "source_lesson_ids": [
+        "LESSON_003"
+      ],
+      "pending_conflict": false,
+      "field_origins": {
+        "attendance": "EXPLICIT",
+        "grade": "EXPLICIT"
+      },
+      "attendance_covered_lesson_ids": [
+        "LESSON_003"
+      ],
+      "grade_covered_lesson_ids": [
+        "LESSON_003"
+      ]
+    },
+    {
+      "id": "RECORD_TASK_MATH_G1_P1_2026-09-28_DEMO_STU_14",
+      "task_id": "TASK_MATH_G1_P1",
+      "date": "2026-09-28",
+      "student_id": "DEMO_STU_14",
+      "attendance": "NORMAL",
+      "attendance_confirmed": true,
+      "classroom_grade": "A",
+      "grade_handling": "CONFIRMED",
+      "revision": 1,
+      "source_lesson_ids": [
+        "LESSON_003"
+      ],
+      "pending_conflict": false,
+      "field_origins": {
+        "attendance": "EXPLICIT",
+        "grade": "EXPLICIT"
+      },
+      "attendance_covered_lesson_ids": [
+        "LESSON_003"
+      ],
+      "grade_covered_lesson_ids": [
+        "LESSON_003"
+      ]
+    },
+    {
+      "id": "RECORD_TASK_MATH_G1_P1_2026-09-28_DEMO_STU_15",
+      "task_id": "TASK_MATH_G1_P1",
+      "date": "2026-09-28",
+      "student_id": "DEMO_STU_15",
+      "attendance": "NORMAL",
+      "attendance_confirmed": true,
+      "classroom_grade": "A",
+      "grade_handling": "CONFIRMED",
+      "revision": 1,
+      "source_lesson_ids": [
+        "LESSON_003"
+      ],
+      "pending_conflict": false,
+      "field_origins": {
+        "attendance": "EXPLICIT",
+        "grade": "EXPLICIT"
+      },
+      "attendance_covered_lesson_ids": [
+        "LESSON_003"
+      ],
+      "grade_covered_lesson_ids": [
+        "LESSON_003"
+      ]
+    },
+    {
+      "id": "RECORD_TASK_MATH_G1_P1_2026-09-28_DEMO_STU_16",
+      "task_id": "TASK_MATH_G1_P1",
+      "date": "2026-09-28",
+      "student_id": "DEMO_STU_16",
+      "attendance": "NORMAL",
+      "attendance_confirmed": true,
+      "classroom_grade": "A",
+      "grade_handling": "CONFIRMED",
+      "revision": 1,
+      "source_lesson_ids": [
+        "LESSON_003"
+      ],
+      "pending_conflict": false,
+      "field_origins": {
+        "attendance": "EXPLICIT",
+        "grade": "EXPLICIT"
+      },
+      "attendance_covered_lesson_ids": [
+        "LESSON_003"
+      ],
+      "grade_covered_lesson_ids": [
+        "LESSON_003"
+      ]
+    },
+    {
+      "id": "RECORD_TASK_MATH_G2_P1_2026-09-29_DEMO_STU_13",
+      "task_id": "TASK_MATH_G2_P1",
+      "date": "2026-09-29",
+      "student_id": "DEMO_STU_13",
+      "attendance": null,
+      "attendance_confirmed": false,
+      "classroom_grade": "B",
+      "grade_handling": "CONFIRMED",
+      "revision": 1,
+      "source_lesson_ids": [
+        "LESSON_007"
+      ],
+      "pending_conflict": false,
+      "field_origins": {
+        "attendance": "UNSET",
+        "grade": "MANUAL"
+      },
+      "attendance_covered_lesson_ids": [],
+      "grade_covered_lesson_ids": [
+        "LESSON_007"
+      ]
+    },
+    {
+      "id": "RECORD_TASK_MATH_G2_P1_2026-09-29_DEMO_STU_14",
+      "task_id": "TASK_MATH_G2_P1",
+      "date": "2026-09-29",
+      "student_id": "DEMO_STU_14",
+      "attendance": null,
+      "attendance_confirmed": false,
+      "classroom_grade": null,
+      "grade_handling": "EXPLICIT_EMPTY",
+      "revision": 1,
+      "source_lesson_ids": [
+        "LESSON_007"
+      ],
+      "pending_conflict": false,
+      "field_origins": {
+        "attendance": "UNSET",
+        "grade": "EXPLICIT_EMPTY"
+      },
+      "attendance_covered_lesson_ids": [],
+      "grade_covered_lesson_ids": [
+        "LESSON_007"
+      ]
+    },
+    {
+      "id": "RECORD_TASK_MATH_G2_P1_2026-09-29_DEMO_STU_15",
+      "task_id": "TASK_MATH_G2_P1",
+      "date": "2026-09-29",
+      "student_id": "DEMO_STU_15",
+      "attendance": null,
+      "attendance_confirmed": false,
+      "classroom_grade": null,
+      "grade_handling": "PENDING",
+      "revision": 1,
+      "source_lesson_ids": [
+        "LESSON_007"
+      ],
+      "pending_conflict": false,
+      "field_origins": {
+        "attendance": "UNSET",
+        "grade": "UNSET"
+      },
+      "attendance_covered_lesson_ids": [],
+      "grade_covered_lesson_ids": []
+    },
+    {
+      "id": "RECORD_TASK_MATH_G2_P1_2026-09-29_DEMO_STU_16",
+      "task_id": "TASK_MATH_G2_P1",
+      "date": "2026-09-29",
+      "student_id": "DEMO_STU_16",
+      "attendance": null,
+      "attendance_confirmed": false,
+      "classroom_grade": null,
+      "grade_handling": "PENDING",
+      "revision": 1,
+      "source_lesson_ids": [
+        "LESSON_007"
+      ],
+      "pending_conflict": false,
+      "field_origins": {
+        "attendance": "UNSET",
+        "grade": "UNSET"
+      },
+      "attendance_covered_lesson_ids": [],
+      "grade_covered_lesson_ids": []
+    },
+    {
+      "id": "RECORD_TASK_MATH_G2_P1_2026-09-29_DEMO_STU_17",
+      "task_id": "TASK_MATH_G2_P1",
+      "date": "2026-09-29",
+      "student_id": "DEMO_STU_17",
+      "attendance": null,
+      "attendance_confirmed": false,
+      "classroom_grade": null,
+      "grade_handling": "PENDING",
+      "revision": 1,
+      "source_lesson_ids": [
+        "LESSON_007"
+      ],
+      "pending_conflict": false,
+      "field_origins": {
+        "attendance": "UNSET",
+        "grade": "UNSET"
+      },
+      "attendance_covered_lesson_ids": [],
+      "grade_covered_lesson_ids": []
+    },
+    {
+      "id": "RECORD_TASK_MATH_G2_P1_2026-09-29_DEMO_STU_18",
+      "task_id": "TASK_MATH_G2_P1",
+      "date": "2026-09-29",
+      "student_id": "DEMO_STU_18",
+      "attendance": null,
+      "attendance_confirmed": false,
+      "classroom_grade": null,
+      "grade_handling": "PENDING",
+      "revision": 1,
+      "source_lesson_ids": [
+        "LESSON_007"
+      ],
+      "pending_conflict": false,
+      "field_origins": {
+        "attendance": "UNSET",
+        "grade": "UNSET"
+      },
+      "attendance_covered_lesson_ids": [],
+      "grade_covered_lesson_ids": []
+    },
+    {
+      "id": "RECORD_TASK_MATH_G2_P1_2026-09-29_DEMO_STU_19",
+      "task_id": "TASK_MATH_G2_P1",
+      "date": "2026-09-29",
+      "student_id": "DEMO_STU_19",
+      "attendance": null,
+      "attendance_confirmed": false,
+      "classroom_grade": null,
+      "grade_handling": "PENDING",
+      "revision": 1,
+      "source_lesson_ids": [
+        "LESSON_007"
+      ],
+      "pending_conflict": false,
+      "field_origins": {
+        "attendance": "UNSET",
+        "grade": "UNSET"
+      },
+      "attendance_covered_lesson_ids": [],
+      "grade_covered_lesson_ids": []
+    },
+    {
+      "id": "RECORD_TASK_MATH_G2_P1_2026-09-29_DEMO_STU_20",
+      "task_id": "TASK_MATH_G2_P1",
+      "date": "2026-09-29",
+      "student_id": "DEMO_STU_20",
+      "attendance": null,
+      "attendance_confirmed": false,
+      "classroom_grade": null,
+      "grade_handling": "PENDING",
+      "revision": 1,
+      "source_lesson_ids": [
+        "LESSON_007"
+      ],
+      "pending_conflict": false,
+      "field_origins": {
+        "attendance": "UNSET",
+        "grade": "UNSET"
+      },
+      "attendance_covered_lesson_ids": [],
+      "grade_covered_lesson_ids": []
+    },
+    {
+      "id": "RECORD_TASK_MATH_G2_S1_2026-09-30_DEMO_STU_17",
+      "task_id": "TASK_MATH_G2_S1",
+      "date": "2026-09-30",
+      "student_id": "DEMO_STU_17",
+      "attendance": "NORMAL",
+      "attendance_confirmed": true,
+      "classroom_grade": "A",
+      "grade_handling": "CONFIRMED",
+      "revision": 1,
+      "source_lesson_ids": [
+        "LESSON_009"
+      ],
+      "pending_conflict": false,
+      "field_origins": {
+        "attendance": "EXPLICIT",
+        "grade": "EXPLICIT"
+      },
+      "attendance_covered_lesson_ids": [
+        "LESSON_009"
+      ],
+      "grade_covered_lesson_ids": [
+        "LESSON_009"
+      ]
+    },
+    {
+      "id": "RECORD_TASK_MATH_G2_S1_2026-09-30_DEMO_STU_18",
+      "task_id": "TASK_MATH_G2_S1",
+      "date": "2026-09-30",
+      "student_id": "DEMO_STU_18",
+      "attendance": "NORMAL",
+      "attendance_confirmed": true,
+      "classroom_grade": "A",
+      "grade_handling": "CONFIRMED",
+      "revision": 1,
+      "source_lesson_ids": [
+        "LESSON_009"
+      ],
+      "pending_conflict": false,
+      "field_origins": {
+        "attendance": "EXPLICIT",
+        "grade": "EXPLICIT"
+      },
+      "attendance_covered_lesson_ids": [
+        "LESSON_009"
+      ],
+      "grade_covered_lesson_ids": [
+        "LESSON_009"
+      ]
+    },
+    {
+      "id": "RECORD_TASK_MATH_G2_S1_2026-09-30_DEMO_STU_19",
+      "task_id": "TASK_MATH_G2_S1",
+      "date": "2026-09-30",
+      "student_id": "DEMO_STU_19",
+      "attendance": "NORMAL",
+      "attendance_confirmed": true,
+      "classroom_grade": "A",
+      "grade_handling": "CONFIRMED",
+      "revision": 1,
+      "source_lesson_ids": [
+        "LESSON_009"
+      ],
+      "pending_conflict": false,
+      "field_origins": {
+        "attendance": "EXPLICIT",
+        "grade": "EXPLICIT"
+      },
+      "attendance_covered_lesson_ids": [
+        "LESSON_009"
+      ],
+      "grade_covered_lesson_ids": [
+        "LESSON_009"
+      ]
+    },
+    {
+      "id": "RECORD_TASK_MATH_G2_S1_2026-09-30_DEMO_STU_20",
+      "task_id": "TASK_MATH_G2_S1",
+      "date": "2026-09-30",
+      "student_id": "DEMO_STU_20",
+      "attendance": "NORMAL",
+      "attendance_confirmed": true,
+      "classroom_grade": "A",
+      "grade_handling": "CONFIRMED",
+      "revision": 1,
+      "source_lesson_ids": [
+        "LESSON_009"
+      ],
+      "pending_conflict": false,
+      "field_origins": {
+        "attendance": "EXPLICIT",
+        "grade": "EXPLICIT"
+      },
+      "attendance_covered_lesson_ids": [
+        "LESSON_009"
+      ],
+      "grade_covered_lesson_ids": [
+        "LESSON_009"
+      ]
+    },
+    {
+      "id": "RECORD_TASK_MATH_G2_S1_2026-09-30_DEMO_STU_21",
+      "task_id": "TASK_MATH_G2_S1",
+      "date": "2026-09-30",
+      "student_id": "DEMO_STU_21",
+      "attendance": "NORMAL",
+      "attendance_confirmed": true,
+      "classroom_grade": "A",
+      "grade_handling": "CONFIRMED",
+      "revision": 1,
+      "source_lesson_ids": [
+        "LESSON_009"
+      ],
+      "pending_conflict": false,
+      "field_origins": {
+        "attendance": "EXPLICIT",
+        "grade": "EXPLICIT"
+      },
+      "attendance_covered_lesson_ids": [
+        "LESSON_009"
+      ],
+      "grade_covered_lesson_ids": [
+        "LESSON_009"
+      ]
+    },
+    {
+      "id": "RECORD_TASK_MATH_G2_S1_2026-09-30_DEMO_STU_22",
+      "task_id": "TASK_MATH_G2_S1",
+      "date": "2026-09-30",
+      "student_id": "DEMO_STU_22",
+      "attendance": "NORMAL",
+      "attendance_confirmed": true,
+      "classroom_grade": "A",
+      "grade_handling": "CONFIRMED",
+      "revision": 1,
+      "source_lesson_ids": [
+        "LESSON_009"
+      ],
+      "pending_conflict": false,
+      "field_origins": {
+        "attendance": "EXPLICIT",
+        "grade": "EXPLICIT"
+      },
+      "attendance_covered_lesson_ids": [
+        "LESSON_009"
+      ],
+      "grade_covered_lesson_ids": [
+        "LESSON_009"
+      ]
+    },
+    {
+      "id": "RECORD_TASK_MATH_G2_S1_2026-09-30_DEMO_STU_23",
+      "task_id": "TASK_MATH_G2_S1",
+      "date": "2026-09-30",
+      "student_id": "DEMO_STU_23",
+      "attendance": "NORMAL",
+      "attendance_confirmed": true,
+      "classroom_grade": "A",
+      "grade_handling": "CONFIRMED",
+      "revision": 1,
+      "source_lesson_ids": [
+        "LESSON_009"
+      ],
+      "pending_conflict": false,
+      "field_origins": {
+        "attendance": "EXPLICIT",
+        "grade": "EXPLICIT"
+      },
+      "attendance_covered_lesson_ids": [
+        "LESSON_009"
+      ],
+      "grade_covered_lesson_ids": [
+        "LESSON_009"
+      ]
+    },
+    {
+      "id": "RECORD_TASK_MATH_G2_S1_2026-09-30_DEMO_STU_24",
+      "task_id": "TASK_MATH_G2_S1",
+      "date": "2026-09-30",
+      "student_id": "DEMO_STU_24",
+      "attendance": "NORMAL",
+      "attendance_confirmed": true,
+      "classroom_grade": "A",
+      "grade_handling": "CONFIRMED",
+      "revision": 1,
+      "source_lesson_ids": [
+        "LESSON_009"
+      ],
+      "pending_conflict": false,
+      "field_origins": {
+        "attendance": "EXPLICIT",
+        "grade": "EXPLICIT"
+      },
+      "attendance_covered_lesson_ids": [
+        "LESSON_009"
+      ],
+      "grade_covered_lesson_ids": [
+        "LESSON_009"
+      ]
+    }
+  ],
+  "leave_sources": [
+    {
+      "id": "LEAVE_001",
+      "student_id": "DEMO_STU_02",
+      "date": "2026-09-28",
+      "kind": "APPROVED_FULL_DAY",
+      "internal_reason": "事假",
+      "outbound_reason": null
+    }
+  ],
+  "assignments": [
+    {
+      "id": "HW_MATH_P1",
+      "task_id": "TASK_MATH_G1_P1",
+      "title": "二次函数练习",
+      "issued_at": "2026-09-28T12:00:00+08:00",
+      "deadline": "2026-10-01T12:00:00+08:00",
+      "recipient_ids": [
+        "DEMO_STU_01",
+        "DEMO_STU_02",
+        "DEMO_STU_03",
+        "DEMO_STU_04",
+        "DEMO_STU_05",
+        "DEMO_STU_06",
+        "DEMO_STU_07",
+        "DEMO_STU_08",
+        "DEMO_STU_09",
+        "DEMO_STU_10",
+        "DEMO_STU_11",
+        "DEMO_STU_12",
+        "DEMO_STU_13",
+        "DEMO_STU_14",
+        "DEMO_STU_15",
+        "DEMO_STU_16"
+      ],
+      "default_requirement": "REQUIRED",
+      "is_published": true,
+      "results": [
+        {
+          "student_id": "DEMO_STU_01",
+          "participation": "REQUIRED",
+          "submission": "ON_TIME",
+          "submission_confirmed": true,
+          "quality": "A",
+          "quality_confirmed": true
+        },
+        {
+          "student_id": "DEMO_STU_02",
+          "participation": "EXEMPT",
+          "submission": null,
+          "quality": null
+        },
+        {
+          "student_id": "DEMO_STU_03",
+          "participation": "REQUIRED",
+          "submission": "SUBMITTED",
+          "submission_confirmed": true,
+          "quality": null,
+          "quality_confirmed": false
+        }
+      ]
+    },
+    {
+      "id": "HW_CS",
+      "task_id": "TASK_CS_WHOLE",
+      "title": "程序跟踪练习",
+      "issued_at": "2026-09-25T08:00:00+08:00",
+      "deadline": "2026-09-28T08:00:00+08:00",
+      "recipient_ids": [
+        "DEMO_STU_01",
+        "DEMO_STU_02",
+        "DEMO_STU_03",
+        "DEMO_STU_04",
+        "DEMO_STU_17",
+        "DEMO_STU_18",
+        "DEMO_STU_19",
+        "DEMO_STU_20",
+        "DEMO_STU_21",
+        "DEMO_STU_22",
+        "DEMO_STU_23",
+        "DEMO_STU_24"
+      ],
+      "default_requirement": "REQUIRED",
+      "is_published": true,
+      "results": [
+        {
+          "student_id": "DEMO_STU_01",
+          "participation": "REQUIRED",
+          "submission": "ON_TIME",
+          "submission_confirmed": true,
+          "quality": "A",
+          "quality_confirmed": true
+        },
+        {
+          "student_id": "DEMO_STU_17",
+          "participation": "REQUIRED",
+          "submission": "MISSING",
+          "submission_confirmed": true,
+          "quality": null,
+          "quality_confirmed": false
+        },
+        {
+          "student_id": "DEMO_STU_18",
+          "participation": "REQUIRED",
+          "submission": "LATE",
+          "submission_confirmed": true,
+          "quality": "A",
+          "quality_confirmed": true
+        },
+        {
+          "student_id": "DEMO_STU_03",
+          "participation": "OPTIONAL_NOT_PARTICIPATING",
+          "submission": null,
+          "quality": null
+        }
+      ],
+      "requirement_overrides": [
+        {
+          "student_id": "DEMO_STU_03",
+          "requirement": "OPTIONAL",
+          "explicitly_set": true
+        }
+      ]
+    },
+    {
+      "id": "HW_S1",
+      "task_id": "TASK_MATH_G2_S1",
+      "title": "统计调查（选做）",
+      "issued_at": "2026-09-30T12:00:00+08:00",
+      "deadline": null,
+      "recipient_ids": [
+        "DEMO_STU_17",
+        "DEMO_STU_18",
+        "DEMO_STU_19",
+        "DEMO_STU_20",
+        "DEMO_STU_21",
+        "DEMO_STU_22",
+        "DEMO_STU_23",
+        "DEMO_STU_24"
+      ],
+      "default_requirement": "OPTIONAL",
+      "is_published": true,
+      "results": []
+    }
+  ],
+  "plans": [
+    {
+      "id": "PLAN_MATH_P1",
+      "task_id": "TASK_MATH_G1_P1",
+      "state": "ADOPTED",
+      "items": [
+        {
+          "title": "二次函数",
+          "content_points": [
+            "图像特征",
+            "配方法"
+          ],
+          "estimated_lessons": 6,
+          "objectives": null,
+          "notes": null
+        }
+      ],
+      "estimated_progress": 0.4,
+      "estimated_progress_is_observed_fact": false
+    }
+  ],
+  "publications": [
+    {
+      "id": "PUB_S1_V1",
+      "task_id": "TASK_MATH_G2_S1",
+      "feedback_period_id": "WEEK_DEMO_5",
+      "revision": 1,
+      "published_at": "2026-09-30T17:00:00+08:00",
+      "classroom_coverage": [
+        "2026-09-30"
+      ],
+      "assignment_ids": [],
+      "audience_reference_date": "2026-09-30",
+      "student_ids": [
+        "DEMO_STU_17",
+        "DEMO_STU_18",
+        "DEMO_STU_19",
+        "DEMO_STU_20",
+        "DEMO_STU_21",
+        "DEMO_STU_22",
+        "DEMO_STU_23",
+        "DEMO_STU_24"
+      ],
+      "audience_homeroom_ids": {
+        "HR_2": [
+          "DEMO_STU_17",
+          "DEMO_STU_18",
+          "DEMO_STU_19",
+          "DEMO_STU_20",
+          "DEMO_STU_21",
+          "DEMO_STU_22",
+          "DEMO_STU_23",
+          "DEMO_STU_24"
+        ]
+      },
+      "public_summary": "本次完成数据整理方法的练习。",
+      "classroom_snapshot": [
+        {
+          "student_id": "DEMO_STU_17",
+          "date": "2026-09-30",
+          "attendance": "NORMAL",
+          "classroom_grade": "A"
+        },
+        {
+          "student_id": "DEMO_STU_18",
+          "date": "2026-09-30",
+          "attendance": "NORMAL",
+          "classroom_grade": "A"
+        },
+        {
+          "student_id": "DEMO_STU_19",
+          "date": "2026-09-30",
+          "attendance": "NORMAL",
+          "classroom_grade": "A"
+        },
+        {
+          "student_id": "DEMO_STU_20",
+          "date": "2026-09-30",
+          "attendance": "NORMAL",
+          "classroom_grade": "A"
+        },
+        {
+          "student_id": "DEMO_STU_21",
+          "date": "2026-09-30",
+          "attendance": "NORMAL",
+          "classroom_grade": "A"
+        },
+        {
+          "student_id": "DEMO_STU_22",
+          "date": "2026-09-30",
+          "attendance": "NORMAL",
+          "classroom_grade": "A"
+        },
+        {
+          "student_id": "DEMO_STU_23",
+          "date": "2026-09-30",
+          "attendance": "NORMAL",
+          "classroom_grade": "A"
+        },
+        {
+          "student_id": "DEMO_STU_24",
+          "date": "2026-09-30",
+          "attendance": "NORMAL",
+          "classroom_grade": "A"
+        }
+      ],
+      "delivery_status": "NOT_SENT",
+      "read_status": "NOT_AVAILABLE_IN_PROTOTYPE"
+    }
+  ],
+  "expected": {
+    "visible_task_ids": [
+      "TASK_CS_WHOLE",
+      "TASK_MATH_G1_P1",
+      "TASK_MATH_G2_P1",
+      "TASK_MATH_G2_S1"
+    ],
+    "own_unique_students": 24,
+    "sum_task_student_counts_not_unique": 44,
+    "elapsed_total_records": 56,
+    "elapsed_confirmed_records": 42,
+    "whole_week_all_scheduled_records": 120,
+    "class_unique_student_counts": {
+      "CLASS_CS_G1_2": 12,
+      "CLASS_MATH_G1_1": 20,
+      "CLASS_MATH_G1_2": 12
+    },
+    "weekend_lesson_ids": [
+      "LESSON_006"
+    ],
+    "math_p1_first_publication_homeroom_counts": {
+      "HR_1": 12,
+      "HR_2": 4
+    },
+    "lesson_display_labels": {
+      "LESSON_001": null,
+      "LESSON_002": null,
+      "LESSON_003": "纯数1",
+      "LESSON_004": "专题复习",
+      "LESSON_005": "P1",
+      "LESSON_006": "纯数1",
+      "LESSON_007": "P1",
+      "LESSON_008": "P1",
+      "LESSON_009": "S1",
+      "LESSON_010": "S1"
+    },
+    "own_simple_schedule_card_count": 10,
+    "per_task": {
+      "TASK_CS_WHOLE": {
+        "week_lesson_count": 2,
+        "elapsed_confirmed": 18,
+        "elapsed_total": 24
+      },
+      "TASK_MATH_G1_P1": {
+        "week_lesson_count": 4,
+        "elapsed_confirmed": 16,
+        "elapsed_total": 16
+      },
+      "TASK_MATH_G2_P1": {
+        "week_lesson_count": 2,
+        "elapsed_confirmed": 0,
+        "elapsed_total": 8
+      },
+      "TASK_MATH_G2_S1": {
+        "week_lesson_count": 2,
+        "elapsed_confirmed": 8,
+        "elapsed_total": 8
+      },
+      "TASK_OTHER_M1": {
+        "week_lesson_count": 1
+      }
+    }
+  },
+  "required_scenario_variants": [
+    "同一教学日连续两节：日记录不重复，细节保留",
+    "部分课次请假与实际出勤混合",
+    "学期中加入和退出：按日期适用",
+    "周末补课及取消：真实日期投影",
+    "保存失败、旧目标迟到响应",
+    "后续补发布和更正不改变PUB_S1_V1",
+    "缺家长联系方式但可形成本人结果",
+    "其他教师/学校目标显式拒绝",
+    "当前日期推进后分母只增加新增已发生有效记录",
+    "当前筛选学生确认后不突然关闭抽屉；下一位来自本次合法序列",
+    "同名P1保存慢响应晚到，不能覆盖已切换的另一个班",
+    "补发新增日期时保留此前未修改的已发布覆盖，旧版始终不变",
+    "原课次已记录后再调课，只更新有效安排并提示核对，不静默移动历史反馈",
+    "出图失败重试不重复发布，不把下载记录当家长已读"
+  ],
+  "effective_dictionary": {
+    "classroom": "A＝优秀；其他值由当前有效字典提供。",
+    "homework": "A＝优秀；缺少结果不自动填A。"
+  },
+  "task_display_preferences": [
+    {
+      "school_id": "SCHOOL_TGS_DEMO",
+      "teacher_id": "TEACHER_LYNN",
+      "task_id": "TASK_MATH_G1_P1",
+      "custom_enabled": true,
+      "text": "纯数1"
+    },
+    {
+      "school_id": "SCHOOL_TGS_DEMO",
+      "teacher_id": "TEACHER_LYNN",
+      "task_id": "TASK_MATH_G2_P1",
+      "custom_enabled": false,
+      "text": "二班纯数"
+    },
+    {
+      "school_id": "SCHOOL_TGS_DEMO",
+      "teacher_id": "TEACHER_LYNN",
+      "task_id": "TASK_CS_WHOLE",
+      "custom_enabled": false,
+      "text": ""
+    },
+    {
+      "school_id": "SCHOOL_TGS_DEMO",
+      "teacher_id": "TEACHER_PEER",
+      "task_id": "TASK_OTHER_M1",
+      "custom_enabled": true,
+      "text": "力学"
+    }
+  ],
+  "lesson_display_overrides": [
+    {
+      "school_id": "SCHOOL_TGS_DEMO",
+      "teacher_id": "TEACHER_LYNN",
+      "lesson_id": "LESSON_004",
+      "custom_enabled": true,
+      "text": "专题复习"
+    },
+    {
+      "school_id": "SCHOOL_TGS_DEMO",
+      "teacher_id": "TEACHER_LYNN",
+      "lesson_id": "LESSON_005",
+      "custom_enabled": false,
+      "text": "仅保留不使用的个人文字"
+    }
+  ],
+  "per_student_confirmation_cases": [
+    {
+      "id": "CONFIRM_CS_STU19",
+      "task_id": "TASK_CS_WHOLE",
+      "student_id": "DEMO_STU_19",
+      "expected_record_ids": [
+        "RECORD_TASK_CS_WHOLE_2026-09-30_DEMO_STU_19"
+      ],
+      "explanation": "周一已处理不覆盖，周三空白可以处理，只限本学生；作业不受影响。"
+    },
+    {
+      "id": "CONFIRM_LEAVE_SKIP",
+      "task_id": "TASK_MATH_G1_P1",
+      "student_id": "DEMO_STU_02",
+      "expected_record_ids": [],
+      "explanation": "已确认请假保留，未来不提前处理。"
+    },
+    {
+      "id": "CONFIRM_MANUAL_SKIP",
+      "task_id": "TASK_MATH_G2_P1",
+      "student_id": "DEMO_STU_13",
+      "expected_record_ids": [],
+      "explanation": "原人工B必须保留，需要核对的出勤不能借常规批量自动覆盖整项。"
+    },
+    {
+      "id": "CONFIRM_EXPLICIT_EMPTY_SKIP",
+      "task_id": "TASK_MATH_G2_P1",
+      "student_id": "DEMO_STU_14",
+      "expected_record_ids": [],
+      "explanation": "明确清空不被默认A重填。"
+    },
+    {
+      "id": "CONFIRM_G2_STU15",
+      "task_id": "TASK_MATH_G2_P1",
+      "student_id": "DEMO_STU_15",
+      "expected_record_ids": [
+        "RECORD_TASK_MATH_G2_P1_2026-09-29_DEMO_STU_15"
+      ],
+      "explanation": "当前只有周二可确认，周五不提前处理；其他学生不变。"
+    }
+  ],
+  "scenario_variants": [
+    {
+      "id": "ADJACENT_LESSONS",
+      "apply_to": "base_only_independently",
+      "add_period_definitions": [
+        {
+          "id": "PERIOD_2",
+          "number": 2,
+          "start": "08:50",
+          "end": "09:30"
+        }
+      ],
+      "add_lessons": [
+        {
+          "id": "LESSON_CS_WED_SECOND",
+          "task_id": "TASK_CS_WHOLE",
+          "actual_date": "2026-09-30",
+          "period_id": "PERIOD_2",
+          "room_id": "ROOM_CS",
+          "status": "EFFECTIVE",
+          "applied": true,
+          "normative_source": "DEMO_SCHOOL_SCHEDULE",
+          "is_non_teaching_activity": false
+        }
+      ],
+      "expected": {
+        "own_simple_schedule_card_count": 11,
+        "cs_week_lesson_count": 3,
+        "cs_teaching_day_count": 2,
+        "cs_week_student_day_total": 24
+      },
+      "instruction": "此变体新增课次必须成为同日记录的原课次来源。连堂显示两张卡；不要把24个日记录变成36个。未来/确认覆盖另按实际来源核对，不能盲目沿用基线已确认状态。"
+    },
+    {
+      "id": "SEPARATED_LESSONS",
+      "apply_to": "base_only_independently",
+      "add_lessons": [
+        {
+          "id": "LESSON_P1_MON_FIFTH",
+          "task_id": "TASK_MATH_G1_P1",
+          "actual_date": "2026-09-28",
+          "period_id": "PERIOD_5",
+          "room_id": "ROOM_M1",
+          "status": "EFFECTIVE",
+          "applied": true,
+          "normative_source": "DEMO_SCHOOL_SCHEDULE",
+          "is_non_teaching_activity": false
+        }
+      ],
+      "expected": {
+        "own_simple_schedule_card_count": 11,
+        "g1p1_week_lesson_count": 5,
+        "g1p1_teaching_day_count": 4,
+        "g1p1_week_student_day_total": 64
+      },
+      "instruction": "第3、5节各自一张卡，各自时间；都打开同一个16人P1整周反馈。对既有日记录补来源时核对，不自动伪造新课次事实。"
+    },
+    {
+      "id": "MIDDAY_PARTIAL",
+      "apply_to": "ADJACENT_LESSONS",
+      "clock_now": "2026-09-30T08:45:00+08:00",
+      "instruction": "切换到此验证时间应重建时间适用的记录状态，不保留基线18点才发生的确认。08:40结束的第一课可以核对，08:50的第二课不可确认；随后设置第二课例外时第一课不被改写。"
+    },
+    {
+      "id": "NEXT_WEEK_NAVIGATION",
+      "apply_to": "base_only_independently",
+      "instruction": "在同源排课store建立另一周有效安排（可以复用重复规则展开），从未来周课卡进入该未来反馈周期；不复制基线课堂事实、作业任务或已发布快照，不回默认第5周。"
+    }
+  ],
+  "display_test_cases": [
+    {
+      "normative": "P1",
+      "default": {
+        "custom_enabled": true,
+        "text": "纯数1"
+      },
+      "override": null,
+      "expected": "纯数1"
+    },
+    {
+      "normative": "P1",
+      "default": {
+        "custom_enabled": true,
+        "text": "纯数1"
+      },
+      "override": {
+        "custom_enabled": false,
+        "text": "保留文字"
+      },
+      "expected": "P1"
+    },
+    {
+      "normative": "P1",
+      "default": {
+        "custom_enabled": true,
+        "text": "纯数1"
+      },
+      "override": {
+        "custom_enabled": true,
+        "text": "专题复习"
+      },
+      "expected": "专题复习"
+    },
+    {
+      "normative": null,
+      "default": {
+        "custom_enabled": false,
+        "text": "保留文字"
+      },
+      "override": null,
+      "expected": null
+    },
+    {
+      "normative": null,
+      "default": {
+        "custom_enabled": true,
+        "text": "程序设计"
+      },
+      "override": null,
+      "expected": "程序设计"
+    },
+    {
+      "normative": "CIE 9709 P1",
+      "default": {
+        "custom_enabled": false,
+        "text": "纯数1"
+      },
+      "override": null,
+      "expected": "CIE 9709 P1"
+    },
+    {
+      "normative": "P1",
+      "default": {
+        "custom_enabled": true,
+        "text": " 　 "
+      },
+      "override": null,
+      "expected_error": "请输入自定义分工"
+    }
+  ],
+  "prototype_relation_notes": {
+    "dates": "valid_through仅是本fixture含当日的边界；实现须按真实代码统一闭开区间转换。",
+    "classroom_sources": "source_lesson_ids描述适用来源；attendance_covered_lesson_ids和grade_covered_lesson_ids是被明确处理的来源。新增来源不可自动加入coverage。",
+    "membership": "基础场景名单整期稳定；入班/退出变体必须按课次发生时间调整适用性，不能按当前名单重算历史。",
+    "source_material_not_security_proof": "允许/拒绝关系仅演示原型授权逻辑，不是产品后端授权方案。"
+  },
+  "navigation_reference_cases": [
+    {
+      "case": "same_task_many_lessons",
+      "lesson_ids": [
+        "LESSON_003",
+        "LESSON_004",
+        "LESSON_005",
+        "LESSON_006"
+      ],
+      "expected_task_id": "TASK_MATH_G1_P1",
+      "expected_period_id": "WEEK_DEMO_5",
+      "editor_scope": "WHOLE_FEEDBACK_PERIOD",
+      "source_lesson_is_filter": false
+    },
+    {
+      "case": "whole_course",
+      "lesson_ids": [
+        "LESSON_001",
+        "LESSON_002"
+      ],
+      "expected_task_id": "TASK_CS_WHOLE",
+      "expected_duty_id": null,
+      "expected_students": 12
+    },
+    {
+      "case": "other_teacher",
+      "task_id": "TASK_OTHER_M1",
+      "actor_id": "TEACHER_LYNN",
+      "expected": "DENIED_NO_FALLBACK"
+    },
+    {
+      "case": "distinct_p1",
+      "task_ids": [
+        "TASK_MATH_G1_P1",
+        "TASK_MATH_G2_P1"
+      ],
+      "expected": "DISTINCT_CONTEXTS_NOT_DISPLAY_TEXT_KEYS"
+    }
+  ]
+}

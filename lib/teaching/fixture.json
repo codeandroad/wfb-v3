@@ -1,0 +1,2066 @@
+{
+  "fixtureId": "PROTOTYPE_TEACHING_UI_20260926_R2",
+  "createdDate": "2026-09-26",
+  "synthetic": true,
+  "note": "显式重建的原型合成状态。教学事实沿用同日已确认新设计，新增页面动作与合法模拟范围；不是生产身份/数据库数据。",
+  "school": {
+    "id": "DEMO-SCHOOL",
+    "name": "合成教学设计学校",
+    "timeZone": "Asia/Shanghai"
+  },
+  "semester": {
+    "id": "2026T1",
+    "start": "2026-09-01",
+    "endExclusive": "2027-02-01"
+  },
+  "simulatedNow": "2026-09-26T09:00:00+08:00",
+  "previewWeekStart": "2026-09-28",
+  "systemPeriodVersion": "DEMO-PERIODS-R1",
+  "periods": [
+    {
+      "id": "P01",
+      "label": "第1节",
+      "ordinal": 1,
+      "start": "08:00",
+      "end": "08:40",
+      "segment": "day"
+    },
+    {
+      "id": "P02",
+      "label": "第2节",
+      "ordinal": 2,
+      "start": "08:50",
+      "end": "09:30",
+      "segment": "day"
+    },
+    {
+      "id": "P03",
+      "label": "第3节",
+      "ordinal": 3,
+      "start": "09:40",
+      "end": "10:20",
+      "segment": "day"
+    },
+    {
+      "id": "P04",
+      "label": "第4节",
+      "ordinal": 4,
+      "start": "10:30",
+      "end": "11:10",
+      "segment": "day"
+    },
+    {
+      "id": "P05",
+      "label": "第5节",
+      "ordinal": 5,
+      "start": "11:20",
+      "end": "12:00",
+      "segment": "day"
+    },
+    {
+      "id": "P06",
+      "label": "第6节",
+      "ordinal": 6,
+      "start": "12:10",
+      "end": "12:50",
+      "segment": "midday"
+    },
+    {
+      "id": "P07",
+      "label": "第7节",
+      "ordinal": 7,
+      "start": "14:00",
+      "end": "14:40",
+      "segment": "day"
+    },
+    {
+      "id": "P08",
+      "label": "第8节",
+      "ordinal": 8,
+      "start": "14:50",
+      "end": "15:30",
+      "segment": "day"
+    },
+    {
+      "id": "P09",
+      "label": "第9节",
+      "ordinal": 9,
+      "start": "15:40",
+      "end": "16:20",
+      "segment": "day"
+    },
+    {
+      "id": "P10",
+      "label": "第10节",
+      "ordinal": 10,
+      "start": "16:30",
+      "end": "17:10",
+      "segment": "day"
+    },
+    {
+      "id": "P11",
+      "label": "第11节",
+      "ordinal": 11,
+      "start": "18:30",
+      "end": "19:10",
+      "segment": "evening"
+    },
+    {
+      "id": "P12",
+      "label": "第12节",
+      "ordinal": 12,
+      "start": "19:20",
+      "end": "20:00",
+      "segment": "evening"
+    },
+    {
+      "id": "P13",
+      "label": "第13节",
+      "ordinal": 13,
+      "start": "20:10",
+      "end": "20:50",
+      "segment": "evening"
+    },
+    {
+      "id": "P14",
+      "label": "第14节",
+      "ordinal": 14,
+      "start": "21:00",
+      "end": "21:40",
+      "segment": "evening"
+    }
+  ],
+  "homerooms": [
+    {
+      "id": "H1",
+      "name": "高一1班"
+    },
+    {
+      "id": "H2",
+      "name": "高一2班"
+    }
+  ],
+  "subjects": [
+    {
+      "id": "MATH",
+      "name": "数学"
+    },
+    {
+      "id": "PHYS",
+      "name": "物理"
+    },
+    {
+      "id": "CHEM",
+      "name": "化学"
+    },
+    {
+      "id": "BIO",
+      "name": "生物"
+    },
+    {
+      "id": "CS",
+      "name": "计算机"
+    },
+    {
+      "id": "ECON",
+      "name": "经济"
+    },
+    {
+      "id": "ENG",
+      "name": "英语"
+    },
+    {
+      "id": "PSY",
+      "name": "心理学"
+    },
+    {
+      "id": "CHIN",
+      "name": "中文"
+    }
+  ],
+  "courses": [
+    {
+      "id": "C-MATH",
+      "subjectId": "MATH",
+      "name": "CIE 数学",
+      "syntheticReferenceOnly": true
+    },
+    {
+      "id": "E-MATH",
+      "subjectId": "MATH",
+      "name": "Edexcel IAL 数学",
+      "syntheticReferenceOnly": true
+    },
+    {
+      "id": "C-PHYS",
+      "subjectId": "PHYS",
+      "name": "CIE 物理",
+      "syntheticReferenceOnly": true
+    },
+    {
+      "id": "C-CHEM",
+      "subjectId": "CHEM",
+      "name": "CIE 化学",
+      "syntheticReferenceOnly": true
+    },
+    {
+      "id": "C-ECON",
+      "subjectId": "ECON",
+      "name": "CIE 经济",
+      "syntheticReferenceOnly": true
+    },
+    {
+      "id": "C-CS",
+      "subjectId": "CS",
+      "name": "CIE 计算机科学",
+      "syntheticReferenceOnly": true
+    }
+  ],
+  "teachers": [
+    {
+      "id": "T-LIN",
+      "name": "林老师",
+      "accountAvailable": true
+    },
+    {
+      "id": "T-ZHOU",
+      "name": "周老师",
+      "accountAvailable": true
+    },
+    {
+      "id": "T-CHEN",
+      "name": "陈老师",
+      "accountAvailable": true
+    },
+    {
+      "id": "T-WU",
+      "name": "吴老师",
+      "accountAvailable": true
+    },
+    {
+      "id": "T-SUN",
+      "name": "孙老师",
+      "accountAvailable": true
+    }
+  ],
+  "students": [
+    {
+      "id": "H1S01",
+      "name": "示例学生01",
+      "homeroomId": "H1"
+    },
+    {
+      "id": "H1S02",
+      "name": "示例学生02",
+      "homeroomId": "H1"
+    },
+    {
+      "id": "H1S03",
+      "name": "示例学生03",
+      "homeroomId": "H1"
+    },
+    {
+      "id": "H1S04",
+      "name": "示例学生04",
+      "homeroomId": "H1"
+    },
+    {
+      "id": "H1S05",
+      "name": "示例学生05",
+      "homeroomId": "H1"
+    },
+    {
+      "id": "H1S06",
+      "name": "示例学生06",
+      "homeroomId": "H1"
+    },
+    {
+      "id": "H1S07",
+      "name": "示例学生07",
+      "homeroomId": "H1"
+    },
+    {
+      "id": "H1S08",
+      "name": "示例学生08",
+      "homeroomId": "H1"
+    },
+    {
+      "id": "H1S09",
+      "name": "示例学生09",
+      "homeroomId": "H1"
+    },
+    {
+      "id": "H1S10",
+      "name": "示例学生10",
+      "homeroomId": "H1"
+    },
+    {
+      "id": "H1S11",
+      "name": "示例学生11",
+      "homeroomId": "H1"
+    },
+    {
+      "id": "H1S12",
+      "name": "示例学生12",
+      "homeroomId": "H1"
+    },
+    {
+      "id": "H1S13",
+      "name": "示例学生13",
+      "homeroomId": "H1"
+    },
+    {
+      "id": "H1S14",
+      "name": "示例学生14",
+      "homeroomId": "H1"
+    },
+    {
+      "id": "H1S15",
+      "name": "示例学生15",
+      "homeroomId": "H1"
+    },
+    {
+      "id": "H1S16",
+      "name": "示例学生16",
+      "homeroomId": "H1"
+    },
+    {
+      "id": "H1S17",
+      "name": "示例学生17",
+      "homeroomId": "H1"
+    },
+    {
+      "id": "H1S18",
+      "name": "示例学生18",
+      "homeroomId": "H1"
+    },
+    {
+      "id": "H1S19",
+      "name": "示例学生19",
+      "homeroomId": "H1"
+    },
+    {
+      "id": "H1S20",
+      "name": "示例学生20",
+      "homeroomId": "H1"
+    },
+    {
+      "id": "H2S01",
+      "name": "示例学生21",
+      "homeroomId": "H2"
+    },
+    {
+      "id": "H2S02",
+      "name": "示例学生22",
+      "homeroomId": "H2"
+    },
+    {
+      "id": "H2S03",
+      "name": "示例学生23",
+      "homeroomId": "H2"
+    },
+    {
+      "id": "H2S04",
+      "name": "示例学生24",
+      "homeroomId": "H2"
+    },
+    {
+      "id": "H2S05",
+      "name": "示例学生25",
+      "homeroomId": "H2"
+    },
+    {
+      "id": "H2S06",
+      "name": "示例学生26",
+      "homeroomId": "H2"
+    },
+    {
+      "id": "H2S07",
+      "name": "示例学生27",
+      "homeroomId": "H2"
+    },
+    {
+      "id": "H2S08",
+      "name": "示例学生28",
+      "homeroomId": "H2"
+    },
+    {
+      "id": "H2S09",
+      "name": "示例学生29",
+      "homeroomId": "H2"
+    },
+    {
+      "id": "H2S10",
+      "name": "示例学生30",
+      "homeroomId": "H2"
+    },
+    {
+      "id": "H2S11",
+      "name": "示例学生31",
+      "homeroomId": "H2"
+    },
+    {
+      "id": "H2S12",
+      "name": "示例学生32",
+      "homeroomId": "H2"
+    }
+  ],
+  "teachingClasses": [
+    {
+      "id": "MAT1",
+      "name": "高一1班 • 数学",
+      "subjectId": "MATH",
+      "placementHomeroomId": "H1",
+      "courseId": "C-MATH",
+      "studentIds": [
+        "H1S01",
+        "H1S02",
+        "H1S03",
+        "H1S04",
+        "H1S05",
+        "H1S06",
+        "H1S07",
+        "H1S08",
+        "H1S09",
+        "H1S10",
+        "H1S11",
+        "H1S12",
+        "H2S01",
+        "H2S02",
+        "H2S03",
+        "H2S04"
+      ],
+      "wholeTeacherIds": [],
+      "validFrom": "2026-09-01",
+      "validToExclusive": "2027-02-01",
+      "courseResponsibleTeacherId": "T-LIN",
+      "sharedShortName": null
+    },
+    {
+      "id": "MAT2",
+      "name": "高一2班 • 数学",
+      "subjectId": "MATH",
+      "placementHomeroomId": "H2",
+      "courseId": "E-MATH",
+      "studentIds": [
+        "H2S05",
+        "H2S06",
+        "H2S07",
+        "H2S08",
+        "H2S09",
+        "H2S10",
+        "H2S11",
+        "H2S12"
+      ],
+      "wholeTeacherIds": [],
+      "validFrom": "2026-09-01",
+      "validToExclusive": "2027-02-01",
+      "courseResponsibleTeacherId": "T-LIN",
+      "sharedShortName": null
+    },
+    {
+      "id": "PHY1",
+      "name": "高一1班 • 物理",
+      "subjectId": "PHYS",
+      "placementHomeroomId": "H1",
+      "courseId": "C-PHYS",
+      "studentIds": [
+        "H1S01",
+        "H1S02",
+        "H1S03",
+        "H1S04",
+        "H1S05",
+        "H1S06",
+        "H1S07",
+        "H1S08",
+        "H1S09",
+        "H1S10",
+        "H1S11",
+        "H1S12",
+        "H1S13",
+        "H1S14",
+        "H1S15",
+        "H1S16",
+        "H1S17",
+        "H1S18",
+        "H1S19",
+        "H1S20"
+      ],
+      "wholeTeacherIds": [
+        "T-ZHOU"
+      ],
+      "validFrom": "2026-09-01",
+      "validToExclusive": "2027-02-01",
+      "courseResponsibleTeacherId": "T-ZHOU",
+      "sharedShortName": null
+    },
+    {
+      "id": "CHEM1",
+      "name": "高一1班 • 化学",
+      "subjectId": "CHEM",
+      "placementHomeroomId": "H1",
+      "courseId": "C-CHEM",
+      "studentIds": [
+        "H1S01",
+        "H1S02",
+        "H1S03",
+        "H1S04",
+        "H1S05",
+        "H1S06",
+        "H1S07",
+        "H1S08",
+        "H1S09",
+        "H1S10",
+        "H1S11",
+        "H1S12",
+        "H1S13",
+        "H1S14",
+        "H1S15",
+        "H1S16",
+        "H1S17",
+        "H1S18",
+        "H1S19",
+        "H1S20"
+      ],
+      "wholeTeacherIds": [
+        "T-CHEN"
+      ],
+      "validFrom": "2026-09-01",
+      "validToExclusive": "2027-02-01",
+      "courseResponsibleTeacherId": "T-CHEN",
+      "sharedShortName": null
+    },
+    {
+      "id": "ECO1",
+      "name": "高一1班 • 经济",
+      "subjectId": "ECON",
+      "placementHomeroomId": "H1",
+      "courseId": "C-ECON",
+      "studentIds": [
+        "H1S01",
+        "H1S02",
+        "H1S03",
+        "H1S04",
+        "H1S05",
+        "H1S06",
+        "H1S07",
+        "H1S08",
+        "H1S09",
+        "H1S10",
+        "H1S11",
+        "H1S12",
+        "H1S13",
+        "H1S14",
+        "H1S15",
+        "H1S16",
+        "H1S17",
+        "H1S18",
+        "H1S19",
+        "H1S20"
+      ],
+      "wholeTeacherIds": [
+        "T-WU"
+      ],
+      "validFrom": "2026-09-01",
+      "validToExclusive": "2027-02-01",
+      "courseResponsibleTeacherId": "T-WU",
+      "sharedShortName": null
+    },
+    {
+      "id": "CS2",
+      "name": "高一2班 • 计算机",
+      "subjectId": "CS",
+      "placementHomeroomId": "H2",
+      "courseId": "C-CS",
+      "studentIds": [
+        "H2S01",
+        "H2S02",
+        "H2S03",
+        "H2S04",
+        "H2S05",
+        "H2S06",
+        "H2S07",
+        "H2S08",
+        "H2S09",
+        "H2S10",
+        "H2S11",
+        "H2S12"
+      ],
+      "wholeTeacherIds": [
+        "T-LIN"
+      ],
+      "validFrom": "2026-09-01",
+      "validToExclusive": "2027-02-01",
+      "courseResponsibleTeacherId": "T-LIN",
+      "sharedShortName": null
+    },
+    {
+      "id": "ENGX",
+      "name": "英语强化B班",
+      "subjectId": "ENG",
+      "placementHomeroomId": null,
+      "courseId": null,
+      "studentIds": [
+        "H1S13",
+        "H1S14",
+        "H1S15",
+        "H1S16",
+        "H1S17",
+        "H1S18",
+        "H1S19",
+        "H1S20"
+      ],
+      "wholeTeacherIds": [
+        "T-SUN"
+      ],
+      "validFrom": "2026-09-01",
+      "validToExclusive": "2027-02-01",
+      "courseResponsibleTeacherId": "T-SUN",
+      "sharedShortName": null
+    },
+    {
+      "id": "COMP",
+      "name": "数学竞赛A班",
+      "subjectId": "MATH",
+      "placementHomeroomId": null,
+      "courseId": null,
+      "studentIds": [
+        "H1S01",
+        "H1S08",
+        "H2S03",
+        "H2S07"
+      ],
+      "wholeTeacherIds": [
+        "T-CHEN"
+      ],
+      "validFrom": "2026-09-01",
+      "validToExclusive": "2027-02-01",
+      "courseResponsibleTeacherId": "T-CHEN",
+      "sharedShortName": null
+    }
+  ],
+  "responsibilities": [
+    {
+      "id": "MAT1-P1",
+      "teachingClassId": "MAT1",
+      "sharedMark": "P1",
+      "teacherIds": [
+        "T-LIN"
+      ],
+      "studentIds": [
+        "H1S01",
+        "H1S02",
+        "H1S03",
+        "H1S04",
+        "H1S05",
+        "H1S06",
+        "H1S07",
+        "H1S08",
+        "H1S09",
+        "H1S10",
+        "H1S11",
+        "H1S12",
+        "H2S01",
+        "H2S02",
+        "H2S03",
+        "H2S04"
+      ],
+      "validFrom": "2026-09-01",
+      "validToExclusive": "2027-02-01",
+      "rosterMode": "EXPLICIT_SUBSET",
+      "optionalCatalogContentId": null
+    },
+    {
+      "id": "MAT1-S1",
+      "teachingClassId": "MAT1",
+      "sharedMark": "S1",
+      "teacherIds": [
+        "T-ZHOU"
+      ],
+      "studentIds": [
+        "H1S01",
+        "H1S02",
+        "H1S03",
+        "H1S04",
+        "H1S05",
+        "H1S06",
+        "H1S07",
+        "H1S08",
+        "H1S09",
+        "H1S10",
+        "H1S11",
+        "H1S12",
+        "H2S01",
+        "H2S02",
+        "H2S03",
+        "H2S04"
+      ],
+      "validFrom": "2026-09-01",
+      "validToExclusive": "2027-02-01",
+      "rosterMode": "EXPLICIT_SUBSET",
+      "optionalCatalogContentId": null
+    },
+    {
+      "id": "MAT2-P1",
+      "teachingClassId": "MAT2",
+      "sharedMark": "P1",
+      "teacherIds": [
+        "T-LIN"
+      ],
+      "studentIds": [
+        "H2S05",
+        "H2S06",
+        "H2S07",
+        "H2S08",
+        "H2S09",
+        "H2S10",
+        "H2S11",
+        "H2S12"
+      ],
+      "validFrom": "2026-09-01",
+      "validToExclusive": "2027-02-01",
+      "rosterMode": "EXPLICIT_SUBSET",
+      "optionalCatalogContentId": null
+    },
+    {
+      "id": "MAT2-S1",
+      "teachingClassId": "MAT2",
+      "sharedMark": "S1",
+      "teacherIds": [
+        "T-LIN"
+      ],
+      "studentIds": [
+        "H2S05",
+        "H2S06",
+        "H2S07",
+        "H2S08",
+        "H2S09",
+        "H2S10",
+        "H2S11",
+        "H2S12"
+      ],
+      "validFrom": "2026-09-01",
+      "validToExclusive": "2027-02-01",
+      "rosterMode": "EXPLICIT_SUBSET",
+      "optionalCatalogContentId": null
+    }
+  ],
+  "locations": [
+    {
+      "id": "D101",
+      "name": "D101",
+      "exclusive": true
+    },
+    {
+      "id": "D102",
+      "name": "D102",
+      "exclusive": true
+    },
+    {
+      "id": "D105",
+      "name": "D105",
+      "exclusive": true
+    },
+    {
+      "id": "D108",
+      "name": "D108",
+      "exclusive": true
+    },
+    {
+      "id": "LAB1",
+      "name": "LAB1",
+      "exclusive": true
+    },
+    {
+      "id": "E201",
+      "name": "E201",
+      "exclusive": true
+    },
+    {
+      "id": "E101",
+      "name": "E101",
+      "exclusive": true
+    },
+    {
+      "id": "M101",
+      "name": "M101",
+      "exclusive": true
+    },
+    {
+      "id": "CS101",
+      "name": "CS101",
+      "exclusive": true
+    }
+  ],
+  "events": [
+    {
+      "id": "EV001",
+      "date": "2026-09-28",
+      "weekday": 1,
+      "periodId": "P01",
+      "kind": "COURSE",
+      "teachingClassId": "MAT1",
+      "responsibilityId": "MAT1-P1",
+      "teacherIds": [
+        "T-LIN"
+      ],
+      "locationId": "D101",
+      "title": "高一1班 • 数学",
+      "studentIds": [
+        "H1S01",
+        "H1S02",
+        "H1S03",
+        "H1S04",
+        "H1S05",
+        "H1S06",
+        "H1S07",
+        "H1S08",
+        "H1S09",
+        "H1S10",
+        "H1S11",
+        "H1S12",
+        "H2S01",
+        "H2S02",
+        "H2S03",
+        "H2S04"
+      ],
+      "placementHomeroomId": "H1",
+      "sourceOmitSharedMark": false,
+      "sharedNote": "",
+      "showSharedNoteOnCard": false
+    },
+    {
+      "id": "EV002",
+      "date": "2026-09-28",
+      "weekday": 1,
+      "periodId": "P01",
+      "kind": "COURSE",
+      "teachingClassId": "ENGX",
+      "responsibilityId": null,
+      "teacherIds": [
+        "T-SUN"
+      ],
+      "locationId": "E201",
+      "title": "英语强化B班",
+      "studentIds": [
+        "H1S13",
+        "H1S14",
+        "H1S15",
+        "H1S16",
+        "H1S17",
+        "H1S18",
+        "H1S19",
+        "H1S20"
+      ],
+      "placementHomeroomId": null,
+      "sourceOmitSharedMark": false,
+      "sharedNote": "",
+      "showSharedNoteOnCard": false
+    },
+    {
+      "id": "EV003",
+      "date": "2026-09-28",
+      "weekday": 1,
+      "periodId": "P02",
+      "kind": "COURSE",
+      "teachingClassId": "PHY1",
+      "responsibilityId": null,
+      "teacherIds": [
+        "T-ZHOU"
+      ],
+      "locationId": "D105",
+      "title": "高一1班 • 物理",
+      "studentIds": [
+        "H1S01",
+        "H1S02",
+        "H1S03",
+        "H1S04",
+        "H1S05",
+        "H1S06",
+        "H1S07",
+        "H1S08",
+        "H1S09",
+        "H1S10",
+        "H1S11",
+        "H1S12",
+        "H1S13",
+        "H1S14",
+        "H1S15",
+        "H1S16",
+        "H1S17",
+        "H1S18",
+        "H1S19",
+        "H1S20"
+      ],
+      "placementHomeroomId": "H1",
+      "sourceOmitSharedMark": false,
+      "sharedNote": "",
+      "showSharedNoteOnCard": false
+    },
+    {
+      "id": "EV004",
+      "date": "2026-09-28",
+      "weekday": 1,
+      "periodId": "P03",
+      "kind": "COURSE",
+      "teachingClassId": "CHEM1",
+      "responsibilityId": null,
+      "teacherIds": [
+        "T-CHEN"
+      ],
+      "locationId": "LAB1",
+      "title": "高一1班 • 化学",
+      "studentIds": [
+        "H1S01",
+        "H1S02",
+        "H1S03",
+        "H1S04",
+        "H1S05",
+        "H1S06",
+        "H1S07",
+        "H1S08",
+        "H1S09",
+        "H1S10",
+        "H1S11",
+        "H1S12",
+        "H1S13",
+        "H1S14",
+        "H1S15",
+        "H1S16",
+        "H1S17",
+        "H1S18",
+        "H1S19",
+        "H1S20"
+      ],
+      "placementHomeroomId": "H1",
+      "sourceOmitSharedMark": false,
+      "sharedNote": "",
+      "showSharedNoteOnCard": false
+    },
+    {
+      "id": "EV005",
+      "date": "2026-09-29",
+      "weekday": 2,
+      "periodId": "P01",
+      "kind": "COURSE",
+      "teachingClassId": "MAT1",
+      "responsibilityId": "MAT1-S1",
+      "teacherIds": [
+        "T-ZHOU"
+      ],
+      "locationId": "D101",
+      "title": "高一1班 • 数学",
+      "studentIds": [
+        "H1S01",
+        "H1S02",
+        "H1S03",
+        "H1S04",
+        "H1S05",
+        "H1S06",
+        "H1S07",
+        "H1S08",
+        "H1S09",
+        "H1S10",
+        "H1S11",
+        "H1S12",
+        "H2S01",
+        "H2S02",
+        "H2S03",
+        "H2S04"
+      ],
+      "placementHomeroomId": "H1",
+      "sourceOmitSharedMark": false,
+      "sharedNote": "",
+      "showSharedNoteOnCard": false
+    },
+    {
+      "id": "EV006",
+      "date": "2026-09-29",
+      "weekday": 2,
+      "periodId": "P02",
+      "kind": "COURSE",
+      "teachingClassId": "MAT2",
+      "responsibilityId": "MAT2-P1",
+      "teacherIds": [
+        "T-LIN"
+      ],
+      "locationId": "D102",
+      "title": "高一2班 • 数学",
+      "studentIds": [
+        "H2S05",
+        "H2S06",
+        "H2S07",
+        "H2S08",
+        "H2S09",
+        "H2S10",
+        "H2S11",
+        "H2S12"
+      ],
+      "placementHomeroomId": "H2",
+      "sourceOmitSharedMark": false,
+      "sharedNote": "",
+      "showSharedNoteOnCard": false
+    },
+    {
+      "id": "EV007",
+      "date": "2026-09-30",
+      "weekday": 3,
+      "periodId": "P01",
+      "kind": "COURSE",
+      "teachingClassId": "MAT2",
+      "responsibilityId": "MAT2-S1",
+      "teacherIds": [
+        "T-LIN"
+      ],
+      "locationId": null,
+      "title": "高一2班 • 数学",
+      "studentIds": [
+        "H2S05",
+        "H2S06",
+        "H2S07",
+        "H2S08",
+        "H2S09",
+        "H2S10",
+        "H2S11",
+        "H2S12"
+      ],
+      "placementHomeroomId": "H2",
+      "sourceOmitSharedMark": false,
+      "sharedNote": "",
+      "showSharedNoteOnCard": false
+    },
+    {
+      "id": "EV008",
+      "date": "2026-09-30",
+      "weekday": 3,
+      "periodId": "P02",
+      "kind": "COURSE",
+      "teachingClassId": "ECO1",
+      "responsibilityId": null,
+      "teacherIds": [
+        "T-WU"
+      ],
+      "locationId": null,
+      "title": "高一1班 • 经济",
+      "studentIds": [
+        "H1S01",
+        "H1S02",
+        "H1S03",
+        "H1S04",
+        "H1S05",
+        "H1S06",
+        "H1S07",
+        "H1S08",
+        "H1S09",
+        "H1S10",
+        "H1S11",
+        "H1S12",
+        "H1S13",
+        "H1S14",
+        "H1S15",
+        "H1S16",
+        "H1S17",
+        "H1S18",
+        "H1S19",
+        "H1S20"
+      ],
+      "placementHomeroomId": "H1",
+      "sourceOmitSharedMark": false,
+      "sharedNote": "",
+      "showSharedNoteOnCard": false
+    },
+    {
+      "id": "EV009",
+      "date": "2026-09-30",
+      "weekday": 3,
+      "periodId": "P03",
+      "kind": "COURSE",
+      "teachingClassId": "CS2",
+      "responsibilityId": null,
+      "teacherIds": [
+        "T-LIN"
+      ],
+      "locationId": null,
+      "title": "高一2班 • 计算机",
+      "studentIds": [
+        "H2S01",
+        "H2S02",
+        "H2S03",
+        "H2S04",
+        "H2S05",
+        "H2S06",
+        "H2S07",
+        "H2S08",
+        "H2S09",
+        "H2S10",
+        "H2S11",
+        "H2S12"
+      ],
+      "placementHomeroomId": "H2",
+      "sourceOmitSharedMark": false,
+      "sharedNote": "",
+      "showSharedNoteOnCard": false
+    },
+    {
+      "id": "EV010",
+      "date": "2026-10-01",
+      "weekday": 4,
+      "periodId": "P01",
+      "kind": "COURSE",
+      "teachingClassId": "MAT1",
+      "responsibilityId": "MAT1-P1",
+      "teacherIds": [
+        "T-LIN"
+      ],
+      "locationId": null,
+      "title": "高一1班 • 数学",
+      "studentIds": [
+        "H1S01",
+        "H1S02",
+        "H1S03",
+        "H1S04",
+        "H1S05",
+        "H1S06",
+        "H1S07",
+        "H1S08",
+        "H1S09",
+        "H1S10",
+        "H1S11",
+        "H1S12",
+        "H2S01",
+        "H2S02",
+        "H2S03",
+        "H2S04"
+      ],
+      "placementHomeroomId": "H1",
+      "sourceOmitSharedMark": true,
+      "sharedNote": "",
+      "showSharedNoteOnCard": false
+    },
+    {
+      "id": "EV011",
+      "date": "2026-10-01",
+      "weekday": 4,
+      "periodId": "P02",
+      "kind": "COURSE",
+      "teachingClassId": "PHY1",
+      "responsibilityId": null,
+      "teacherIds": [
+        "T-ZHOU"
+      ],
+      "locationId": "D105",
+      "title": "高一1班 • 物理",
+      "studentIds": [
+        "H1S01",
+        "H1S02",
+        "H1S03",
+        "H1S04",
+        "H1S05",
+        "H1S06",
+        "H1S07",
+        "H1S08",
+        "H1S09",
+        "H1S10",
+        "H1S11",
+        "H1S12",
+        "H1S13",
+        "H1S14",
+        "H1S15",
+        "H1S16",
+        "H1S17",
+        "H1S18",
+        "H1S19",
+        "H1S20"
+      ],
+      "placementHomeroomId": "H1",
+      "sourceOmitSharedMark": false,
+      "sharedNote": "",
+      "showSharedNoteOnCard": false
+    },
+    {
+      "id": "EV012",
+      "date": "2026-10-02",
+      "weekday": 5,
+      "periodId": "P01",
+      "kind": "COURSE",
+      "teachingClassId": "MAT1",
+      "responsibilityId": "MAT1-S1",
+      "teacherIds": [
+        "T-ZHOU"
+      ],
+      "locationId": "D101",
+      "title": "高一1班 • 数学",
+      "studentIds": [
+        "H1S01",
+        "H1S02",
+        "H1S03",
+        "H1S04",
+        "H1S05",
+        "H1S06",
+        "H1S07",
+        "H1S08",
+        "H1S09",
+        "H1S10",
+        "H1S11",
+        "H1S12",
+        "H2S01",
+        "H2S02",
+        "H2S03",
+        "H2S04"
+      ],
+      "placementHomeroomId": "H1",
+      "sourceOmitSharedMark": false,
+      "sharedNote": "",
+      "showSharedNoteOnCard": false
+    },
+    {
+      "id": "EV013",
+      "date": "2026-10-02",
+      "weekday": 5,
+      "periodId": "P02",
+      "kind": "COURSE",
+      "teachingClassId": "MAT2",
+      "responsibilityId": "MAT2-P1",
+      "teacherIds": [
+        "T-LIN"
+      ],
+      "locationId": "D102",
+      "title": "高一2班 • 数学",
+      "studentIds": [
+        "H2S05",
+        "H2S06",
+        "H2S07",
+        "H2S08",
+        "H2S09",
+        "H2S10",
+        "H2S11",
+        "H2S12"
+      ],
+      "placementHomeroomId": "H2",
+      "sourceOmitSharedMark": false,
+      "sharedNote": "",
+      "showSharedNoteOnCard": false
+    },
+    {
+      "id": "EV014",
+      "date": "2026-10-02",
+      "weekday": 5,
+      "periodId": "P03",
+      "kind": "COURSE",
+      "teachingClassId": "COMP",
+      "responsibilityId": null,
+      "teacherIds": [
+        "T-CHEN"
+      ],
+      "locationId": "E101",
+      "title": "数学竞赛A班",
+      "studentIds": [
+        "H1S01",
+        "H1S08",
+        "H2S03",
+        "H2S07"
+      ],
+      "placementHomeroomId": null,
+      "sourceOmitSharedMark": false,
+      "sharedNote": "",
+      "showSharedNoteOnCard": false
+    },
+    {
+      "id": "EV015",
+      "date": "2026-10-02",
+      "weekday": 5,
+      "periodId": "P04",
+      "kind": "COURSE",
+      "teachingClassId": "CHEM1",
+      "responsibilityId": null,
+      "teacherIds": [
+        "T-CHEN"
+      ],
+      "locationId": "LAB1",
+      "title": "高一1班 • 化学",
+      "studentIds": [
+        "H1S01",
+        "H1S02",
+        "H1S03",
+        "H1S04",
+        "H1S05",
+        "H1S06",
+        "H1S07",
+        "H1S08",
+        "H1S09",
+        "H1S10",
+        "H1S11",
+        "H1S12",
+        "H1S13",
+        "H1S14",
+        "H1S15",
+        "H1S16",
+        "H1S17",
+        "H1S18",
+        "H1S19",
+        "H1S20"
+      ],
+      "placementHomeroomId": "H1",
+      "sourceOmitSharedMark": false,
+      "sharedNote": "",
+      "showSharedNoteOnCard": false
+    },
+    {
+      "id": "EV016",
+      "date": "2026-09-28",
+      "weekday": 1,
+      "periodId": "P11",
+      "kind": "COURSE",
+      "teachingClassId": "COMP",
+      "responsibilityId": null,
+      "teacherIds": [
+        "T-CHEN"
+      ],
+      "locationId": "E101",
+      "title": "数学竞赛A班",
+      "studentIds": [
+        "H1S01",
+        "H1S08",
+        "H2S03",
+        "H2S07"
+      ],
+      "placementHomeroomId": null,
+      "sourceOmitSharedMark": false,
+      "sharedNote": "",
+      "showSharedNoteOnCard": false
+    },
+    {
+      "id": "EV017",
+      "date": "2026-09-29",
+      "weekday": 2,
+      "periodId": "P06",
+      "kind": "ACTIVITY",
+      "teachingClassId": null,
+      "responsibilityId": null,
+      "teacherIds": [
+        "T-LIN"
+      ],
+      "locationId": "M101",
+      "title": "数学教研会",
+      "studentIds": [],
+      "placementHomeroomId": null,
+      "sourceOmitSharedMark": false,
+      "sharedNote": "",
+      "showSharedNoteOnCard": false
+    },
+    {
+      "id": "EV018",
+      "date": "2026-10-02",
+      "weekday": 5,
+      "periodId": "P06",
+      "kind": "ACTIVITY",
+      "teachingClassId": null,
+      "responsibilityId": null,
+      "teacherIds": [
+        "T-ZHOU"
+      ],
+      "locationId": null,
+      "title": "高一1班班会",
+      "studentIds": [
+        "H1S01",
+        "H1S02",
+        "H1S03",
+        "H1S04",
+        "H1S05",
+        "H1S06",
+        "H1S07",
+        "H1S08",
+        "H1S09",
+        "H1S10",
+        "H1S11",
+        "H1S12",
+        "H1S13",
+        "H1S14",
+        "H1S15",
+        "H1S16",
+        "H1S17",
+        "H1S18",
+        "H1S19",
+        "H1S20"
+      ],
+      "placementHomeroomId": "H1",
+      "sourceOmitSharedMark": false,
+      "sharedNote": "",
+      "showSharedNoteOnCard": false
+    },
+    {
+      "id": "EV019",
+      "date": "2026-10-03",
+      "weekday": 6,
+      "periodId": "P03",
+      "kind": "COURSE",
+      "teachingClassId": "MAT1",
+      "responsibilityId": "MAT1-P1",
+      "teacherIds": [
+        "T-LIN"
+      ],
+      "locationId": "D101",
+      "title": "高一1班 • 数学",
+      "studentIds": [
+        "H1S01",
+        "H1S02",
+        "H1S03",
+        "H1S04",
+        "H1S05",
+        "H1S06",
+        "H1S07",
+        "H1S08",
+        "H1S09",
+        "H1S10",
+        "H1S11",
+        "H1S12",
+        "H2S01",
+        "H2S02",
+        "H2S03",
+        "H2S04"
+      ],
+      "placementHomeroomId": "H1",
+      "sourceOmitSharedMark": false,
+      "sharedNote": "",
+      "showSharedNoteOnCard": false
+    },
+    {
+      "id": "EV020",
+      "date": "2026-09-28",
+      "weekday": 1,
+      "periodId": "P07",
+      "kind": "COURSE",
+      "teachingClassId": "PHY1",
+      "responsibilityId": null,
+      "teacherIds": [
+        "T-ZHOU"
+      ],
+      "locationId": "D105",
+      "title": "高一1班 • 物理",
+      "studentIds": [
+        "H1S01",
+        "H1S02",
+        "H1S03",
+        "H1S04",
+        "H1S05",
+        "H1S06",
+        "H1S07",
+        "H1S08",
+        "H1S09",
+        "H1S10",
+        "H1S11",
+        "H1S12",
+        "H1S13",
+        "H1S14",
+        "H1S15",
+        "H1S16",
+        "H1S17",
+        "H1S18",
+        "H1S19",
+        "H1S20"
+      ],
+      "placementHomeroomId": "H1",
+      "sourceOmitSharedMark": false,
+      "sharedNote": "",
+      "showSharedNoteOnCard": false
+    },
+    {
+      "id": "EV021",
+      "date": "2026-09-28",
+      "weekday": 1,
+      "periodId": "P10",
+      "kind": "COURSE",
+      "teachingClassId": "CS2",
+      "responsibilityId": null,
+      "teacherIds": [
+        "T-LIN"
+      ],
+      "locationId": "CS101",
+      "title": "高一2班 • 计算机",
+      "studentIds": [
+        "H2S01",
+        "H2S02",
+        "H2S03",
+        "H2S04",
+        "H2S05",
+        "H2S06",
+        "H2S07",
+        "H2S08",
+        "H2S09",
+        "H2S10",
+        "H2S11",
+        "H2S12"
+      ],
+      "placementHomeroomId": "H2",
+      "sourceOmitSharedMark": false,
+      "sharedNote": "",
+      "showSharedNoteOnCard": false
+    },
+    {
+      "id": "EV022",
+      "date": "2026-09-29",
+      "weekday": 2,
+      "periodId": "P08",
+      "kind": "COURSE",
+      "teachingClassId": "CHEM1",
+      "responsibilityId": null,
+      "teacherIds": [
+        "T-CHEN"
+      ],
+      "locationId": "LAB1",
+      "title": "高一1班 • 化学",
+      "studentIds": [
+        "H1S01",
+        "H1S02",
+        "H1S03",
+        "H1S04",
+        "H1S05",
+        "H1S06",
+        "H1S07",
+        "H1S08",
+        "H1S09",
+        "H1S10",
+        "H1S11",
+        "H1S12",
+        "H1S13",
+        "H1S14",
+        "H1S15",
+        "H1S16",
+        "H1S17",
+        "H1S18",
+        "H1S19",
+        "H1S20"
+      ],
+      "placementHomeroomId": "H1",
+      "sourceOmitSharedMark": false,
+      "sharedNote": "",
+      "showSharedNoteOnCard": false
+    },
+    {
+      "id": "EV023",
+      "date": "2026-09-30",
+      "weekday": 3,
+      "periodId": "P10",
+      "kind": "COURSE",
+      "teachingClassId": "MAT1",
+      "responsibilityId": "MAT1-S1",
+      "teacherIds": [
+        "T-ZHOU"
+      ],
+      "locationId": "D101",
+      "title": "高一1班 • 数学",
+      "studentIds": [
+        "H1S01",
+        "H1S02",
+        "H1S03",
+        "H1S04",
+        "H1S05",
+        "H1S06",
+        "H1S07",
+        "H1S08",
+        "H1S09",
+        "H1S10",
+        "H1S11",
+        "H1S12",
+        "H2S01",
+        "H2S02",
+        "H2S03",
+        "H2S04"
+      ],
+      "placementHomeroomId": "H1",
+      "sourceOmitSharedMark": false,
+      "sharedNote": "",
+      "showSharedNoteOnCard": false
+    },
+    {
+      "id": "EV024",
+      "date": "2026-10-01",
+      "weekday": 4,
+      "periodId": "P07",
+      "kind": "COURSE",
+      "teachingClassId": "MAT2",
+      "responsibilityId": "MAT2-S1",
+      "teacherIds": [
+        "T-LIN"
+      ],
+      "locationId": null,
+      "title": "高一2班 • 数学",
+      "studentIds": [
+        "H2S05",
+        "H2S06",
+        "H2S07",
+        "H2S08",
+        "H2S09",
+        "H2S10",
+        "H2S11",
+        "H2S12"
+      ],
+      "placementHomeroomId": "H2",
+      "sourceOmitSharedMark": false,
+      "sharedNote": "",
+      "showSharedNoteOnCard": false
+    },
+    {
+      "id": "EV025",
+      "date": "2026-10-01",
+      "weekday": 4,
+      "periodId": "P10",
+      "kind": "COURSE",
+      "teachingClassId": "ECO1",
+      "responsibilityId": null,
+      "teacherIds": [
+        "T-WU"
+      ],
+      "locationId": null,
+      "title": "高一1班 • 经济",
+      "studentIds": [
+        "H1S01",
+        "H1S02",
+        "H1S03",
+        "H1S04",
+        "H1S05",
+        "H1S06",
+        "H1S07",
+        "H1S08",
+        "H1S09",
+        "H1S10",
+        "H1S11",
+        "H1S12",
+        "H1S13",
+        "H1S14",
+        "H1S15",
+        "H1S16",
+        "H1S17",
+        "H1S18",
+        "H1S19",
+        "H1S20"
+      ],
+      "placementHomeroomId": "H1",
+      "sourceOmitSharedMark": false,
+      "sharedNote": "",
+      "showSharedNoteOnCard": false
+    },
+    {
+      "id": "EV026",
+      "date": "2026-10-02",
+      "weekday": 5,
+      "periodId": "P09",
+      "kind": "COURSE",
+      "teachingClassId": "ENGX",
+      "responsibilityId": null,
+      "teacherIds": [
+        "T-SUN"
+      ],
+      "locationId": "E201",
+      "title": "英语强化B班",
+      "studentIds": [
+        "H1S13",
+        "H1S14",
+        "H1S15",
+        "H1S16",
+        "H1S17",
+        "H1S18",
+        "H1S19",
+        "H1S20"
+      ],
+      "placementHomeroomId": null,
+      "sourceOmitSharedMark": false,
+      "sharedNote": "",
+      "showSharedNoteOnCard": false
+    },
+    {
+      "id": "EV027",
+      "date": "2026-10-02",
+      "weekday": 5,
+      "periodId": "P10",
+      "kind": "COURSE",
+      "teachingClassId": "MAT1",
+      "responsibilityId": "MAT1-P1",
+      "teacherIds": [
+        "T-LIN"
+      ],
+      "locationId": "D101",
+      "title": "高一1班 • 数学",
+      "studentIds": [
+        "H1S01",
+        "H1S02",
+        "H1S03",
+        "H1S04",
+        "H1S05",
+        "H1S06",
+        "H1S07",
+        "H1S08",
+        "H1S09",
+        "H1S10",
+        "H1S11",
+        "H1S12",
+        "H2S01",
+        "H2S02",
+        "H2S03",
+        "H2S04"
+      ],
+      "placementHomeroomId": "H1",
+      "sourceOmitSharedMark": false,
+      "sharedNote": "",
+      "showSharedNoteOnCard": false
+    },
+    {
+      "id": "EV028",
+      "date": "2026-10-01",
+      "weekday": 4,
+      "periodId": "P14",
+      "kind": "COURSE",
+      "teachingClassId": "COMP",
+      "responsibilityId": null,
+      "teacherIds": [
+        "T-CHEN"
+      ],
+      "locationId": "E101",
+      "title": "数学竞赛A班",
+      "studentIds": [
+        "H1S01",
+        "H1S08",
+        "H2S03",
+        "H2S07"
+      ],
+      "placementHomeroomId": null,
+      "sourceOmitSharedMark": false,
+      "sharedNote": "",
+      "showSharedNoteOnCard": false
+    }
+  ],
+  "personalDisplayPreferences": [
+    {
+      "userId": "T-LIN",
+      "targetKind": "RESPONSIBILITY",
+      "targetId": "MAT1-P1",
+      "mode": "CUSTOM",
+      "text": "纯数"
+    }
+  ],
+  "actors": [
+    {
+      "id": "A-ADMIN",
+      "name": "示例教务",
+      "roleHints": [
+        "SCHOOL_ADMIN",
+        "TEACHING_MANAGER"
+      ],
+      "teacherId": null,
+      "demoGrants": {
+        "schoolTimetableManage": true,
+        "schoolClassesManage": true,
+        "catalogEdit": true,
+        "teachingClassIdsRead": "ALL",
+        "wholeClassTeachingIds": [],
+        "responsibilityTeachingIds": [],
+        "courseConfigureClassIds": "ALL",
+        "sharedMarkEditIds": "ALL",
+        "teacherSelfCreateClass": false,
+        "assignSelfOnOwnNewClass": false,
+        "manageNewClassesCreatedBySelf": false,
+        "privateDisplayEditForSelf": false
+      }
+    },
+    {
+      "id": "T-LIN",
+      "name": "林老师",
+      "roleHints": [
+        "SUBJECT_TEACHER"
+      ],
+      "teacherId": "T-LIN",
+      "demoGrants": {
+        "schoolTimetableManage": false,
+        "schoolClassesManage": false,
+        "catalogEdit": false,
+        "teachingClassIdsRead": [
+          "CS2",
+          "MAT1",
+          "MAT2"
+        ],
+        "wholeClassTeachingIds": [
+          "CS2"
+        ],
+        "responsibilityTeachingIds": [
+          "MAT1-P1",
+          "MAT2-P1",
+          "MAT2-S1"
+        ],
+        "courseConfigureClassIds": [
+          "MAT1",
+          "MAT2",
+          "CS2"
+        ],
+        "sharedMarkEditIds": [
+          "MAT1-P1",
+          "MAT2-P1",
+          "MAT2-S1"
+        ],
+        "teacherSelfCreateClass": true,
+        "assignSelfOnOwnNewClass": true,
+        "manageNewClassesCreatedBySelf": true,
+        "privateDisplayEditForSelf": true
+      }
+    },
+    {
+      "id": "T-ZHOU",
+      "name": "周老师",
+      "roleHints": [
+        "SUBJECT_TEACHER"
+      ],
+      "teacherId": "T-ZHOU",
+      "demoGrants": {
+        "schoolTimetableManage": false,
+        "schoolClassesManage": false,
+        "catalogEdit": false,
+        "teachingClassIdsRead": [
+          "MAT1",
+          "PHY1"
+        ],
+        "wholeClassTeachingIds": [
+          "PHY1"
+        ],
+        "responsibilityTeachingIds": [
+          "MAT1-S1"
+        ],
+        "courseConfigureClassIds": [
+          "PHY1"
+        ],
+        "sharedMarkEditIds": [
+          "MAT1-S1"
+        ],
+        "teacherSelfCreateClass": true,
+        "assignSelfOnOwnNewClass": true,
+        "manageNewClassesCreatedBySelf": true,
+        "privateDisplayEditForSelf": true
+      }
+    },
+    {
+      "id": "T-CHEN",
+      "name": "陈老师",
+      "roleHints": [
+        "SUBJECT_TEACHER"
+      ],
+      "teacherId": "T-CHEN",
+      "demoGrants": {
+        "schoolTimetableManage": false,
+        "schoolClassesManage": false,
+        "catalogEdit": false,
+        "teachingClassIdsRead": [
+          "CHEM1",
+          "COMP"
+        ],
+        "wholeClassTeachingIds": [
+          "CHEM1",
+          "COMP"
+        ],
+        "responsibilityTeachingIds": [],
+        "courseConfigureClassIds": [
+          "CHEM1",
+          "COMP"
+        ],
+        "sharedMarkEditIds": [],
+        "teacherSelfCreateClass": true,
+        "assignSelfOnOwnNewClass": true,
+        "manageNewClassesCreatedBySelf": true,
+        "privateDisplayEditForSelf": true
+      }
+    },
+    {
+      "id": "T-WU",
+      "name": "吴老师",
+      "roleHints": [
+        "SUBJECT_TEACHER"
+      ],
+      "teacherId": "T-WU",
+      "demoGrants": {
+        "schoolTimetableManage": false,
+        "schoolClassesManage": false,
+        "catalogEdit": false,
+        "teachingClassIdsRead": [
+          "ECO1"
+        ],
+        "wholeClassTeachingIds": [
+          "ECO1"
+        ],
+        "responsibilityTeachingIds": [],
+        "courseConfigureClassIds": [
+          "ECO1"
+        ],
+        "sharedMarkEditIds": [],
+        "teacherSelfCreateClass": true,
+        "assignSelfOnOwnNewClass": true,
+        "manageNewClassesCreatedBySelf": true,
+        "privateDisplayEditForSelf": true
+      }
+    },
+    {
+      "id": "T-SUN",
+      "name": "孙老师",
+      "roleHints": [
+        "SUBJECT_TEACHER"
+      ],
+      "teacherId": "T-SUN",
+      "demoGrants": {
+        "schoolTimetableManage": false,
+        "schoolClassesManage": false,
+        "catalogEdit": false,
+        "teachingClassIdsRead": [
+          "ENGX"
+        ],
+        "wholeClassTeachingIds": [
+          "ENGX"
+        ],
+        "responsibilityTeachingIds": [],
+        "courseConfigureClassIds": [
+          "ENGX"
+        ],
+        "sharedMarkEditIds": [],
+        "teacherSelfCreateClass": true,
+        "assignSelfOnOwnNewClass": true,
+        "manageNewClassesCreatedBySelf": true,
+        "privateDisplayEditForSelf": true
+      }
+    }
+  ],
+  "publicationSeed": {
+    "schoolPublicationCode": "SCH-2026T1-001",
+    "publishedAt": "2026-09-25T10:00:00+08:00",
+    "effectiveFrom": "2026-09-28",
+    "adoptedBy": [
+      "T-LIN",
+      "T-ZHOU",
+      "T-CHEN",
+      "T-WU",
+      "T-SUN"
+    ],
+    "personalCodePerTeacher": "PER-2026T1-001",
+    "note": "显式初始化为已确认待生效的合成场景；发布与采用不由普通GET触发。"
+  },
+  "scenarios": [
+    {
+      "id": "OMITTED_MARK_AMBIGUOUS",
+      "action": "导入MAT2/T-LIN但不写标记",
+      "expected": "保存候选，P1/S1不得猜选；批量明确分工"
+    },
+    {
+      "id": "REIMPORT_KEEP_ENRICHMENT",
+      "action": "补地点/分工后重传省略项",
+      "expected": "可靠关联课次保留补充，明确清除另操作"
+    },
+    {
+      "id": "PARTIAL_SCHOOL_PUBLICATION",
+      "action": "只改林老师未来一课再发布",
+      "expected": "SCH递增，其他无变化教师不出现更新"
+    },
+    {
+      "id": "DISPLAY_ONLY_CHANGE",
+      "action": "将林老师纯数自定义改为隐藏",
+      "expected": "教务自定义分工P1不变，无SCH/PER安排修订"
+    },
+    {
+      "id": "HOMEROOM_DESTINATIONS",
+      "date": "2026-09-28",
+      "periodId": "P01",
+      "expected": {
+        "H1": {
+          "MAT1": 12,
+          "ENGX": 8
+        },
+        "H2": {
+          "MAT1": 4
+        }
+      }
+    },
+    {
+      "id": "TIME_COLUMN_IGNORED",
+      "action": "参考时间任意普通文本、清空、删除整列",
+      "expected": "规范安排和系统时间不变"
+    },
+    {
+      "id": "PARALLEL_DISJOINT",
+      "action": "隔离场景中明确MAT1两组名单互斥、各教师不同地点，同期同节",
+      "expected": "不以排课归属相同判冲突；重叠一个学生则冲突"
+    },
+    {
+      "id": "CO_TEACHING",
+      "action": "同一明确课次配置两位合法共同教师",
+      "expected": "学生和教室只占一次，两名教师各自占用；两条独立课不是共同课"
+    },
+    {
+      "id": "HOLIDAY_MAKEUP",
+      "action": "隔离场景9/26补9/28，明确实际校历许可和来源",
+      "expected": "实际日期为9/26/第4周，来源9/28/第5周，不重复复制事实"
+    },
+    {
+      "id": "CREATE_MINIMAL_CLASS",
+      "start": "school.teachingClasses",
+      "input": {
+        "subjectId": "PHYS",
+        "placementHomeroomId": "H2",
+        "name": "高一2班 • 物理",
+        "courseId": null
+      },
+      "expected": "成功建立空教学班；不产生假默认组、学生复制或当前教务任教；进入其教学安排。"
+    },
+    {
+      "id": "CUSTOM_NAME_STAYS",
+      "action": "输入物理拓展A班后变更归属/学科",
+      "expected": "自定义班名保留；一处恢复建议名称动作；无AUTO/CUSTOM模式选择。"
+    },
+    {
+      "id": "CLASSIC_SOURCE_NOT_EXAM_NAME",
+      "action": "为新班选择CIE物理",
+      "expected": "班名仍为高一2班 • 物理；本期课程有真实引用。"
+    },
+    {
+      "id": "CREATE_PENDING_COURSE",
+      "action": "新班不选课程、不选老师/学生直接创建",
+      "expected": "可保存；没有教师不能在任意个人页冒充本人任务。"
+    },
+    {
+      "id": "SHARED_RENAME_NOT_PRIVATE",
+      "action": "自定义分工P1改为CIE 9709 P1，然后林老师改个人显示纯数",
+      "expected": "自定义分工内容两端一致、个人偏好独立；不改变实际分工/名单/SCH/PER。"
+    },
+    {
+      "id": "OWNER_LINK_NOT_PREFIX",
+      "action": "将MAT1改名数学实验A班，不改placementHomeroomId",
+      "expected": "H1归属课表仍包含其课次；学生行政归属不变。"
+    },
+    {
+      "id": "NAV_ROUNDTRIP",
+      "action": "从我的教学打开MAT1-P1工作区/编辑/返回",
+      "expected": "目标、周和筛选恢复；只教P1的林老师不取得MAT1-S1私稿。"
+    },
+    {
+      "id": "IMPORT_CREATE_RETURN",
+      "action": "有权教务导入未知教学对象→新建→保存",
+      "expected": "调用同一紧凑抽屉，返回原批次同一格并明确匹配，不丢原文件/映射。"
+    }
+  ],
+  "uiPrototype": {
+    "schemaGeneration": "prototype-teaching-ui-20260926-r2",
+    "storageNamespace": "weekly-feedback-prototype:teaching-ui:20260926-r2",
+    "defaultActorId": "A-ADMIN",
+    "defaultRoute": "/school/teaching-classes",
+    "sourceRoutePathsAreSuggestions": true,
+    "sourceModeIsNotRequiredFormField": true,
+    "feedbackSamplePolicy": "没有既有新模型课堂结果时不造百分比；在独立演示时钟场景实际确认课堂后演示开始/继续/待发布。",
+    "newClassDefaults": {
+      "courseId": null,
+      "placementHomeroomId": null,
+      "wholeTeacherIds": [],
+      "studentIds": [],
+      "responsibilityIds": []
+    },
+    "bootstrapOnEveryPageRead": false,
+    "materialFieldSemantics": {
+      "events.title": "种子生成时用于阅读/导出核对的快照，不是COURSE课卡的独立名称权威；当前课卡以stable teachingClassId取得当前正式名称/有效显示。活动title是活动自身正文。",
+      "events.placementHomeroomId": "材料预期快照；当前归属网格以教学班按期间的显式排课归属关系计算，不能改班关系后继续读这个过时副本。",
+      "events.studentIds": "材料核对时的预期授课集合；新store按真实目标、有效名单模式及日期计算计划课次受众，变更要重算视图/冲突，不维护独立学生副本。若做已冻结历史场景要显式区分snapshot。",
+      "responsibilities.studentIds": "基线使用EXPLICIT_SUBSET，属于实际名单输入；别用同名标记或默认全班覆盖。",
+      "actors.demoGrants": "只用于明确演示范围；ALL仅对应那个具体治理键，不授全校反馈私稿。"
+    }
+  }
+}

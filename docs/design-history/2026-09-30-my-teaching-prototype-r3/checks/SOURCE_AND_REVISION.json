@@ -1,0 +1,40 @@
+{
+  "compiled_date": "2026-09-30",
+  "sources_read_fully": [
+    {
+      "name": "DESIGN_MY_TEACHING_2026-09-28_r1.md",
+      "sha256": "9b44cdac604bc228a6ff3b0a7dd661bb817483ec098d04e199e059973162040b"
+    },
+    {
+      "name": "V0_PROMPT_2026-09-28_r1.md",
+      "sha256": "c5b6b78b11d38999d9cfdde597f27c2733551686357676eadcd07194606606cd"
+    },
+    {
+      "name": "OWNER_VERIFICATION_2026-09-28_r1.md",
+      "sha256": "56d8de174fbaa15fa341392bb5f1f9d2335190fa97e471846bf444c1114423e2"
+    },
+    {
+      "name": "DESIGN_MY_TEACHING_2026-09-29_r2.md",
+      "sha256": "314a4b1c34b25f98136c4ff9bc20c0bfcd0ae5282a8b76f7446550814f0c9737"
+    },
+    {
+      "name": "V0_PROMPT_2026-09-29_r2.md",
+      "sha256": "ba2d0e81298aba758d5ac661861abed3596247b5dc25bdd391fd085fca6cbce8"
+    },
+    {
+      "name": "OWNER_VERIFICATION_2026-09-29_r2.md",
+      "sha256": "665395addc026db3fbf3e1d5f0d25d3b9623d5d264fdd8b5001531f79ec8fced"
+    }
+  ],
+  "current_prototype_source_read_this_turn": false,
+  "prototype_run_this_turn": false,
+  "real_product_run_this_turn": false,
+  "owner_fact": "r1和r2均未交给v0实施；本版是首次完整整合，四项选择已确认。",
+  "conflict_resolutions": [
+    "r1合并简版为完整课表要求已被用户纠正，采用r2保留两个视图。",
+    "r1允许课堂批量可选联动作业的候选不带入本版，采用r2课堂操作不改作业。",
+    "历史HIDDEN/我的显示后缀退出，保留一个自定义开关及明确课次覆盖。",
+    "r1对重复图未知详情的观察已由后续实际抽屉截图补齐。",
+    "既有同源日记录/部分发布基础上补操作边界，不新增权限政策/生产实现授权。"
+  ]
+}

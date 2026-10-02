@@ -1,0 +1,63 @@
+{
+ "visible_task_ids": [
+  "TASK_CS_WHOLE",
+  "TASK_MATH_G1_P1",
+  "TASK_MATH_G2_P1",
+  "TASK_MATH_G2_S1"
+ ],
+ "own_unique_students": 24,
+ "sum_task_student_counts_not_unique": 44,
+ "elapsed_total_records": 56,
+ "elapsed_confirmed_records": 42,
+ "whole_week_all_scheduled_records": 120,
+ "class_unique_student_counts": {
+  "CLASS_CS_G1_2": 12,
+  "CLASS_MATH_G1_1": 20,
+  "CLASS_MATH_G1_2": 12
+ },
+ "weekend_lesson_ids": [
+  "LESSON_006"
+ ],
+ "math_p1_first_publication_homeroom_counts": {
+  "HR_1": 12,
+  "HR_2": 4
+ },
+ "lesson_display_labels": {
+  "LESSON_001": null,
+  "LESSON_002": null,
+  "LESSON_003": "纯数1",
+  "LESSON_004": "专题复习",
+  "LESSON_005": "P1",
+  "LESSON_006": "纯数1",
+  "LESSON_007": "P1",
+  "LESSON_008": "P1",
+  "LESSON_009": "S1",
+  "LESSON_010": "S1"
+ },
+ "own_simple_schedule_card_count": 10,
+ "per_task": {
+  "TASK_CS_WHOLE": {
+   "week_lesson_count": 2,
+   "elapsed_confirmed": 18,
+   "elapsed_total": 24
+  },
+  "TASK_MATH_G1_P1": {
+   "week_lesson_count": 4,
+   "elapsed_confirmed": 16,
+   "elapsed_total": 16
+  },
+  "TASK_MATH_G2_P1": {
+   "week_lesson_count": 2,
+   "elapsed_confirmed": 0,
+   "elapsed_total": 8
+  },
+  "TASK_MATH_G2_S1": {
+   "week_lesson_count": 2,
+   "elapsed_confirmed": 8,
+   "elapsed_total": 8
+  },
+  "TASK_OTHER_M1": {
+   "week_lesson_count": 1
+  }
+ }
+}
