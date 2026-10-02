@@ -39,6 +39,8 @@ import {
   type StudentDay,
   type VariantId,
 } from "./model"
+import { cleanPhrase, emptyLib, type PersonalPhrase, type PhraseKind, type PhraseLib } from "./phrases"
+import type { Attendance as AttV } from "./model"
 import {
   bindingKey,
   revById,
@@ -58,6 +60,10 @@ export interface TextEntry {
 export interface Highlight {
   id: string
   text: string
+  /** r3：来自日卡时为实际日期；既有周级亮点无日期 */
+  date?: string
+  /** 选用的常用短语（仅来源记录；文字以本条保存为准） */
+  phraseId?: string
 }
 export interface RoutineOp {
   id: string
@@ -98,6 +104,8 @@ export interface MtBiz {
    * 只作参考：不参与评价覆盖、完成度、发布内容或排课版本。
    */
   observations: Record<string, Observation>
+  /** r3 常用内容：按教师隔离的个人常用原因 / 亮点与收藏 */
+  phrases: Record<string, PhraseLib>
 }
 
 export interface Observation {
@@ -162,6 +170,7 @@ function freshBiz(variant: VariantId): MtBiz {
     rosterEvents: [],
     schemes: seedSchemes(seedRecords(clock)),
     observations: {},
+    phrases: {},
   }
 }
 
@@ -180,6 +189,7 @@ function migrate(p: MtBiz): MtBiz {
   if (!out.schemes) out = { ...out, schemes: seedSchemes(out.records) }
   if (!out.daySummaries) out = { ...out, daySummaries: {} }
   if (!out.observations) out = { ...out, observations: {} }
+  if (!out.phrases) out = { ...out, phrases: {} }
   if (out.assignments.some((a) => a.schemeRevId === undefined)) {
     // 迁移前布置的作业只可能使用原型既有字典（A＝优秀）
     out = { ...out, assignments: out.assignments.map((a) => (a.schemeRevId === undefined ? { ...a, schemeRevId: "SYS_BASIC4@1" } : a)) }
@@ -591,6 +601,82 @@ export function entryKey(taskId: string, week: number, sid?: string) {
   return sid ? `${p}|${sid}` : p
 }
 
+type LessonAttT = Rec["att"][string]
+const cleanReason = (t: string) => t.replace(/[\u0000-\u0008\u000b-\u001f<>]/g, "").slice(0, 200)
+
+export const scopePhrases = (teacherId: string) => `phr:${teacherId}`
+
+/** 常用内容写入：只改本人个人库，不触碰系统原文、他人库或任何已保存的学生记录 */
+export function usePhraseWriters(teacherId: string | null) {
+  const mt = useMt()
+  return useMemo(() => {
+    const write = (label: string, field: string, fn: (lib: PhraseLib, s: MtBiz) => PhraseLib | { error: string }) => {
+      if (!teacherId) return
+      mt.save({
+        field: `phr:${teacherId}:${field}`,
+        scope: [scopePhrases(teacherId)],
+        label,
+        value: field,
+        run: (s) => {
+          const r = fn(s.phrases[teacherId] ?? emptyLib(), s)
+          if ("error" in r) return { error: r.error, kind: "rejected" as const }
+          return { ...s, phrases: { ...s.phrases, [teacherId]: r }, seq: s.seq + 1 }
+        },
+      })
+    }
+    return {
+      add(kind: PhraseKind, text: string, opts?: { states?: AttV[]; category?: string; fromSystemId?: string }) {
+        const t = cleanPhrase(text)
+        if (!t) return
+        write("新增常用内容", `add:${kind}:${t}`, (lib, s) => {
+          if (lib.items.some((p) => p.kind === kind && p.text === t && p.active)) return lib
+          const item: PersonalPhrase = {
+            id: `PP_${teacherId}_${s.seq}`,
+            kind,
+            text: t,
+            system: false,
+            ownerId: teacherId!,
+            active: true,
+            order: lib.items.length,
+            ...(opts?.states?.length ? { states: opts.states } : {}),
+            ...(opts?.category ? { category: opts.category } : {}),
+            ...(opts?.fromSystemId ? { fromSystemId: opts.fromSystemId } : {}),
+          }
+          return { ...lib, items: [...lib.items, item] }
+        })
+      },
+      edit(id: string, patch: { text?: string; states?: AttV[] }) {
+        write("修改常用内容", `edit:${id}`, (lib) => {
+          const t = patch.text !== undefined ? cleanPhrase(patch.text) : undefined
+          if (t !== undefined && !t) return { error: "内容不能为空" }
+          return { ...lib, items: lib.items.map((p) => (p.id === id ? { ...p, ...(t !== undefined ? { text: t } : {}), ...(patch.states ? { states: patch.states } : {}) } : p)) }
+        })
+      },
+      setActive(id: string, active: boolean) {
+        write(active ? "启用常用内容" : "停用常用内容", `act:${id}`, (lib) => ({ ...lib, items: lib.items.map((p) => (p.id === id ? { ...p, active } : p)) }))
+      },
+      remove(id: string) {
+        write("删除常用内容", `del:${id}`, (lib) => ({ items: lib.items.filter((p) => p.id !== id), favs: lib.favs.filter((f) => f !== id) }))
+      },
+      toggleFav(id: string) {
+        write("收藏常用内容", `fav:${id}`, (lib) => ({ ...lib, favs: lib.favs.includes(id) ? lib.favs.filter((f) => f !== id) : [...lib.favs, id] }))
+      },
+      move(id: string, dir: -1 | 1) {
+        write("调整常用排序", `mv:${id}:${Date.now()}`, (lib) => {
+          const kind = lib.items.find((p) => p.id === id)?.kind
+          const same = lib.items.filter((p) => p.kind === kind).sort((a, b) => a.order - b.order)
+          const i = same.findIndex((p) => p.id === id)
+          const j = i + dir
+          if (i < 0 || j < 0 || j >= same.length) return lib
+          const oi = same[i].order
+          const oj = same[j].order
+          return { ...lib, items: lib.items.map((p) => (p.id === same[i].id ? { ...p, order: oj } : p.id === same[j].id ? { ...p, order: oi } : p)) }
+        })
+      },
+    }
+  }, [mt, teacherId])
+}
+
 function patchRec(s: MtBiz, key: string, base: Rec, fn: (r: Rec) => Rec, fieldNames: string[]): MtBiz {
   const cur = s.records[key] ?? base
   const next = fn({ ...cur, fieldRev: { ...cur.fieldRev } })
@@ -619,8 +705,14 @@ export function useRecordWriters() {
               (r) => {
                 const att = { ...r.att }
                 for (const l of lessonIds) {
-                  // 正常出勤不保留异常原因；改为例外时沿用已填原因
-                  att[l] = { v, reason: v === "NORMAL" ? "" : att[l]?.reason ?? "", origin: "EXPLICIT" }
+                  // 同一状态保留原因；状态改变时原原因转为“原状态原因”保留可恢复，不冒充新状态的有效原因
+                  const old = att[l]
+                  if (old && old.v === v) {
+                    att[l] = { ...old, origin: "EXPLICIT" }
+                    continue
+                  }
+                  const prevReason = old?.reason ? { v: old.v, text: old.reason } : old?.prevReason
+                  att[l] = { v, reason: "", origin: "EXPLICIT", ...(prevReason ? { prevReason } : {}) }
                 }
                 return { ...r, att }
               },
@@ -639,7 +731,9 @@ export function useRecordWriters() {
             const r = s.records[d.rec.key]
             const a = r?.att[lessonId]
             if (!a || a.v === "NORMAL") return { error: "正常出勤不可填写异常原因" }
-            return patchRec(s, d.rec.key, r, (x) => ({ ...x, att: { ...x.att, [lessonId]: { ...a, reason } } }), [`reason:${lessonId}`])
+            const next: LessonAttT = { ...a, reason: cleanReason(reason) }
+            delete next.prevReason
+            return patchRec(s, d.rec.key, r, (x) => ({ ...x, att: { ...x.att, [lessonId]: next } }), [`reason:${lessonId}`])
           },
         })
       },
@@ -784,19 +878,27 @@ export function useTextWriters() {
           run: (s) => ({ ...s, comments: { ...s.comments, [k]: { text, stamp: s.stamp + 1 } } }),
         })
       },
-      addHighlight(taskId: string, week: number, sid: string, text: string) {
+      /**
+       * 教师明确选择 / 输入后加入一条亮点。同一学生、任务、日期（周级为无日期）的同一文字视为同一次操作的重试或误双击，不重复创建；
+       * 不同日期的同类行为可以再次记录。
+       */
+      addHighlight(taskId: string, week: number, sid: string, text: string, opts?: { date?: string; phraseId?: string }) {
         const k = entryKey(taskId, week, sid)
+        const clean = text.trim()
+        if (!clean) return
         mt.save({
-          field: `hl:${k}:add:${Date.now()}`,
+          field: `hl:${k}:add:${opts?.date ?? "W"}:${clean}`,
           scope: [scopeTask(taskId), scopeStudent(taskId, week, sid)],
           label: "新增亮点",
-          value: text,
+          value: clean,
           taskId,
           run: (s) => {
             const cur = s.highlights[k]?.items ?? []
+            if (cur.some((h) => h.text === clean && (h.date ?? null) === (opts?.date ?? null))) return s
+            const item: Highlight = { id: `HL_${s.seq}`, text: clean, ...(opts?.date ? { date: opts.date } : {}), ...(opts?.phraseId ? { phraseId: opts.phraseId } : {}) }
             return {
               ...s,
-              highlights: { ...s.highlights, [k]: { items: [...cur, { id: `HL_${s.seq}`, text }], stamp: s.stamp + 1 } },
+              highlights: { ...s.highlights, [k]: { items: [...cur, item], stamp: s.stamp + 1 } },
               seq: s.seq + 1,
             }
           },

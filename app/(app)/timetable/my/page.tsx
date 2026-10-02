@@ -45,7 +45,7 @@ import { safeQuery } from "@/lib/mt/display"
 function myTimetableBack(from: string | null, back: string | null, canGovern: boolean) {
   if (from === "schedule") {
     const q = safeQuery(back, ["week", "class", "task", "view", "q", "status"])
-    return { href: `/teaching/schedule${q ? `?${q}` : ""}`, label: "返回本周教学安排" }
+    return { href: `/teaching${q ? `?${q}` : ""}`, label: "返回我的教学" }
   }
   if (from === "teaching") return { href: "/teaching", label: "返回我的教学" }
   if (from === "center" && canGovern) return { href: "/timetable", label: "返回课表中心" }

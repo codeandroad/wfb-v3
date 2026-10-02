@@ -2,6 +2,7 @@
 
 import { Badge } from "@/components/kit"
 import { HwResultControls } from "@/components/mt/homework"
+import { PhrasePicker, ReasonField } from "@/components/mt/phrase-picker"
 import { RoutineDialog } from "@/components/mt/routine-dialog"
 import { AttSelect, GradeSelect, SaveState } from "@/components/mt/shared"
 import { Btn, Drawer, inputCls, Section, useAutoText } from "@/components/mt/ui"
@@ -96,6 +97,10 @@ export function StudentDrawer({
       )}
     </Drawer>
   )
+}
+
+export function StudentDetailBody({ tw, sid }: { tw: TaskWeek; sid: string }) {
+  return <DrawerBody tw={tw} sid={sid} />
 }
 
 function DrawerBody({ tw, sid }: { tw: TaskWeek; sid: string }) {
@@ -224,7 +229,7 @@ function DayBlock({ d, week }: { d: StudentDay; week: number }) {
               {elapsed ? (
                 <>
                   <AttSelect label={`${lessonTimeLabel(l)} 出勤`} value={a?.v ?? null} onChange={(v) => rw.setAttendance(d, week, [l.id], v)} />
-                  <ReasonInput d={d} week={week} lessonId={l.id} value={a?.reason ?? ""} enabled={!!a && a.v !== "NORMAL"} />
+                  <ReasonField d={d} week={week} lessonId={l.id} compact />
                   {a?.origin === "APPROVED_LEAVE" ? <Badge tone="info">来自请假来源</Badge> : null}
                 </>
               ) : (
@@ -294,20 +299,9 @@ function LessonObsRef({ lessonId, sid }: { lessonId: string; sid: string }) {
   )
 }
 
-export function ReasonInput({ d, week, lessonId, value, enabled }: { d: StudentDay; week: number; lessonId: string; value: string; enabled: boolean }) {
-  const rw = useRecordWriters()
-  const t = useAutoText(value, (v) => rw.setReason(d, week, lessonId, v))
-  return (
-    <input
-      aria-label="原因（选填）"
-      disabled={!enabled}
-      placeholder={enabled ? "原因（选填）" : "正常时不可填"}
-      value={enabled ? t.value : ""}
-      onChange={(e) => t.onChange(e.target.value)}
-      onBlur={t.flush}
-      className="h-7 min-w-32 flex-1 rounded-md border border-input bg-card px-2 disabled:opacity-50"
-    />
-  )
+/** 与日卡、课次详情同一原因组件（常用原因按状态过滤，状态切换保留原原因可恢复） */
+export function ReasonInput({ d, week, lessonId }: { d: StudentDay; week: number; lessonId: string; value?: string; enabled?: boolean }) {
+  return <ReasonField d={d} week={week} lessonId={lessonId} />
 }
 
 function Highlights({ tw, sid }: { tw: TaskWeek; sid: string }) {
@@ -318,9 +312,15 @@ function Highlights({ tw, sid }: { tw: TaskWeek; sid: string }) {
   return (
     <div className="flex flex-col gap-1.5">
       {items.map((h) => (
-        <HighlightRow key={h.id} text={h.text} onSave={(v) => tx.editHighlight(tw.task.id, tw.week, sid, h.id, v)} />
+        <div key={h.id} className="flex items-center gap-2">
+          <span className="w-12 shrink-0 font-mono text-[11px] text-muted-foreground">{h.date ? fmtMD(h.date) : "本周"}</span>
+          <div className="min-w-0 flex-1">
+            <HighlightRow text={h.text} onSave={(v) => tx.editHighlight(tw.task.id, tw.week, sid, h.id, v)} />
+          </div>
+        </div>
       ))}
       <div className="flex gap-2">
+        <PhrasePicker kind="HIGHLIGHT" label="亮点" saveText={draft} onPick={(t, pid) => tx.addHighlight(tw.task.id, tw.week, sid, t, pid ? { phraseId: pid } : undefined)} />
         <input
           aria-label="新增亮点"
           className={inputCls}

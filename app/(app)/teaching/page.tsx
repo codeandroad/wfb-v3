@@ -1,10 +1,10 @@
-import { TaskListPage } from "@/components/mt/task-list"
+import { TeachingHub } from "@/components/mt/teaching-hub"
 import { Suspense } from "react"
 
 export default function TeachingPage() {
   return (
     <Suspense>
-      <TaskListPage />
+      <TeachingHub />
     </Suspense>
   )
 }

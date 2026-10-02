@@ -1,10 +1,16 @@
-import { WeekSchedulePage } from "@/components/mt/week-schedule"
-import { Suspense } from "react"
+import { redirect } from "next/navigation"
 
-export default function SchedulePage() {
-  return (
-    <Suspense>
-      <WeekSchedulePage />
-    </Suspense>
-  )
+export default async function SchedulePage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>
+}) {
+  const sp = await searchParams
+  const q = new URLSearchParams()
+  for (const [k, v] of Object.entries(sp)) {
+    if (typeof v === "string") q.set(k, v)
+  }
+  const v = q.get("view")
+  if (v !== "lessons" && v !== "days") q.set("view", "lessons")
+  redirect(`/teaching?${q.toString()}`)
 }

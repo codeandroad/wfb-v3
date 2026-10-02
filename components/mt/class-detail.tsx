@@ -177,8 +177,8 @@ export function ClassDetailPage({ classId }: { classId: string }) {
                 <LinkButton href={ws("publish")} variant="outline">
                   发布与历史
                 </LinkButton>
-                <LinkButton href={`/teaching/schedule?week=${week}&class=${classId}`} variant="outline">
-                  本周教学安排
+                <LinkButton href={`/teaching?view=lessons&week=${week}&class=${classId}`} variant="outline">
+                  本周课次安排
                 </LinkButton>
               </div>
             </div>

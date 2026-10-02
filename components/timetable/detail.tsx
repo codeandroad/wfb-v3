@@ -64,7 +64,7 @@ function DayRecordEntry({ entry }: { entry: ProjectedEntry }) {
   const records = useLessonRecords()
   const legacy = records[recordKey(entry)]
   const href = entry.taskId
-    ? `/teaching/task/${encodeURIComponent(entry.taskId)}/day/${entry.date}?from=schedule&back=${encodeURIComponent(`week=${weekOfDate(entry.date)}`)}`
+    ? `/teaching?${new URLSearchParams({ view: "days", week: String(weekOfDate(entry.date)), day: `${entry.taskId}|${entry.date}` }).toString()}`
     : null
   return (
     <section className="mt-4 flex flex-col gap-2 rounded-lg border border-border bg-card p-3 text-[13px]" aria-label="课堂记录">

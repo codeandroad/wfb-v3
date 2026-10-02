@@ -482,6 +482,8 @@ export interface LessonAtt {
   v: Attendance
   reason: string
   origin: Origin
+  /** r3：状态切换后不再适用的原原因，保留可见可恢复，不冒充新状态原因 */
+  prevReason?: { v: Attendance; text: string }
 }
 export interface Rec {
   key: string

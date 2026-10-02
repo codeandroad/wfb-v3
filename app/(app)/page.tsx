@@ -33,9 +33,9 @@ export default function WorkbenchPage() {
         desc={`第 ${week} 周 · ${weekRangeLabel(week)}`}
         actions={
           <>
-            <LinkButton variant="outline" href="/teaching/schedule">
+            <LinkButton variant="outline" href="/teaching?view=lessons">
               <CalendarDays className="size-3.5" aria-hidden />
-              本周教学安排
+              本周课次安排
             </LinkButton>
             <LinkButton variant="outline" href="/teaching">
               <BookOpen className="size-3.5" aria-hidden />

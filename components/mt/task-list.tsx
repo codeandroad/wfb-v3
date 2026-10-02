@@ -20,10 +20,11 @@ import { useMt } from "@/lib/mt/store"
 import { ArrowRight, CalendarDays, Search, Settings2 } from "lucide-react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
+import type { ReactNode } from "react"
 
 type StatusFilter = "all" | "todo" | "ready" | "published"
 
-export function TaskListPage() {
+export function TaskListPage({ switcher }: { switcher: ReactNode }) {
   const mt = useMt()
   const teacherId = useTeacherId()
   const sp = useSearchParams()
@@ -46,22 +47,19 @@ export function TaskListPage() {
   }
 
   const header = (
-    <PageHeader
-      title="我的教学"
-      desc="本人任教的教学班与分工"
-      actions={
-        <>
+    <>
+      <PageHeader
+        title="我的教学"
+        desc="本人任教的教学班与分工"
+        actions={
           <LinkButton href={`/teaching/settings?ret=${encodeURIComponent(`/teaching?${sp.toString()}`)}`} variant="outline">
             <Settings2 className="size-3.5" aria-hidden />
             教学设置
           </LinkButton>
-          <LinkButton href={`/teaching/schedule?week=${week}`} variant="outline">
-            <CalendarDays className="size-3.5" aria-hidden />
-            本周教学安排
-          </LinkButton>
-        </>
-      }
-    />
+        }
+      />
+      <div className="mb-4">{switcher}</div>
+    </>
   )
 
   if (!teacherId) {
