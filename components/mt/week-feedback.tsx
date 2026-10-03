@@ -1,6 +1,7 @@
 "use client"
 
 import { Card, EmptyState } from "@/components/kit"
+import { CommonSummary } from './common-summary'
 import { planRoutine } from "@/lib/mt/model"
 import { routineStandard } from "@/lib/mt/use-schemes"
 import { AttSelect, FieldMark, GradeSelect, SaveState } from "@/components/mt/shared"
@@ -64,7 +65,10 @@ export function WeekFeedback({
 
   return (
     <div className="flex flex-col gap-4">
-
+      <details className="rounded-lg border border-border bg-card p-3">
+        <summary className="cursor-pointer text-sm font-medium">教学介绍与学情总结 · 本周共同内容</summary>
+        <div className="pt-3"><CommonSummary taskId={tw.task.id} week={tw.week} /></div>
+      </details>
       <div className="flex flex-wrap items-center gap-2">
         <div role="radiogroup" aria-label="学生集合" className="flex flex-wrap gap-1">
           {keys.map((k) => (

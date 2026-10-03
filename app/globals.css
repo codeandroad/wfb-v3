@@ -2,6 +2,14 @@
 @import 'tw-animate-css';
 @import 'shadcn/tailwind.css';
 
+@font-face {
+  font-family: 'Noto Report';
+  src: url('/fonts/NotoSansSC.ttf') format('truetype');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
@@ -41,7 +49,7 @@
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
   --font-sans: Arial, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei",
-    "微软雅黑", system-ui, sans-serif;
+    "微软雅黑", 'Noto Report', system-ui, sans-serif;
 }
 
 :root {
