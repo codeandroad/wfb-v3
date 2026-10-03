@@ -63,26 +63,26 @@ export function DayCardsView({
                   data-eval={c.status.key}
                   aria-label={`${pd.className}${sub ? ` ${sub}` : ""} ${fmtMD(c.date)} ${periodsLabel(c.lessons)}${c.merged > 1 ? `，合并${c.merged}节` : ""}，${c.status.label}${c.attTodo ? `，考勤待核对${c.attTodo}人` : ""}，打开本日记录`}
                   className={cn(
-                    "relative flex flex-col items-start gap-1.5 rounded-lg border bg-card px-3 py-2.5 text-left transition-colors hover:border-primary focus-visible:outline-2 focus-visible:outline-primary",
+                    "relative flex min-w-0 flex-col items-start gap-1.5 rounded-lg border bg-card px-3 py-2.5 text-left transition-colors hover:border-primary focus-visible:outline-2 focus-visible:outline-primary",
                     c.merged > 1 && "border-l-4 border-l-foreground/25",
                     focus === c.key ? "border-primary ring-2 ring-primary/30" : "border-border",
                   )}
                 >
-                  <span className="flex w-full items-start justify-between gap-1">
-                    <span className={cn("min-w-0 text-sm font-semibold leading-snug", titleClass(ps))} style={ps.hex ? { color: ps.hex } : undefined}>
+                  <span className="flex w-full min-w-0 items-center gap-1">
+                    <span title={pd.className} className={cn("min-w-0 truncate text-sm font-semibold leading-snug", titleClass(ps))} style={ps.hex ? { color: ps.hex } : undefined}>
                       {pd.className}
                     </span>
-                    {c.merged > 1 ? (
-                      <span className="inline-flex shrink-0 items-center gap-1 rounded border border-foreground/30 px-1.5 py-0.5 text-[11px] font-medium text-foreground">
-                        <Layers className="size-3" aria-hidden />
-                        {c.merged}节
-                      </span>
-                    ) : null}
+                    {pd.division ? <span className="shrink-0 whitespace-nowrap rounded px-1 text-xs font-medium" style={tagStyle(ps)}>{pd.division}</span> : null}
                   </span>
-                  {pd.division || pd.course ? (
-                    <span className="-mt-1 flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
-                      {pd.division ? <span className="rounded px-1 font-medium" style={tagStyle(ps)}>{pd.division}</span> : null}
+                  {pd.course || c.merged > 1 ? (
+                    <span className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
                       {pd.course ? <span>{pd.course}</span> : null}
+                      {c.merged > 1 ? (
+                        <span className="inline-flex shrink-0 items-center gap-1 rounded border border-foreground/30 px-1.5 py-0.5 text-[11px] font-medium text-foreground">
+                          <Layers className="size-3" aria-hidden />
+                          {c.merged}节
+                        </span>
+                      ) : null}
                     </span>
                   ) : null}
                   <ul className="flex flex-col gap-0.5 text-[11px] text-muted-foreground">
