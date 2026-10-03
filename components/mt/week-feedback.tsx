@@ -1,7 +1,8 @@
 "use client"
 
 import { Card, EmptyState } from "@/components/kit"
-import { RoutineDialog } from "@/components/mt/routine-dialog"
+import { planRoutine } from "@/lib/mt/model"
+import { routineStandard } from "@/lib/mt/use-schemes"
 import { AttSelect, FieldMark, GradeSelect, SaveState } from "@/components/mt/shared"
 import { Btn } from "@/components/mt/ui"
 import { FILTER_LABEL, filterStudents, nameOf, type FilterKey, type TaskWeek } from "@/lib/mt/derive"
@@ -45,7 +46,7 @@ export function WeekFeedback({
 }) {
   const mt = useMt()
   const [selected, setSelected] = useState<string[]>([])
-  const [routine, setRoutine] = useState<null | { sids: string[]; label: string }>(null)
+  const [routine, setRoutine] = useState<null | { message: string; opId?: string }>(null)
   const keys = Object.keys(FILTER_LABEL) as FilterKey[]
   const [hwSid, setHwSid] = useState<string | null>(null)
   const [page, setPage] = useState(1)
@@ -92,7 +93,13 @@ export function WeekFeedback({
             className="h-8 w-full rounded-lg border border-input bg-card pl-8 pr-3 text-sm"
           />
         </label>
-        <Btn variant="primary" disabled={!tw.students.length} onClick={() => setRoutine({ sids: scopeSids, label: selected.length ? `已选 ${selected.length} 人` : `全部 ${tw.students.length} 名有效学生` })}>
+        <Btn variant="primary" disabled={!tw.students.length} onClick={() => {
+          const days = tw.days.filter(d => scopeSids.includes(d.studentId))
+          const plan = planRoutine(days, routineStandard(mt.biz, () => tw.task, () => tw.week))
+          if (!plan.items.length) { setRoutine({ message: "没有符合条件的待处理记录，未写入。" }); return }
+          const result = mt.runRoutine(crypto.randomUUID(), plan, days, selected.length ? `已选 ${selected.length} 人` : `全部 ${tw.students.length} 名有效学生`)
+          setRoutine(result.ok ? { message: `已处理 ${result.written} 条学生—教学日`, opId: result.op.id } : { message: result.error })
+        }}>
           <CheckCheck className="size-4" aria-hidden />
           批量确认常规情况
         </Btn>
@@ -183,7 +190,7 @@ export function WeekFeedback({
         </Card>
       )}
 
-      {routine ? <RoutineDialog tw={tw} sids={routine.sids} scopeLabel={routine.label} onClose={() => setRoutine(null)} /> : null}
+      {routine ? <div role="status" className="flex items-center gap-3 text-sm">{routine.message}{routine.opId ? <Btn onClick={() => { const result = mt.undoRoutine(routine.opId!); setRoutine({ message: "error" in result ? result.error : `已恢复 ${result.restored} 条，保留后续更正 ${result.kept} 条。` }) }}>撤销本次批量</Btn> : null}</div> : null}
       {hwSid && tw.students.includes(hwSid) ? <StudentHwDialog tw={tw} sid={hwSid} onClose={() => setHwSid(null)} /> : null}
     </div>
   )

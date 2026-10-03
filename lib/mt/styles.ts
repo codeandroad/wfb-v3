@@ -5,12 +5,14 @@ import type { MtBiz } from "./store"
 /**
  * 个人显示样式：只影响当前教师自己的界面。
  * 不改变共享课程 / 班级 / 任务名称、排课版本、分工或任何业务数据。
- * 优先级：本任务 > 本班级 > 本课程 > 系统默认；颜色、字重、字体分别继承。
+ * 每个属性按成功提交序号选择；无序号的旧偏好仅保留升级前的显示，不伪造保存时间。
  */
 export type StyleLevel = "TASK" | "CLASS" | "COURSE"
 export type StyleWeight = "normal" | "semibold" | "bold"
 export type StyleFont = "sans" | "serif" | "mono"
+export type StyleAttribute = "color" | "bg" | "weight" | "font"
 export interface StylePref {
+  order?: Partial<Record<StyleAttribute, number>>
   color?: string
   /** 分工标签色，取 STYLE_COLORS id */
   tag?: string
@@ -69,8 +71,16 @@ export function resolveStyle(biz: MtBiz, teacherId: string | null, task: STask):
   ]
   for (const [lvl, id] of chain) {
     if (!id) continue
-    const p = all[styleKey(teacherId, lvl, id)]
-    if (!p) continue
+    const stored = all[styleKey(teacherId, lvl, id)]
+    if (!stored) continue
+    const p: StylePref = {}
+    for (const field of ["color", "bg", "weight", "font"] as const) {
+      const winner = chain.filter(([, targetId]) => !!targetId).map(([scope, targetId], index) => ({ scope, targetId, index, pref: all[styleKey(teacherId, scope, targetId)] })).filter(x => x.pref && (x.pref[field] !== undefined || x.pref.order?.[field] !== undefined)).sort((a, b) => (b.pref!.order?.[field] ?? 0) - (a.pref!.order?.[field] ?? 0) || a.index - b.index)[0]
+      if (winner?.scope === lvl && winner.targetId === id) {
+        Object.assign(p, { [field]: stored[field] })
+        if (stored[field] === undefined) out.from[field] = lvl
+      }
+    }
     if (!out.from.color && p.color) {
       const c = STYLE_COLORS.find((x) => x.id === p.color)
       const hex = normalizeHex(p.color) ?? c?.hex
@@ -104,6 +114,20 @@ export function resolveStyle(biz: MtBiz, teacherId: string | null, task: STask):
     out.bg = { hex: `#${channels.join("")}`, border: `${c}55`, label: "自动配套" }
   }
   return out
+}
+
+export function saveStylePatch(all: Record<string, StylePref>, key: string, patch: StylePref | null): Record<string, StylePref> {
+  const fields = (patch ? Object.keys(patch) : ["color", "bg", "weight", "font"]).filter(f => ["color", "bg", "weight", "font"].includes(f)) as StyleAttribute[]
+  const clean = patch ? cleanStyle(patch) : null
+  const sequence = Math.max(0, ...Object.values(all).flatMap(p => Object.values(p.order ?? {}).map(Number))) + 1
+  const saved: StylePref = { ...all[key], order: { ...all[key]?.order } }
+  for (const field of fields) {
+    if (patch?.[field] !== undefined && clean?.[field] === undefined) continue
+    Object.assign(saved, { [field]: clean?.[field] })
+    saved.order![field] = sequence
+  }
+  delete saved.tag
+  return { ...all, [key]: saved }
 }
 
 export function normalizeHex(raw: string): string | null {

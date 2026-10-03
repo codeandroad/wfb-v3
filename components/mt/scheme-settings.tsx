@@ -240,7 +240,7 @@ export function SchemeSettings() {
               新建空白
             </Btn>
           </div>
-          <p className="mb-3 text-xs text-muted-foreground">保存仅备用，不自动设为默认。复制得到独立副本，不与来源同步。</p>
+          <p className="mb-3 text-xs text-muted-foreground">保存仅备用，不自动设为默认。复制得��独立副本，不与来源同步。</p>
           {active.length === 0 ? (
             <p className="rounded-lg border border-dashed border-border px-3 py-6 text-center text-sm text-muted-foreground">
               还没有个人方案。可从系统方案复制，或新建空白方案。
@@ -487,14 +487,7 @@ function PurposePicker({ value, onChange, timing, setTiming, usedNow, curWeek }:
       ))}
       {value.includes("CLASSROOM") ? (
         <div className="ml-6 flex flex-col gap-1 text-sm">
-          <label className="flex items-center gap-2">
-            <input type="radio" name="timing" checked={timing === "NOW"} onChange={() => setTiming("NOW")} />
-            立即生效（本期 {weekLabel(curWeek)} 起）
-          </label>
-          <label className="flex items-center gap-2">
-            <input type="radio" name="timing" checked={timing === "NEXT"} onChange={() => setTiming("NEXT")} />
-            自{weekLabel(curWeek + 1)}起
-          </label>
+          <p>保存后作为未单独采用任务的新周期默认，不重评已有结果。</p>
           {usedNow && timing === "NOW" ? (
             <p className="text-xs leading-relaxed text-muted-foreground">本期尚未评价的任务立即改用新方案；本期已有评价的任务保留其已固定的标准，已录入的等级不受影响。</p>
           ) : null}

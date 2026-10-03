@@ -105,7 +105,7 @@ export function saveScheme(
   }
 }
 
-export type ClassroomTiming = "NOW" | "NEXT"
+export type ClassroomTiming = "NOW"
 
 /** 设为默认：只改所选用途。课堂可本期立即生效（已固定绑定的任务不受影响）或下期起；同一待生效周期再次调整即替换。 */
 export function setDefault(biz: MtBiz, teacherId: string, revId: string, purposes: Purpose[], timing: ClassroomTiming): Out {
@@ -117,7 +117,7 @@ export function setDefault(biz: MtBiz, teacherId: string, revId: string, purpose
     const k = defaultKey(owner, p)
     const list = [...(defaults[k] ?? [])]
     if (p === "CLASSROOM") {
-      const from = timing === "NOW" ? cur : cur + 1
+      const from = cur
       const kept = list.filter((e) => e.fromWeek < from)
       const entry: DefaultEntry = { revId, fromWeek: from, at: biz.clock }
       defaults[k] = [...kept, entry]
@@ -147,8 +147,7 @@ export function setTaskOverride(biz: MtBiz, teacherId: string, taskId: string, p
   const cur = curWeekOf(biz)
   let next: DefaultEntry[]
   if (purpose === "CLASSROOM") {
-    const from = taskClassroomUsed(biz, taskId) ? cur + 1 : cur
-    next = [...list.filter((e) => e.fromWeek < from), { revId: revId ?? "", fromWeek: from, at: biz.clock }]
+    return { error: "请在任务课堂方案中明确采用，当前周期与持续选择一起更新。" }
   } else {
     next = [...list, { revId: revId ?? "", fromWeek: cur, at: biz.clock }]
   }
@@ -180,7 +179,7 @@ export function retireScheme(biz: MtBiz, teacherId: string, schemeId: string, mo
   const used = defaultUsesScheme(biz, teacherId, schemeId)
   let next: MtBiz = biz
   if (used.length) {
-    const r = setDefault(biz, teacherId, replacementRevId, used, classroomUsedThisPeriod(biz, teacherId) ? "NEXT" : "NOW")
+    const r = setDefault(biz, teacherId, replacementRevId, used, "NOW")
     if ("error" in r) return r
     next = r
     // 待生效选择若仍指向该方案，也一并替换

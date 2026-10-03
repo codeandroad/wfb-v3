@@ -60,15 +60,9 @@ function TaskSchemesModal({ task, week, onClose }: { task: Pick<STask, "id" | "t
   const biz = mt.biz
   const std = useClassroomStandard(task, week)
   const revs = legalRevs(biz, task.teacher_id)
-  const cur = curWeekOf(biz)
-  const viewingCurrent = week === cur
-  const used = taskClassroomUsed(biz, task.id)
   const hw = homeworkRevForTask(biz.schemes, task.id, task.teacher_id, biz.clock)
-  const clsOverrideNow = taskClassroomOverrideAt(biz.schemes, task.id, cur)
-  const clsOverrideNext = taskClassroomOverrideAt(biz.schemes, task.id, cur + 1)
   const hasHwOverride = (biz.schemes.taskOverrides?.[overrideKey(task.id, "HOMEWORK")] ?? []).length > 0 && hw.source === "TASK"
 
-  const [clsPick, setClsPick] = useState(std.revId)
   const [hwPick, setHwPick] = useState(hw.revId)
   const [view, setView] = useState<SchemeRev | null>(null)
   const [msg, setMsg] = useState<{ p: Purpose; text: string; error?: boolean } | null>(null)
@@ -77,44 +71,16 @@ function TaskSchemesModal({ task, week, onClose }: { task: Pick<STask, "id" | "t
     const r = mt.command(p === "CLASSROOM" ? "本任务课堂方案" : "本任务新作业方案", (b) => setTaskOverride(b, task.teacher_id, task.id, p, revId))
     if (!r.ok) return setMsg({ p, text: r.error, error: true })
     const name = revId ? revById(revId)?.name : "教师默认"
-    if (p === "CLASSROOM")
-      setMsg({ p, text: used ? `本期仍用「${std.rev?.name}」，第 ${cur + 1} 周起本任务用「${name}」。` : `本任务自本期（第 ${cur} 周）起用「${name}」。` })
-    else setMsg({ p, text: `本任务之后新布置的作业用「${name}」；已布置作业保持原方案。` })
+    setMsg({ p, text: `本任务之后新布置的作业用「${name}」；已布置作业保持原方案。` })
   }
 
-  const clsSame = clsPick === (used ? clsOverrideNext ?? std.revId : std.revId)
   return (
     <Modal title="本任务评价方案" desc={`仅作用于「${task.label}」，不改你的其他任务和教师默认。`} onClose={onClose} footer={<Btn onClick={onClose}>关闭</Btn>}>
       <div className="flex flex-col gap-5">
         <section aria-labelledby="ts-cls" className="flex flex-col gap-2">
           <h3 id="ts-cls" className="text-sm font-semibold">课堂评价</h3>
           <RegradeControl key={`${task.id}:${week}`} target={{ kind: "CLASSROOM", taskId: task.id, week }} currentRev={std.revId} label={task.label} />
-          <h4 className="text-sm font-semibold">单独设置后续默认（不重置当前结果）</h4>
-          <p className="text-sm">
-            {`第 ${week} 周实际方案：`}
-            <b>{std.rev?.name}</b>
-            <span className="ml-1 text-muted-foreground">{std.bound ? "（当前工作版本）" : clsOverrideNow && viewingCurrent ? "（本任务覆盖）" : "（候选，尚未评价）"}</span>
-            <button type="button" className="ml-2 text-primary underline-offset-2 hover:underline" onClick={() => std.rev && setView(std.rev)}>查看释义</button>
-          </p>
-          {used && clsOverrideNext && clsOverrideNext !== std.revId ? (
-            <p className="text-sm text-muted-foreground">{`第 ${cur + 1} 周起本任务：${revById(clsOverrideNext)?.name}`}</p>
-          ) : null}
-          <div className="flex flex-wrap items-center gap-2">
-            <label className="sr-only" htmlFor="ts-cls-pick">选择课堂方案</label>
-            <select id="ts-cls-pick" value={clsPick} onChange={(e) => setClsPick(e.target.value)} className="h-9 rounded-lg border border-input bg-card px-2 text-sm">
-              {revs.map((r) => (
-                <option key={r.id} value={r.id}>{r.name}</option>
-              ))}
-            </select>
-            <Btn variant="primary" disabled={clsSame} onClick={() => apply("CLASSROOM", clsPick)}>
-              {used ? "下期起本任务采用" : "本任务立即采用"}
-            </Btn>
-            {clsOverrideNow || clsOverrideNext ? <Btn onClick={() => apply("CLASSROOM", null)}>恢复教师默认</Btn> : null}
-          </div>
-          <p className="text-xs leading-relaxed text-muted-foreground">
-            {used ? "此处仅设置后续默认；要更换本期工作方案，请使用上方立即重评入口。" : "本期尚未评价，可立即换用；选方案不会为学生评分。"}
-          </p>
-          {msg?.p === "CLASSROOM" ? <p role={msg.error ? "alert" : "status"} className={msg.error ? "text-sm text-destructive" : "text-sm text-primary"}>{msg.text}</p> : null}
+          <button type="button" className="self-start text-sm text-primary" onClick={() => std.rev && setView(std.rev)}>查看当前方案释义</button>
         </section>
 
         <section aria-labelledby="ts-hw" className="flex flex-col gap-2 border-t border-border pt-4">

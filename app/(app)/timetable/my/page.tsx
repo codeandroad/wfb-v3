@@ -6,6 +6,7 @@ import { CardDetail, ConfirmModal, DiffColumns, DiffList } from "@/components/ti
 import { findEffectiveLesson, LessonDetail } from "@/components/mt/lesson-detail"
 import { taskById, weekOfDate } from "@/lib/mt/model"
 import { useTeacherId } from "@/lib/mt/derive"
+import { useMt } from "@/lib/mt/store"
 import { periodById } from "@/lib/timetable/data"
 import { LessonDialog } from "@/components/timetable/lesson-dialog"
 import { TimetableDemoBar } from "@/components/timetable/demo-bar"
@@ -79,10 +80,10 @@ function MyTimetableContent() {
   const setWeekStartRef = useRef(tt.setWeekStart)
   setWeekStartRef.current = tt.setWeekStart
   useEffect(() => {
-    if (!weekParam || syncedWeekParam.current === weekParam) return
+    if (!tt.hydrated || !weekParam || syncedWeekParam.current === weekParam) return
     syncedWeekParam.current = weekParam
     if (WEEKS.some((w) => w.start === weekParam)) setWeekStartRef.current(weekParam)
-  }, [weekParam])
+  }, [weekParam, tt.hydrated])
 
   const [mode, setMode] = useState<"my" | "school" | "compare">("my")
   const [detail, setDetail] = useState<ProjectedEntry | null>(null)
@@ -96,7 +97,8 @@ function MyTimetableContent() {
   const [dualColumn, setDualColumn] = useState(false)
 
   const week = weekOfStart(tt.weekStart) ?? WEEKS[1]
-  const clockDate = tt.clock.slice(0, 10)
+  const mt = useMt()
+  const clockDate = mt.biz.clock.slice(0, 10)
   const pending = isPending(tt, teacherId)
   const adoption = tt.adoptions[teacherId]
   const editing = !!adoption?.draft?.active

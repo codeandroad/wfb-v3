@@ -50,6 +50,7 @@ export interface SchemeState {
   bindings: Record<string, string>
   /** `${taskId}|${purpose}` -> 本人对该真实任务的覆盖（按生效先后）；仅影响该任务 */
   taskOverrides?: Record<string, DefaultEntry[]>
+  classroomChoices?: Record<string, string>
 }
 
 export function overrideKey(taskId: string, p: Purpose) {
@@ -57,9 +58,7 @@ export function overrideKey(taskId: string, p: Purpose) {
 }
 /** 任务课堂覆盖：目标周期有效的覆盖修订（无则 null） */
 export function taskClassroomOverrideAt(st: SchemeState, taskId: string, week: number): string | null {
-  let rev: string | null = null
-  for (const e of st.taskOverrides?.[overrideKey(taskId, "CLASSROOM")] ?? []) if (e.fromWeek <= week) rev = e.revId || null
-  return rev
+  return st.classroomChoices?.[taskId] ?? null
 }
 /** 任务新作业覆盖：此刻有效的覆盖修订（无则 null） */
 export function taskHomeworkOverrideNow(st: SchemeState, taskId: string, nowIso: string): string | null {
@@ -228,8 +227,7 @@ export function classroomRevFor(st: SchemeState, taskId: string, teacherId: stri
 
 /** 待生效的课堂选择（生效周期晚于当前周期） */
 export function pendingClassroom(st: SchemeState, owner: string, currentWeek: number): DefaultEntry | null {
-  const list = st.defaults[defaultKey(owner, "CLASSROOM")] ?? []
-  return list.filter((e) => e.fromWeek > currentWeek).at(-1) ?? null
+  return null
 }
 
 /* ---------------- 引用判断 ---------------- */
@@ -241,7 +239,8 @@ export interface RefIndex {
 export function revRefs(st: SchemeState, extra: { assignmentRevs: (string | null | undefined)[]; publicationRevs: string[] }): RefIndex {
   const business = new Set<string>([...Object.values(st.bindings), ...extra.publicationRevs])
   for (const r of extra.assignmentRevs) if (r) business.add(r)
-  const defaults = new Set<string>()
+  const defaults = new Set<string>(Object.values(st.classroomChoices ?? {}))
+  for (const entries of Object.values(st.taskOverrides ?? {})) for (const entry of entries) if (entry.revId) defaults.add(entry.revId)
   for (const list of Object.values(st.defaults)) for (const e of list) defaults.add(e.revId)
   return { business, defaults }
 }

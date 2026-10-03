@@ -10,6 +10,7 @@ import {
   fmtMD,
   personalDisplay,
   lessonsOfWeek,
+  scheduleReadOfWeek,
   lessonTimeLabel,
   MAX_WEEK,
   resolveLabel,
@@ -56,6 +57,7 @@ export function WeekSchedulePage({ view }: { view: ScheduleView }) {
   const tasks = permittedTasks(mt.biz, teacherId)
   const classes = uniq(tasks.map((t) => t.class_id)).map((id) => ({ id, name: classOf(tasks.find((t) => t.class_id === id)!).name }))
   const scoped = tasks.filter((t) => (!classFilter || t.class_id === classFilter) && (!taskFilter || t.id === taskFilter))
+  const schedule = scheduleReadOfWeek(week)
   const lessons = lessonsOfWeek(mt.biz.variant, week, scoped.map((t) => t.id))
   const dates = weekDates(week)
   const showWeekend = lessons.some((l) => dates.indexOf(l.actual_date) >= 5)
@@ -106,7 +108,8 @@ export function WeekSchedulePage({ view }: { view: ScheduleView }) {
         <span className="ml-auto text-sm text-muted-foreground">{view === "days" ? `${weekCards.length} 张合并日卡 · ` : ""}{lessons.length} 个原始课次</span>
       </div>
 
-      {!teacherId ? (
+      {schedule.status === "ok" && schedule.exclusions?.length ? <p className="mb-3 text-sm text-muted-foreground">{schedule.exclusions.map(e => `${e.date}：${e.reason}`).join("；")}。原安排可在完整课表核对。</p> : null}
+      {schedule.status !== "ok" ? <EmptyState title={schedule.status === "error" ? "课表读取失败" : "课表尚未确认"} desc={schedule.message} /> : !teacherId ? (
         <EmptyState icon={<CalendarRange className="size-7" />} title="当前身份没有任教任务" desc="切换为示例林老师或示例周老师查看。" />
       ) : lessons.length === 0 ? (
         <EmptyState

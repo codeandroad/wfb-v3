@@ -519,6 +519,7 @@ export function schoolDraftWeekEntries(
 /* ---------------- Context ---------------- */
 
 interface TTContext extends TTState {
+  hydrated: boolean
   persona: Persona // 由全局 DemoProvider 提供（只读）
   setWeekStart: (w: string) => void
   setSelectedTeacher: (id: string) => void
@@ -635,7 +636,7 @@ export function TimetableProvider({
 
   useEffect(() => {
     if (!clock) return
-    setState((s) => (s.clock === clock ? s : { ...s, clock, weekStart: weekStartOf(clock) }))
+    setState((s) => (s.clock === clock ? s : { ...s, clock }))
   }, [clock])
 
   // 人物切换时：教师视角默认聚焦本人课表；教务视角保留当前所选教师。
@@ -647,7 +648,7 @@ export function TimetableProvider({
   useEffect(() => {
     const loaded = loadState()
     const c = clockRef.current
-    setState(c ? { ...loaded, clock: c, weekStart: loaded.clock === c ? loaded.weekStart : weekStartOf(c) } : loaded)
+    setState(c ? { ...loaded, clock: c } : loaded)
     setHydrated(true)
   }, [])
 
@@ -694,6 +695,7 @@ export function TimetableProvider({
     const api: TTContext = {
       ...state,
       persona,
+      hydrated,
       setWeekStart: (weekStart) => setState((s) => ({ ...s, weekStart })),
       setSelectedTeacher: (selectedTeacher) => setState((s) => ({ ...s, selectedTeacher })),
       advanceClockTo: (date) => {
@@ -1322,7 +1324,7 @@ export function TimetableProvider({
       },
     }
     return api
-  }, [state, persona, nextPerSeq])
+  }, [state, persona, nextPerSeq, hydrated])
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>
 }
@@ -1341,12 +1343,10 @@ export function teacherWeekEntries(s: TTState, teacherId: string, weekStart: str
     const date = addDays(weekStart, wd - 1)
     days.push({ date, weekday: wd, status: teacherCurrent(s, teacherId, date) })
   }
-  const status = teacherCurrent(s, teacherId, weekStart)
-  if (status.kind !== "ok") return { days, entries: [] as ProjectedEntry[], multiVersion: false }
-  const entries = projectWeek(status.template, weekStart, teacherId, "personal").map((e) => ({
+  const entries = days.flatMap(({ date, status }) => status.kind !== "ok" ? [] : projectWeek(status.template, weekStart, teacherId, "personal").filter(e => e.date === date).map(e => ({
     ...e,
     origin: status.editedKeys.includes(e.key) ? ("personal" as const) : ("school" as const),
-  }))
+  })))
   const revSeqs = new Set(days.filter((d) => d.status.kind === "ok").map((d) => (d.status as { rev: PerRevision }).rev.perSeq))
   return { days, entries, multiVersion: revSeqs.size > 1 }
 }
