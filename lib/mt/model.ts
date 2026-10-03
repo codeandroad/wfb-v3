@@ -226,7 +226,7 @@ export type VariantId = "BASE" | "ADJACENT_LESSONS" | "SEPARATED_LESSONS" | "MID
 
 export const VARIANTS: { id: VariantId; label: string; desc: string }[] = [
   { id: "BASE", label: "基线（第5周 · 9/30 18:00）", desc: "10个本人课次，56条已发生日记录" },
-  { id: "ADJACENT_LESSONS", label: "连堂：计算机周三第1+2节", desc: "课����11张，日记录不翻倍" },
+  { id: "ADJACENT_LESSONS", label: "连堂：计算机周三第1+2节", desc: "课�����11张，日记录不翻倍" },
   { id: "SEPARATED_LESSONS", label: "不连续：P1周一第3、5节", desc: "两张卡、各自时间" },
   { id: "MIDDAY_PARTIAL", label: "部分当天：连堂 + 9/30 08:45", desc: "第一课已结束、第二课未开始" },
 ]
@@ -719,7 +719,7 @@ const sameSet = (a: string[], b: string[]) => a.length === b.length && a.every((
  * 出勤改变后的评价联动（纯函数，同一原子写入中调用）：
  * - 全部已发生课次均未出席：当前等级失效为系统“不适用（未出席）”，旧值转入 gradeVoided 历史；
  * - 仍有真实参加但已确认覆盖包含被更正课次：移出该课次，标记需核对覆盖，不机械删除合法评价；
- * - 从不适用恢复为有参加：只恢复为待处理，绝不自动复活旧等级。
+ * - 从不适用恢复为有参加：只恢复为待处理，绝不自动复活���等级。
  */
 export function reconcileGrade(r: Rec, e: DayElig, at: string, why: string): Rec {
   const had = r.grade !== null || r.gradeHandling === "CONFIRMED" || r.gradeHandling === "EXPLICIT_EMPTY"
@@ -1269,7 +1269,7 @@ export function seedAssignments(clockIso: string): Assignment[] {
         results,
         revision: 1,
         stamp: 0,
-        // 场景作业按原型既有字典（A＝优秀）布置，与系统基础四级第 1 修订一致
+        // 场景作业按原型既有字典（A＝优秀）布置，与系统���础四级第 1 修订一致
         schemeRevId: "SYS_BASIC4@1",
       }
     })
@@ -1361,6 +1361,10 @@ export interface SnapStudent {
   comment: string
 }
 export interface Publication {
+  reports?: import('./reports').FrozenReport[]
+  sourceVersion?: string
+  authorId?: string
+  withdrawn?: boolean
   id: string
   taskIds: string[]
   periodId: string

@@ -116,6 +116,9 @@ export function taskWeek(biz: MtBiz, task: STask, week: number): TaskWeek {
   const pubs = biz.publications.filter((p) => p.periodId === periodId && p.taskIds.includes(task.id))
   const latestPublication = pubs.length ? pubs.reduce((a, b) => (a.stamp >= b.stamp ? a : b)) : null
   const published = !!latestPublication
+  const personalPublishedCount = uniq(pubs.filter(p => !p.withdrawn).flatMap(p => p.students.map(s => s.studentId))).filter(id => students.includes(id)).length
+  const classPublished = pubs.some(p => !p.withdrawn && p.reports?.some(r => r.kind === 'class' && r.audience === 'parent'))
+  const coverageLabel = latestPublication?.reports ? `个人 ${personalPublishedCount}/${students.length} · 班级${classPublished ? '已发' : '未发'}` : `已发布 V${latestPublication?.revision}`
   const pubStamp = latestPublication?.stamp ?? 0
 
   const k = entryKey(task.id, week)
@@ -131,7 +134,7 @@ export function taskWeek(biz: MtBiz, task: STask, week: number): TaskWeek {
   if (!lessons.length) status = { key: "none", label: "本周无课", action: "查看", tone: "neutral" }
   else if (!elapsed.length) status = { key: "future", label: "课次未开始", action: "查看", tone: "neutral" }
   else if (published && !unpublishedChanges && processed === elapsed.length)
-    status = { key: "published", label: `已发布 V${latestPublication!.revision}`, action: "查看反馈", tone: "success" }
+    status = { key: "published", label: coverageLabel, action: "查看反馈", tone: "success" }
   else if (published && unpublishedChanges)
     status = { key: "changed", label: `已发布 V${latestPublication!.revision} · 有未发布内容`, action: "继续完善", tone: "info" }
   else if (processed === 0 && !days.some((d) => d.rec.revision > 0))

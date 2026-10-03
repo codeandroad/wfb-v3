@@ -8,6 +8,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
 import { schoolNow } from "./clock"
+import { sourceVersion, validTemplate } from './reports'
 import { generationOf } from "./regrading"
 import {
   addDaysIso,
@@ -198,7 +199,8 @@ export interface MtBiz {
   lessonOverrides: Record<string, DisplayPref>
   assignments: Assignment[]
   plans: Record<string, Plan>
-  summaries: Record<string, TextEntry> // `${taskId}|${periodId}`
+  reporting?: import('./reports').ReportingState
+  summaries: Record<string, TextEntry & { teaching?: string; learning?: string }> // `${taskId}|${periodId}`
   comments: Record<string, TextEntry> // `${taskId}|${periodId}|${sid}`
   /** 按日记录的课堂日小结：`${taskId}|${date}`；不自动并入公共总结 */
   daySummaries: Record<string, TextEntry>
@@ -521,6 +523,8 @@ export function MtProvider({ children }: { children: ReactNode }) {
   const commitBiz = useCallback((next: MtBiz): string | null => {
     if (faultsRef.current.storageFail) return "模拟存储写入失败（故障注入）"
     try {
+      const stored = JSON.parse(window.localStorage.getItem(bizKey(next.variant)) ?? 'null') as MtBiz | null
+      if (stored && next.variant === bizRef.current.variant && stored.stamp > bizRef.current.stamp) return '其他页面已保存更新。请刷新读取最新内容后重试；本次未覆盖存储。'
       window.localStorage.setItem(bizKey(next.variant), JSON.stringify(next))
     } catch {
       return "浏览器存储不可用或已满"
@@ -693,6 +697,14 @@ export function MtProvider({ children }: { children: ReactNode }) {
         const cur = bizRef.current
         const dup = cur.publications.find((p) => p.idemKey === input.idemKey)
         if (dup) return { ok: true, pub: dup, reused: true }
+        if (faultsRef.current.saveFail) return { ok: false, error: '保存失败（故障注入），输入已保留' }
+        if (input.reports) {
+          let persisted: MtBiz | null = null
+          try { persisted = JSON.parse(window.localStorage.getItem(bizKey(cur.variant)) ?? 'null') } catch { return { ok: false, error: '无法核对存储版本，请重载后重试' } }
+          if (input.sourceVersion !== sourceVersion(cur) || (persisted && sourceVersion(persisted) !== input.sourceVersion)) return { ok: false, error: '源内容已变化，请重新加载并核对预览' }
+          if (!input.authorId || input.taskIds.some(id => !TASKS.some(t => t.id === id && (t.teacher_id === input.authorId || (cur.bigDemo && input.authorId === 'TEACHER_LYNN' && t.teacher_id === 'TEACHER_BIG_DEMO'))))) return { ok: false, error: '无权发布该教学范围' }
+          if (input.reports.some(r => !validTemplate(r.template) || !r.blocks.some(b => b.key !== 'legend' && b.lines.length))) return { ok: false, error: '报告内容为空或模板非法' }
+        }
         if (input.taskIds.some((t) => cur.revoked.includes(t))) return { ok: false, error: "已失去任务权限，不能��布" }
         const prev = cur.publications.filter(
           (p) => p.periodId === input.periodId && p.taskIds.slice().sort().join() === input.taskIds.slice().sort().join(),
@@ -1139,6 +1151,12 @@ export function useTextWriters() {
   const mt = useMt()
   return useMemo(
     () => ({
+      setSummaryPart(taskId: string, week: number, part: 'teaching' | 'learning', text: string) {
+        const k = entryKey(taskId, week)
+        mt.save({ field: `sum:${k}:${part}`, scope: [scopeTask(taskId)], label: part === 'teaching' ? '教学介绍' : '学情总结', value: text, taskId,
+          run: s => ({ ...s, summaries: { ...s.summaries, [k]: { ...s.summaries[k], text: s.summaries[k]?.text ?? '', [part]: text, stamp: s.stamp + 1 } } }),
+        })
+      },
       setSummary(taskId: string, week: number, text: string) {
         const k = entryKey(taskId, week)
         mt.save({
@@ -1147,7 +1165,7 @@ export function useTextWriters() {
           label: "公共总结",
           value: text,
           taskId,
-          run: (s) => ({ ...s, summaries: { ...s.summaries, [k]: { text, stamp: s.stamp + 1 } } }),
+          run: (s) => ({ ...s, summaries: { ...s.summaries, [k]: { ...s.summaries[k], text, stamp: s.stamp + 1 } } }),
         })
       },
       setDaySummary(taskId: string, date: string, text: string) {

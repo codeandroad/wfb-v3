@@ -3,7 +3,7 @@
 import { Badge, Card, LinkButton, PageHeader } from "@/components/kit"
 import { MtLoadError, MtLoading } from "@/components/mt/shared"
 import { Btn, Modal, inputCls } from "@/components/mt/ui"
-import { useTeacherId } from "@/lib/mt/derive"
+import { useTeacherId, permittedTasks, currentWeek } from "@/lib/mt/derive"
 const weekLabel = (n: number) => `第 ${n} 周`
 import {
   classroomUsedThisPeriod,
@@ -95,6 +95,7 @@ export function SchemeSettings() {
           </LinkButton>
         }
       />
+      {permittedTasks(mt.biz, teacherId)[0] ? <div className="mb-3"><LinkButton href={`/teaching/task/${permittedTasks(mt.biz, teacherId)[0].id}?week=${currentWeek(mt.biz)}&tab=publish&publishing=templates`} variant="outline">报告模板中心</LinkButton></div> : null}
       <div role="tablist" aria-label="设置分类" className="mb-5 flex flex-wrap gap-1 border-b border-border">
         {SETTINGS_TABS.map(([k, label]) => (
           <button
@@ -240,7 +241,7 @@ export function SchemeSettings() {
               新建空白
             </Btn>
           </div>
-          <p className="mb-3 text-xs text-muted-foreground">保存仅备用，不自动设为默认。复制得��独立副本，不与来源同步。</p>
+          <p className="mb-3 text-xs text-muted-foreground">保存仅备用，不自动设为默认。复制得���独立副本，不与来源同步。</p>
           {active.length === 0 ? (
             <p className="rounded-lg border border-dashed border-border px-3 py-6 text-center text-sm text-muted-foreground">
               还没有个人方案。可从系统方案复制，或新建空白方案。

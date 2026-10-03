@@ -25,7 +25,9 @@ import { useRef, useState } from "react"
 
 type Issue = { level: "block" | "warn"; text: string; actions?: { label: string; run: () => void }[] }
 
-export function PublishPanel({ tw, teacherId, onOpenStudent }: { tw: TaskWeek; teacherId: string; onOpenStudent: (sid: string) => void }) {
+export { ReportWorkspace as PublishPanel } from './report-workspace'
+
+function LegacyPublishPanel({ tw, teacherId, onOpenStudent }: { tw: TaskWeek; teacherId: string; onOpenStudent: (sid: string) => void }) {
   const mt = useMt()
   const tx = useTextWriters()
   const hw = useHomeworkWriters()
@@ -154,7 +156,7 @@ export function PublishPanel({ tw, teacherId, onOpenStudent }: { tw: TaskWeek; t
         {tw.unpublishedChanges ? (
           <p className="mb-3 flex items-center gap-1.5 rounded-lg bg-[#fbf1dd] px-3 py-2 text-xs text-[#8a5a12]">
             <Info className="size-3.5" aria-hidden />
-            已发布后有新的保存修改尚未发布；发布新版本会生成差异，旧版本保留。
+            已发布后有新的保存修改尚未发布；发布新版本会生成差���，旧版本保留。
           </p>
         ) : null}
 
@@ -418,7 +420,7 @@ export function ParentView({ title, week, summary, s }: { title: string; week: n
   )
 }
 
-function PubViewer({ pub, onClose }: { pub: Publication; onClose: () => void }) {
+export function PubViewer({ pub, onClose }: { pub: Publication; onClose: () => void }) {
   const mt = useMt()
   const [sid, setSid] = useState(pub.students[0]?.studentId ?? "")
   const [urls, setUrls] = useState<Record<string, string[]>>({})
