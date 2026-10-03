@@ -185,12 +185,10 @@ export function TaskWorkspacePage({ id }: { id: string }) {
             ) : null}
           </div>
         </div>
-        <div className="flex flex-wrap items-center border-t border-border px-4 py-2">
-          <TaskSchemes task={task} week={week} />
-        </div>
       </Card>
 
-      <nav role="tablist" aria-label="任务工作区" className="mb-4 flex gap-1 border-b border-border">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-border">
+      <nav role="tablist" aria-label="任务工作区" className="flex max-w-full gap-1 overflow-x-auto">
         {TABS.map((t) => (
           <button
             key={t.k}
@@ -199,7 +197,7 @@ export function TaskWorkspacePage({ id }: { id: string }) {
             aria-selected={tab === t.k}
             onClick={() => guard.go(href({ tab: t.k === "feedback" ? null : t.k }))}
             className={cn(
-              "-mb-px border-b-2 px-3 py-2 text-sm font-medium",
+              "-mb-px shrink-0 whitespace-nowrap border-b-2 px-3 py-2 text-sm font-medium",
               tab === t.k ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground",
             )}
           >
@@ -209,6 +207,10 @@ export function TaskWorkspacePage({ id }: { id: string }) {
           </button>
         ))}
       </nav>
+      <div className="flex min-w-0 max-w-full items-center pb-2 sm:ml-auto">
+        <TaskSchemes task={task} week={week} />
+      </div>
+      </div>
 
       {tab === "feedback" ? (
         <WeekFeedback
