@@ -187,12 +187,15 @@ export function StudentsPanel() {
               </tr>
             </thead>
             <tbody>
-              {rows.map((s) => (
+              {rows.map((s, index) => (
                 <tr key={s.id} className="border-t border-border">
                   <td className="px-5 py-3">
                     <div className="flex items-center gap-2.5">
-                      <span className="flex size-8 items-center justify-center rounded-md bg-secondary text-xs font-semibold text-secondary-foreground">
-                        {s.name.slice(-2)}
+                      <span
+                        aria-label={`序号 ${index + 1}`}
+                        className="flex size-8 shrink-0 items-center justify-center rounded-md bg-secondary text-xs font-semibold tabular-nums text-secondary-foreground"
+                      >
+                        {String(index + 1).padStart(2, "0")}
                       </span>
                       <button
                         type="button"
