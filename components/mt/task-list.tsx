@@ -17,6 +17,8 @@ import {
   weekdayIdx,
 } from "@/lib/mt/model"
 import { useMt } from "@/lib/mt/store"
+import { resolveStyle, titleClass } from "@/lib/mt/styles"
+import { cn } from "@/lib/utils"
 import { ArrowRight, CalendarDays, Search, Settings2 } from "lucide-react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
@@ -178,6 +180,7 @@ function Stat({ label, value }: { label: string; value: string }) {
 function TaskRow({ tw, teacherId, q, st }: { tw: TaskWeek; teacherId: string; q: string; st: string }) {
   const mt = useMt()
   const d = personalDisplay(tw.task, teacherId, mt.biz.taskPrefs, mt.biz.lessonOverrides)
+  const ps = resolveStyle(mt.biz, teacherId, tw.task)
   const back = new URLSearchParams({ week: String(tw.week), ...(q ? { q } : {}), ...(st !== "all" ? { status: st } : {}) })
   const backQ = encodeURIComponent(back.toString())
   const href = `/teaching/task/${tw.task.id}?week=${tw.week}&from=list&back=${backQ}`
@@ -191,7 +194,12 @@ function TaskRow({ tw, teacherId, q, st }: { tw: TaskWeek; teacherId: string; q:
         <div className="flex flex-wrap items-center gap-2">
           <Link
             href={detailHref}
-            className="rounded font-semibold underline-offset-4 hover:text-primary hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            className={cn(
+              "rounded font-semibold underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+              !ps.hex && "hover:text-primary",
+              titleClass(ps),
+            )}
+            style={ps.hex ? { color: ps.hex } : undefined}
           >
             {d.className}
           </Link>

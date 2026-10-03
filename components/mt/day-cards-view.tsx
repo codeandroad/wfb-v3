@@ -5,6 +5,7 @@ import { dayCardsOfWeek, lessonTimingLabel, periodsLabel } from "@/lib/mt/daycar
 import { Layers } from "lucide-react"
 import { fmtMD, personalDisplay, WEEKDAY_CN, type STask } from "@/lib/mt/model"
 import { useMt } from "@/lib/mt/store"
+import { resolveStyle, titleClass } from "@/lib/mt/styles"
 import { cn } from "@/lib/utils"
 
 /** 按日记录视图：同一教学任务同一日期的原课次合并为一张日卡 */
@@ -42,6 +43,7 @@ export function DayCardsView({
             {day.map((c) => {
               const t = allTasks.find((x) => x.id === c.task.id)!
               const pd = personalDisplay(t, teacherId, mt.biz.taskPrefs, mt.biz.lessonOverrides)
+              const ps = resolveStyle(mt.biz, teacherId, t)
               const sub = [pd.division, pd.course].filter(Boolean).join(" · ")
               const roomSet = [...new Set(c.lessons.map((l) => l.room).filter(Boolean))]
               const perLessonRoom = roomSet.length > 1
@@ -65,7 +67,9 @@ export function DayCardsView({
                   )}
                 >
                   <span className="flex items-start justify-between gap-2">
-                    <span className="text-sm font-semibold leading-snug">{pd.className}</span>
+                    <span className={cn("text-sm font-semibold leading-snug", titleClass(ps))} style={ps.hex ? { color: ps.hex } : undefined}>
+                      {pd.className}
+                    </span>
                     {c.merged > 1 ? (
                       <span className="inline-flex shrink-0 items-center gap-1 rounded border border-foreground/30 px-1.5 py-0.5 text-[11px] font-medium text-foreground">
                         <Layers className="size-3" aria-hidden />

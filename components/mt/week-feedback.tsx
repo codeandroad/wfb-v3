@@ -1,13 +1,12 @@
 "use client"
 
-import { Badge, Card, EmptyState } from "@/components/kit"
+import { Card, EmptyState } from "@/components/kit"
 import { RoutineDialog } from "@/components/mt/routine-dialog"
 import { AttSelect, FieldMark, GradeSelect, SaveState } from "@/components/mt/shared"
 import { Btn } from "@/components/mt/ui"
-import { FILTER_LABEL, filterStudents, nameOf, studentHwPending, type FilterKey, type TaskWeek } from "@/lib/mt/derive"
+import { FILTER_LABEL, filterStudents, nameOf, type FilterKey, type TaskWeek } from "@/lib/mt/derive"
 import { ReasonInput } from "@/components/mt/student-drawer"
 import { ATT_LABEL, ELIG_REASON, taskById } from "@/lib/mt/model"
-import { validHighlights } from "@/lib/mt/publish"
 import { gradeDisplay } from "@/lib/mt/schemes"
 import { classroomStandard } from "@/lib/mt/use-schemes"
 import {
@@ -21,7 +20,11 @@ import {
   type Attendance,
   type StudentDay,
 } from "@/lib/mt/view"
-import { scopeTask, useMt, useRecordWriters } from "@/lib/mt/store"
+import { scopeTask, useMt, useRecordWriters, useTeacherPrefs } from "@/lib/mt/store"
+import { useTeacherId } from "@/lib/mt/derive"
+import { Pager } from "@/components/mt/homework"
+import { HighlightCell, HomeworkCell, StudentHwDialog } from "@/components/mt/week-columns"
+import { pageOf } from "@/lib/mt/hw"
 import { cn } from "@/lib/utils"
 import { CheckCheck, Search, Users } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
@@ -44,8 +47,18 @@ export function WeekFeedback({
   const [selected, setSelected] = useState<string[]>([])
   const [routine, setRoutine] = useState<null | { sids: string[]; label: string }>(null)
   const keys = Object.keys(FILTER_LABEL) as FilterKey[]
+  const [hwSid, setHwSid] = useState<string | null>(null)
+  const [page, setPage] = useState(1)
+  const prefs = useTeacherPrefs(useTeacherId())
   const rows = filterStudents(mt.biz, tw, filter, q)
+  const pg = pageOf(rows, page, prefs.pageSize)
   const dates = tw.teachingDates
+  const filterKey = `${tw.task.id}|${tw.week}|${filter}|${q}`
+  const [lastKey, setLastKey] = useState(filterKey)
+  if (lastKey !== filterKey) {
+    setLastKey(filterKey)
+    setPage(1)
+  }
   const scopeSids = selected.length ? selected : tw.students
 
   return (
@@ -110,9 +123,9 @@ export function WeekFeedback({
                 <th className="w-8 px-3 py-2">
                   <input
                     type="checkbox"
-                    aria-label="勾选当前显示的学生"
-                    checked={rows.every((s) => selected.includes(s))}
-                    onChange={(e) => setSelected(e.target.checked ? [...new Set([...selected, ...rows])] : selected.filter((s) => !rows.includes(s)))}
+                    aria-label="勾选本页学生"
+                    checked={pg.items.every((s) => selected.includes(s))}
+                    onChange={(e) => setSelected(e.target.checked ? [...new Set([...selected, ...pg.items])] : selected.filter((s) => !pg.items.includes(s)))}
                   />
                 </th>
                 <th className="sticky left-0 bg-muted/50 px-3 py-2 font-medium">学生</th>
@@ -127,13 +140,13 @@ export function WeekFeedback({
                     </span>
                   </th>
                 ))}
+                <th className="px-3 py-2 font-medium">亮点</th>
+                <th className="px-3 py-2 font-medium">作业</th>
               </tr>
             </thead>
             <tbody>
-              {rows.map((sid) => {
+              {pg.items.map((sid) => {
                 const ds = tw.byStudent[sid] ?? []
-                const hw = studentHwPending(mt.biz, tw, sid)
-                const hl = validHighlights(mt.biz, tw, sid).length
                 return (
                   <tr key={sid} className="border-b border-border last:border-0">
                     <td className="px-3 py-2">
@@ -149,27 +162,29 @@ export function WeekFeedback({
                         {nameOf(sid)}
                       </button>
                       <span className="block text-[11px] text-muted-foreground">{homeroomName(studentById(sid)?.homeroom_id ?? "")}</span>
-                      {hw || hl ? (
-                        <span className="mt-1 flex flex-wrap gap-1">
-                          {hw ? <Badge tone="warning">作业 {hw}</Badge> : null}
-                          {hl ? <Badge tone="info">亮点 {hl}</Badge> : null}
-                        </span>
-                      ) : null}
                     </td>
                     {dates.map((d) => (
                       <td key={d} className="px-3 py-2 align-top">
                         <DayCell d={ds.find((x) => x.date === d)} week={tw.week} onOpenStudent={() => onOpen(sid, rows)} />
                       </td>
                     ))}
+                    <td className="px-3 py-2 align-top">
+                      <HighlightCell tw={tw} sid={sid} />
+                    </td>
+                    <td className="px-3 py-2 align-top">
+                      <HomeworkCell tw={tw} sid={sid} onOpen={() => setHwSid(sid)} />
+                    </td>
                   </tr>
                 )
               })}
             </tbody>
           </table>
+          <Pager page={pg.page} pages={pg.pages} total={rows.length} size={prefs.pageSize} onPage={setPage} />
         </Card>
       )}
 
       {routine ? <RoutineDialog tw={tw} sids={routine.sids} scopeLabel={routine.label} onClose={() => setRoutine(null)} /> : null}
+      {hwSid && tw.students.includes(hwSid) ? <StudentHwDialog tw={tw} sid={hwSid} onClose={() => setHwSid(null)} /> : null}
     </div>
   )
 }
