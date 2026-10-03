@@ -41,6 +41,7 @@ import { useMt } from "@/lib/mt/store"
 import { cn } from "@/lib/utils"
 import { ArrowDown, ArrowLeft, ArrowUp, Plus, Trash2 } from "lucide-react"
 import { useSearchParams } from "next/navigation"
+import { TeacherPrefsPanel } from "@/components/mt/teacher-prefs"
 import { useMemo, useState } from "react"
 
 function safeRet(v: string | null): string | null {
@@ -313,6 +314,8 @@ export function SchemeSettings() {
           }}
         />
       ) : null}
+
+      <TeacherPrefsPanel teacherId={teacherId} />
     </>
   )
 }

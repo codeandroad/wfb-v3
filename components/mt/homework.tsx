@@ -6,13 +6,18 @@ import { Btn, Modal, inputCls } from "@/components/mt/ui"
 import {
   BATCH_LABEL,
   BUCKET_LABEL,
+  deadlineInDays,
   defaultDeadline,
+  HW_DAYS_MAX,
+  parseDays,
   effDeadline,
   hwBucket,
   hwProgress,
   hwState,
   isSubmitted,
   lifecycleOf,
+  pageOf,
+  PAGE_SIZES,
   planBatch,
   STATE_LABEL,
   writeBlock,
@@ -20,9 +25,11 @@ import {
   type BatchOpts,
   type HwBucket,
   type HwState,
+  type PageSize,
 } from "@/lib/mt/hw"
 import { nameOf, useTeacherId, type TaskWeek } from "@/lib/mt/derive"
 import {
+  addDays,
   clockLabel,
   dateOfClock,
   fmtMD,
@@ -35,8 +42,8 @@ import {
   type STask,
 } from "@/lib/mt/model"
 import { homeworkDefaultNow, levelText, ownerKey, revById } from "@/lib/mt/schemes"
-import { scopeTask, useHomeworkWriters, useMt, type HwDraft } from "@/lib/mt/store"
-import { ChevronDown, ChevronRight, ClipboardList, ExternalLink, Search, Undo2 } from "lucide-react"
+import { scopeTask, useHomeworkWriters, useMt, usePrefWriters, useTeacherPrefs, type HwDraft } from "@/lib/mt/store"
+import { ChevronDown, ChevronLeft, ChevronRight, ClipboardList, ExternalLink, Search, Undo2 } from "lucide-react"
 import Link from "next/link"
 import { useMemo, useRef, useState } from "react"
 
@@ -325,6 +332,65 @@ export function HwProgressLine({ a }: { a: Assignment }) {
   )
 }
 
+/** 学生列表分页：每页数量来自教师个人设置，可在列表内临时切换并保存 */
+export function Pager({
+  page,
+  pages,
+  total,
+  size,
+  onPage,
+  label = "学生",
+}: {
+  page: number
+  pages: number
+  total: number
+  size: number
+  onPage: (p: number) => void
+  label?: string
+}) {
+  const teacherId = useTeacherId()
+  const pw = usePrefWriters(teacherId)
+  if (total <= PAGE_SIZES[0]) return null
+  const from = (page - 1) * size + 1
+  const to = Math.min(total, page * size)
+  return (
+    <nav aria-label={`${label}分页`} className="flex flex-wrap items-center justify-between gap-2 border-t border-border px-4 py-2 text-xs text-muted-foreground">
+      <span>
+        第 {from}–{to} 项，共 {total} {label === "学生" ? "人" : "项"}
+      </span>
+      <span className="flex items-center gap-1.5">
+        <label className="flex items-center gap-1">
+          每页
+          <select className={sel} value={size} onChange={(e) => (pw.setPageSize(Number(e.target.value) as PageSize), onPage(1))}>
+            {PAGE_SIZES.map((n) => (
+              <option key={n} value={n}>
+                {n}
+              </option>
+            ))}
+          </select>
+        </label>
+        <Btn size="sm" variant="ghost" disabled={page <= 1} onClick={() => onPage(page - 1)} aria-label="上一页">
+          <ChevronLeft className="size-3.5" aria-hidden />
+        </Btn>
+        <span aria-live="polite" className="tabular-nums text-foreground">
+          {page} / {pages}
+        </span>
+        <Btn size="sm" variant="ghost" disabled={page >= pages} onClick={() => onPage(page + 1)} aria-label="下一页">
+          <ChevronRight className="size-3.5" aria-hidden />
+        </Btn>
+      </span>
+    </nav>
+  )
+}
+
+const SUB_LABEL = { ON_TIME: "按时提交", LATE: "迟交", SUBMITTED: "已提交（时效未定）" } as const
+type SubOpt = keyof typeof SUB_LABEL
+
+interface BatchMsg {
+  text: string
+  reasons: [string, number][]
+}
+
 export function HwReview({
   a,
   manageHref,
@@ -337,21 +403,39 @@ export function HwReview({
   initialStudent?: string | null
 }) {
   const mt = useMt()
+  const teacherId = useTeacherId()
+  const prefs = useTeacherPrefs(teacherId)
+  const pw = usePrefWriters(teacherId)
   const [filter, setFilter] = useState<ResultFilter>("all")
   const [q, setQ] = useState(initialStudent ? (nameOf(initialStudent) ?? "") : "")
+  const [page, setPage] = useState(1)
   const [picked, setPicked] = useState<Set<string>>(new Set())
-  const [batch, setBatch] = useState<BatchKind | null>(null)
   const [manage, setManage] = useState(false)
-  const [msg, setMsg] = useState("")
+  const [msg, setMsg] = useState<BatchMsg | null>(null)
+  const [showWhy, setShowWhy] = useState(false)
+  const busy = useRef(false)
   const sticky = useRef<Set<string>>(new Set())
   const nowTs = Date.parse(mt.biz.clock)
   const life = lifecycleOf(a)
+  const rev = revById(a.schemeRevId ?? null)
+  const w = useHomeworkWriters()
 
-  const rows = a.recipients.filter((sid) => {
+  // 批量候选：页面级参数，按“教师 + 作业 + 采用的标准版本”记忆；切换作业或标准不串用
+  const candKey = `${a.id}|${rev?.id ?? "none"}`
+  const cand = teacherId ? mt.biz.batchCands?.[`${teacherId}|${candKey}`] : undefined
+  const subOpt: SubOpt = cand?.submission ?? "SUBMITTED"
+  const level = cand?.level && rev?.levels.some((l) => l.id === cand.level) ? cand.level : (rev?.defaultLevelId ?? "")
+  const lvl = rev?.levels.find((l) => l.id === level) ?? null
+  const setCand = (patch: Partial<{ submission: SubOpt; level: string }>) => {
+    pw.setBatchCand(candKey, { submission: subOpt, level: level || undefined, ...patch })
+    setMsg(null)
+  }
+
+  const visible = a.recipients.filter((sid) => {
     const st = hwState(a, sid, nowTs)
     const f = FILTERS.find((x) => x.k === filter)!
     const nm = nameOf(sid) ?? ""
-    const hitQ = !q || nm.includes(q.trim())
+    const hitQ = !q.trim() || nm.includes(q.trim()) || sid.includes(q.trim())
     if (!hitQ) return false
     if (f.match(st)) {
       sticky.current.add(sid)
@@ -360,6 +444,7 @@ export function HwReview({
     // 刚处理完的学生不立即从筛选结果中消失
     return sticky.current.has(sid)
   })
+  const pg = pageOf(visible, page, prefs.pageSize)
   const counts = useMemo(() => {
     const c: Record<ResultFilter, number> = { all: 0, ungraded: 0, due: 0, missing: 0, exception: 0, done: 0 }
     for (const sid of a.recipients) {
@@ -369,12 +454,61 @@ export function HwReview({
     return c
   }, [a, nowTs])
   const lastBatch = (a.batches ?? []).find((b) => !b.undone) ?? null
-  const w = useHomeworkWriters()
+
+  const subset = picked.size ? a.recipients.filter((sid) => picked.has(sid)) : null
+  const visibleSet = new Set(visible)
+  const pickedHidden = subset ? subset.filter((sid) => !visibleSet.has(sid)).length : 0
+  const plans = {
+    SUBMIT: planBatch(a, "SUBMIT", { submission: subOpt }, subset, nowTs),
+    GRADE: lvl ? planBatch(a, "GRADE", { level }, subset, nowTs) : null,
+    ROUTINE: lvl ? planBatch(a, "ROUTINE", { level }, subset, nowTs) : null,
+  }
 
   const changeFilter = (k: ResultFilter) => {
     sticky.current = new Set()
     setFilter(k)
+    setPage(1)
   }
+
+  const run = (kind: BatchKind) => {
+    if (busy.current) return
+    const plan = plans[kind]
+    if (!plan || !plan.writes.length) return
+    busy.current = true
+    const opts: BatchOpts = kind === "SUBMIT" ? { submission: subOpt } : { level }
+    const token = `HBT_${a.id}_${kind}_${Date.now().toString(36)}`
+    const r = w.runBatch(
+      token,
+      a.id,
+      kind,
+      opts,
+      subset,
+      plan.writes.map((x) => x.sid),
+    )
+    queueMicrotask(() => (busy.current = false))
+    if (!r.ok) return setMsg({ text: r.error, reasons: [] })
+    const reasons = new Map<string, number>()
+    for (const s of r.batch.skipped) reasons.set(s.reason, (reasons.get(s.reason) ?? 0) + 1)
+    const n = new Set(r.batch.entries.map((e) => e.sid)).size
+    const what = kind === "SUBMIT" ? SUB_LABEL[subOpt] : kind === "GRADE" ? `评价为 ${levelText(lvl!)}` : `按时提交 · ${levelText(lvl!)}`
+    setShowWhy(false)
+    setMsg({
+      text: `已为 ${n} 人登记“${what}”${r.batch.skipped.length ? `；保留 ${r.batch.skipped.length} 人原有结果或不符合条件` : ""}${r.reused ? "（重复点击，未再次写入）" : ""}`,
+      reasons: [...reasons],
+    })
+  }
+
+  const pageIds = pg.items
+  const allPageOn = pageIds.length > 0 && pageIds.every((sid) => picked.has(sid))
+  const togglePage = () => {
+    const n = new Set(picked)
+    for (const sid of pageIds) {
+      if (allPageOn) n.delete(sid)
+      else n.add(sid)
+    }
+    setPicked(n)
+  }
+  const disabledWhy = !rev ? "这份作业的评价标准待核对，只能登记提交" : !lvl ? "请先选择等级" : ""
 
   return (
     <Card className="overflow-hidden">
@@ -407,87 +541,150 @@ export function HwReview({
 
       {manage && !manageHref ? <ManagePanel a={a} onCopy={onCopy} /> : null}
 
-      <div className="flex flex-col gap-2 border-b border-border px-4 py-2.5">
-        <div className="flex flex-wrap items-center gap-1" role="group" aria-label="结果筛选">
-          {FILTERS.map((f) => (
-            <button
-              key={f.k}
-              type="button"
-              aria-pressed={filter === f.k}
-              onClick={() => changeFilter(f.k)}
-              className={`h-7 rounded-full border px-2.5 text-xs ${filter === f.k ? "border-primary bg-primary text-primary-foreground" : "border-border bg-card hover:border-primary/50"}`}
-            >
-              {f.label} {counts[f.k]}
-            </button>
-          ))}
-          <label className="relative ml-auto">
-            <span className="sr-only">搜索学生</span>
-            <Search className="pointer-events-none absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" aria-hidden />
-            <input
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder="姓名或学号"
-              className="h-7 w-40 rounded-md border border-input bg-card pl-7 pr-2 text-xs"
-            />
-          </label>
-        </div>
-        {life === "WITHDRAWN" ? (
-          <p className="text-xs text-muted-foreground">作业已撤回：结果保留可查，不能再登记或批量处理。</p>
-        ) : (
+      {life === "WITHDRAWN" ? (
+        <p className="border-b border-border px-4 py-2.5 text-xs text-muted-foreground">作业已撤回：结果保留可查，不能再登记或批量处理。</p>
+      ) : (
+        <section aria-label="批量处理" className="flex flex-col gap-2 border-b border-border bg-muted/40 px-4 py-2.5">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs">
+            <label className="flex items-center gap-1.5">
+              <span className="text-muted-foreground">提交时效</span>
+              <select className={sel} value={subOpt} onChange={(e) => setCand({ submission: e.target.value as SubOpt })}>
+                <option value="SUBMITTED">已提交（时效未定）</option>
+                <option value="ON_TIME">按时提交</option>
+                <option value="LATE">迟交</option>
+              </select>
+            </label>
+            {rev ? (
+              <label className="flex items-center gap-1.5">
+                <span className="text-muted-foreground">批量等级</span>
+                <select className={sel} value={level} onChange={(e) => setCand({ level: e.target.value })}>
+                  <option value="">请选择</option>
+                  {rev.levels.map((l) => (
+                    <option key={l.id} value={l.id}>
+                      {levelText(l)}
+                      {l.id === rev.defaultLevelId ? "（标准常规）" : ""}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : (
+              <span className="text-[#8a5a12]">评价标准待核对，只能登记提交</span>
+            )}
+            <span className="text-muted-foreground">
+              {subset
+                ? `作用于已勾选 ${subset.length} 人${pickedHidden ? `（其中 ${pickedHidden} 人不在当前结果中）` : ""}`
+                : "作用于本作业全部符合条件的学生（不受搜索、筛选和分页影响）"}
+            </span>
+          </div>
           <div className="flex flex-wrap items-center gap-1.5">
-            <span className="text-xs text-muted-foreground">
-              {picked.size ? `已勾选 ${picked.size} 人 · 批量只作用于勾选` : "批量作用于本作业全部符合条件的学生（不受搜索和筛选影响）"}
-            </span>
-            {picked.size ? (
-              <Btn size="sm" variant="ghost" onClick={() => setPicked(new Set())}>
-                清除勾选
-              </Btn>
-            ) : null}
-            <span className="ml-auto flex flex-wrap gap-1.5">
-              <Btn size="sm" onClick={() => setBatch("SUBMIT")}>
-                批量登记提交
-              </Btn>
-              <Btn size="sm" onClick={() => setBatch("GRADE")}>
-                批量评价
-              </Btn>
-              <Btn size="sm" variant="primary" onClick={() => setBatch("ROUTINE")}>
-                按常规登记
-              </Btn>
-            </span>
-          </div>
-        )}
-        {lastBatch ? (
-          <div className="flex flex-wrap items-center gap-2 rounded-md bg-muted px-2.5 py-1.5 text-xs">
-            <span>
-              最近一次：{lastBatch.label} · 写入 {new Set(lastBatch.entries.map((e) => e.sid)).size} 人
-              {lastBatch.skipped.length ? ` · 跳过 ${lastBatch.skipped.length}` : ""} · {clockLabel(lastBatch.at)}
-            </span>
-            <Btn
-              size="sm"
-              variant="ghost"
-              onClick={() => {
-                const r = w.undoBatch(a.id, lastBatch.id)
-                setMsg(r.ok ? `已撤销 ${r.restored} 项；${r.kept} 项因之后已被修改而保留` : r.error)
-              }}
-            >
-              <Undo2 className="size-3" aria-hidden />
-              安全撤销
+            <Btn size="sm" disabled={!plans.SUBMIT.writes.length} onClick={() => run("SUBMIT")}>
+              登记“{SUB_LABEL[subOpt]}” · {plans.SUBMIT.writes.length} 人
             </Btn>
+            <Btn size="sm" disabled={!plans.GRADE?.writes.length} title={disabledWhy || undefined} onClick={() => run("GRADE")}>
+              评价{lvl ? `为 ${levelText(lvl)}` : ""} · {plans.GRADE?.writes.length ?? 0} 人
+            </Btn>
+            <Btn size="sm" variant="primary" disabled={!plans.ROUTINE?.writes.length} title={disabledWhy || undefined} onClick={() => run("ROUTINE")}>
+              按常规登记{lvl ? `：按时提交 · ${levelText(lvl)}` : ""} · {plans.ROUTINE?.writes.length ?? 0} 人
+            </Btn>
+            {disabledWhy && rev ? <span className="text-xs text-muted-foreground">{disabledWhy}</span> : null}
           </div>
-        ) : null}
-        {msg ? (
-          <p role="status" className="text-xs">
-            {msg}
+          <p className="text-[11px] leading-relaxed text-muted-foreground">
+            点击即写入，结果可安全撤销。只补齐未登记的部分：已知迟交、未交、免做、未参与、手填等级或分数、明确不评价或已清空的等级都会保留。
           </p>
-        ) : null}
-        <SaveState scope={`hw:${a.id}`} compact />
+          {msg ? (
+            <div role="status" className="flex flex-col gap-1 rounded-md bg-card px-2.5 py-1.5 text-xs">
+              <span className="flex flex-wrap items-center gap-2">
+                {msg.text}
+                {msg.reasons.length ? (
+                  <button type="button" className="text-primary underline-offset-2 hover:underline" aria-expanded={showWhy} onClick={() => setShowWhy((v) => !v)}>
+                    {showWhy ? "收起原因" : "查看原因"}
+                  </button>
+                ) : null}
+              </span>
+              {showWhy ? (
+                <ul className="flex flex-wrap gap-1.5 text-muted-foreground">
+                  {msg.reasons.map(([k, n]) => (
+                    <li key={k} className="rounded bg-muted px-1.5 py-0.5">
+                      {k} {n}
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+            </div>
+          ) : null}
+          {lastBatch ? (
+            <div className="flex flex-wrap items-center gap-2 text-xs">
+              <span className="text-muted-foreground">
+                最近一次：{lastBatch.label} · 写入 {new Set(lastBatch.entries.map((e) => e.sid)).size} 人 · {clockLabel(lastBatch.at)}
+              </span>
+              <Btn
+                size="sm"
+                variant="ghost"
+                onClick={() => {
+                  const r = w.undoBatch(a.id, lastBatch.id)
+                  setMsg({ text: r.ok ? `已撤销 ${r.restored} 项；${r.kept} 项因之后已被修改而保留` : r.error, reasons: [] })
+                }}
+              >
+                <Undo2 className="size-3" aria-hidden />
+                安全撤销
+              </Btn>
+            </div>
+          ) : null}
+          <SaveState scope={`hw:${a.id}`} compact />
+        </section>
+      )}
+
+      <div className="flex flex-wrap items-center gap-1 border-b border-border px-4 py-2" role="group" aria-label="结果筛选">
+        {FILTERS.map((f) => (
+          <button
+            key={f.k}
+            type="button"
+            aria-pressed={filter === f.k}
+            onClick={() => changeFilter(f.k)}
+            className={`h-7 rounded-full border px-2.5 text-xs ${filter === f.k ? "border-primary bg-primary text-primary-foreground" : "border-border bg-card hover:border-primary/50"}`}
+          >
+            {f.label} {counts[f.k]}
+          </button>
+        ))}
+        <label className="relative ml-auto">
+          <span className="sr-only">搜索学生</span>
+          <Search className="pointer-events-none absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" aria-hidden />
+          <input
+            value={q}
+            onChange={(e) => (setQ(e.target.value), setPage(1))}
+            placeholder="姓名或学号"
+            className="h-7 w-40 rounded-md border border-input bg-card pl-7 pr-2 text-xs"
+          />
+        </label>
       </div>
 
-      {rows.length === 0 ? (
+      {life !== "WITHDRAWN" && visible.length ? (
+        <div className="flex flex-wrap items-center gap-2 border-b border-border px-4 py-1.5 text-xs">
+          <label className="flex items-center gap-1.5">
+            <input type="checkbox" checked={allPageOn} onChange={togglePage} />
+            本页全选
+          </label>
+          <Btn size="sm" variant="ghost" onClick={() => setPicked(new Set([...picked, ...visible]))}>
+            选中当前结果全部 {visible.length} 人
+          </Btn>
+          {picked.size ? (
+            <>
+              <span className="text-muted-foreground">
+                已选 {picked.size} 人{pickedHidden ? `（${pickedHidden} 人不在当前结果中）` : ""}
+              </span>
+              <Btn size="sm" variant="ghost" onClick={() => setPicked(new Set())}>
+                清空选择
+              </Btn>
+            </>
+          ) : null}
+        </div>
+      ) : null}
+
+      {visible.length === 0 ? (
         <p className="px-4 py-8 text-center text-xs text-muted-foreground">{a.recipients.length ? "没有符合筛选的学生" : "这份作业没有适用学生"}</p>
       ) : (
         <ul className="divide-y divide-border">
-          {rows.map((sid) => (
+          {pg.items.map((sid) => (
             <li key={sid} className="flex items-start gap-2.5 px-4 py-2">
               {life !== "WITHDRAWN" ? (
                 <input
@@ -514,145 +711,8 @@ export function HwReview({
           ))}
         </ul>
       )}
-
-      {batch ? (
-        <BatchDialog
-          a={a}
-          kind={batch}
-          subset={picked.size ? [...picked] : null}
-          onClose={(m) => {
-            setBatch(null)
-            if (m) setMsg(m)
-          }}
-        />
-      ) : null}
+      <Pager page={pg.page} pages={pg.pages} total={visible.length} size={prefs.pageSize} onPage={setPage} />
     </Card>
-  )
-}
-
-function BatchDialog({
-  a,
-  kind,
-  subset,
-  onClose,
-}: {
-  a: Assignment
-  kind: BatchKind
-  subset: string[] | null
-  onClose: (msg?: string) => void
-}) {
-  const mt = useMt()
-  const w = useHomeworkWriters()
-  const rev = revById(a.schemeRevId ?? null)
-  const [token] = useState(() => `HBT_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`)
-  const [submission, setSubmission] = useState<"ON_TIME" | "LATE" | "SUBMITTED">("ON_TIME")
-  const [level, setLevel] = useState<string>(kind === "ROUTINE" ? (rev?.defaultLevelId ?? "") : "")
-  const [err, setErr] = useState("")
-  const nowTs = Date.parse(mt.biz.clock)
-  const opts: BatchOpts = kind === "SUBMIT" ? { submission } : { level: level || null }
-  const plan = planBatch(a, kind, opts, subset, nowTs)
-  const reasons = new Map<string, number>()
-  for (const s of plan.skipped) reasons.set(s.reason, (reasons.get(s.reason) ?? 0) + 1)
-  const lvl = rev?.levels.find((l) => l.id === level)
-  const needLevel = kind === "GRADE" && !level
-  const action =
-    kind === "SUBMIT"
-      ? { ON_TIME: "按时提交", LATE: "迟交", SUBMITTED: "已提交（时效未定）" }[submission]
-      : kind === "GRADE"
-        ? lvl
-          ? `评价为 ${levelText(lvl)}`
-          : "请选择等级"
-        : `按时提交${lvl ? ` · ${levelText(lvl)}` : "（仅登记提交，不评等级）"}`
-
-  const run = () => {
-    if (needLevel) return setErr("请选择要采用的等级")
-    if (!plan.writes.length) return setErr("没有符合条件的学生，未写入任何结果")
-    const r = w.runBatch(
-      token,
-      a.id,
-      kind,
-      opts,
-      subset,
-      plan.writes.map((x) => x.sid),
-    )
-    if (!r.ok) return setErr(r.error)
-    const n = new Set(r.batch.entries.map((e) => e.sid)).size
-    onClose(`${BATCH_LABEL[kind]}：写入 ${n} 人${r.batch.skipped.length ? `，跳过 ${r.batch.skipped.length} 人` : ""}${r.reused ? "（重复提交，未再次写入）" : ""}`)
-  }
-
-  return (
-    <Modal
-      title={kind === "ROUTINE" ? "按常规登记" : BATCH_LABEL[kind]}
-      desc={`${a.title} · ${subset ? `仅勾选的 ${subset.length} 人` : `本作业全部 ${a.recipients.length} 名适用学生`}`}
-      onClose={() => onClose()}
-      footer={
-        <>
-          <Btn variant="ghost" onClick={() => onClose()}>
-            取消
-          </Btn>
-          <Btn variant="primary" onClick={run} disabled={needLevel || !plan.writes.length}>
-            {plan.writes.length ? `确认写入 ${plan.writes.length} 人` : "没有符合项"}
-          </Btn>
-        </>
-      }
-    >
-      <div className="flex flex-col gap-3 text-sm">
-        {kind === "SUBMIT" ? (
-          <label className="flex items-center gap-2">
-            登记为
-            <select className={sel} value={submission} onChange={(e) => setSubmission(e.target.value as "ON_TIME")}>
-              <option value="ON_TIME">按时提交</option>
-              <option value="LATE">迟交</option>
-              <option value="SUBMITTED">已提交（时效未定）</option>
-            </select>
-          </label>
-        ) : rev ? (
-          <label className="flex items-center gap-2">
-            {kind === "ROUTINE" ? "常规等级" : "等级"}
-            <select className={sel} value={level} onChange={(e) => setLevel(e.target.value)}>
-              <option value="">{kind === "ROUTINE" ? "不评等级，仅登记按时提交" : "请选择"}</option>
-              {rev.levels.map((l) => (
-                <option key={l.id} value={l.id}>
-                  {levelText(l)}
-                  {l.id === rev.defaultLevelId ? "（本作业常规默认）" : ""}
-                </option>
-              ))}
-            </select>
-          </label>
-        ) : (
-          <p className="text-xs text-[#8a5a12]">这份作业的评价标准待核对，只能登记提交。</p>
-        )}
-        <div className="rounded-md bg-muted px-3 py-2">
-          <p>
-            将为 <b>{plan.writes.length}</b> 人登记：<b>{action}</b>
-          </p>
-          <p className="mt-0.5 text-xs text-muted-foreground">
-            {kind === "SUBMIT"
-              ? "只登记提交，不评分；已有相反的提交结论不会被覆盖。"
-              : kind === "GRADE"
-                ? "只处理已提交且待评价的学生；迟交仍为迟交，已有手工等级、分数或明确不评价保留。"
-                : "只处理未登记提交的常规候选；跳过迟交、未交、免做、未参与和已处理的学生。"}
-          </p>
-        </div>
-        {reasons.size ? (
-          <div>
-            <p className="text-xs font-medium">跳过 {plan.skipped.length} 人</p>
-            <ul className="mt-0.5 flex flex-wrap gap-1.5 text-xs text-muted-foreground">
-              {[...reasons].map(([k, n]) => (
-                <li key={k} className="rounded bg-muted px-1.5 py-0.5">
-                  {k} {n}
-                </li>
-              ))}
-            </ul>
-          </div>
-        ) : null}
-        {err ? (
-          <p role="alert" className="text-xs text-[#9a2b22]">
-            {err}
-          </p>
-        ) : null}
-      </div>
-    </Modal>
   )
 }
 
@@ -678,7 +738,7 @@ function ManagePanel({ a, onCopy }: { a: Assignment; onCopy?: (a: Assignment) =>
           <input type="datetime-local" className={sel} value={dl} disabled={life === "WITHDRAWN"} onChange={(e) => setDl(e.target.value)} />
         </label>
         <Btn size="sm" disabled={life === "WITHDRAWN" || dl === toLocalInput(a.deadline) || !dl} onClick={() => w.setDeadline(a, fromLocalInput(dl))}>
-          保存截止
+          保��截止
         </Btn>
         {a.deadline ? (
           <Btn size="sm" variant="ghost" disabled={life === "WITHDRAWN"} onClick={() => (w.setDeadline(a, null), setDl(""))}>
@@ -918,8 +978,13 @@ export function AssignForm({
   const [title, setTitle] = useState(draft?.title ?? copyFrom?.title ?? "")
   const [instructions, setInstructions] = useState(draft?.instructions ?? copyFrom?.instructions ?? "")
   const [req, setReq] = useState<"REQUIRED" | "OPTIONAL">(draft?.requirement ?? copyFrom?.defaultRequirement ?? "REQUIRED")
-  // DEFAULT = 实际布置成功后第 3 个自然日结束；NONE = 明确无截止；其它为手填
-  const [dl, setDl] = useState<string>(draft?.deadline ?? (mode === "OFFLINE" ? "NONE" : "DEFAULT"))
+  // DEFAULT = 实际布置成功时的学校自然日 + N 天结束；NONE = 明确无截止；其它为手填
+  const prefs = useTeacherPrefs(teacherId)
+  const pw = usePrefWriters(teacherId)
+  const draftDays = /^DAYS:(\d+)$/.exec(draft?.deadline ?? "")
+  const [dl, setDl] = useState<string>(draftDays ? "DEFAULT" : (draft?.deadline ?? (mode === "OFFLINE" ? "NONE" : "DEFAULT")))
+  const [daysRaw, setDaysRaw] = useState<string>(draftDays ? draftDays[1] : String(prefs.hwDays))
+  const days = parseDays(daysRaw)
   const [origDate, setOrigDate] = useState(draft?.originalDate ?? "")
   const [useCurrentScheme, setUseCurrentScheme] = useState(true)
   const rosterDate = mode === "OFFLINE" && origDate ? origDate : today
@@ -931,7 +996,7 @@ export function AssignForm({
 
   const persistDraft = () => {
     if (!dirty.current || mode === "COPY") return
-    const d: HwDraft = { teacherId, taskId: task.id, mode, title, instructions, requirement: req, deadline: dl, originalDate: origDate, sourceDate: sourceDate ?? null }
+    const d: HwDraft = { teacherId, taskId: task.id, mode, title, instructions, requirement: req, deadline: dl === "DEFAULT" ? `DAYS:${daysRaw}` : dl, originalDate: origDate, sourceDate: sourceDate ?? null }
     w.saveDraft(draftKey, d)
   }
   const edit = <T,>(set: (v: T) => void) => (v: T) => {
@@ -940,7 +1005,8 @@ export function AssignForm({
   }
 
   const recipients = roster.filter((s) => !excluded.has(s))
-  const previewDeadline = dl === "DEFAULT" ? defaultDeadline(mt.biz.clock) : dl === "NONE" ? null : fromLocalInput(dl)
+  const previewDeadline =
+    dl === "DEFAULT" ? (days === null ? null : deadlineInDays(mt.biz.clock, days)) : dl === "NONE" ? null : fromLocalInput(dl)
   const pastDeadline = mode !== "OFFLINE" && previewDeadline && Date.parse(previewDeadline) < Date.parse(mt.biz.clock)
 
   const submit = () => {
@@ -949,6 +1015,7 @@ export function AssignForm({
     if (mode === "OFFLINE" && !origDate) return setErr("请填写原布置日期")
     if (mode === "OFFLINE" && origDate > today) return setErr("原布置日期不能晚于今天")
     if (!recipients.length) return setErr("请至少保留一名适用学生")
+    if (dl === "DEFAULT" && days === null) return setErr(`截止天数请输入 0–${HW_DAYS_MAX} 的整数`)
     if (pastDeadline) return setErr("截止早于现在。已经线下布置的旧作业请使用“补录线下作业”")
     setBusy(true)
     let newId: string | null = null
@@ -962,7 +1029,8 @@ export function AssignForm({
       const finalList = recipients.filter((x) => valid.has(x))
       if (finalList.length !== recipients.length) return { error: "名单在确认前发生变化，请重新核对适用学生" }
       newId = `HW_${task.id}_${s.seq + 1}`
-      const deadline = dl === "NONE" ? null : dl === "DEFAULT" ? defaultDeadline(s.clock) : fromLocalInput(dl)
+      // 以实际写入时刻的学校自然日计算，表单停留跨日也不会用旧日期
+      const deadline = dl === "NONE" ? null : dl === "DEFAULT" ? deadlineInDays(s.clock, days ?? 0) : fromLocalInput(dl)
       const a: Assignment = {
         id: newId,
         taskId: task.id,
@@ -1013,7 +1081,7 @@ export function AssignForm({
           </Btn>
         </div>
       ) : null}
-      {copyFrom ? <p className="text-xs text-muted-foreground">复制题目内容自「{copyFrom.title}」；不复制提交、成绩、免做、延期或结束状态。</p> : null}
+      {copyFrom ? <p className="text-xs text-muted-foreground">复制���目内容自「{copyFrom.title}」；不复制提交、成绩、免做、延期或结束状态。</p> : null}
       <input className={inputCls} placeholder="作业标题" value={title} onChange={(e) => edit(setTitle)(e.target.value)} aria-label="作业标题" />
       <textarea
         className={inputCls}
@@ -1040,10 +1108,32 @@ export function AssignForm({
           value={dl === "DEFAULT" || dl === "NONE" ? dl : "CUSTOM"}
           onChange={(e) => edit(setDl)(e.target.value === "CUSTOM" ? toLocalInput(previewDeadline ?? defaultDeadline(mt.biz.clock)) : e.target.value)}
         >
-          {mode !== "OFFLINE" ? <option value="DEFAULT">截止：布置后第 3 天结束</option> : null}
+          {mode !== "OFFLINE" ? <option value="DEFAULT">截止：N 天后结束</option> : null}
           <option value="CUSTOM">{mode === "OFFLINE" ? "原截止时间" : "指定截止"}</option>
           <option value="NONE">{mode === "OFFLINE" ? "原截止未知／无截止" : "不设截止"}</option>
         </select>
+        {dl === "DEFAULT" && mode !== "OFFLINE" ? (
+          <span className="flex flex-wrap items-center gap-1.5 text-xs">
+            <input
+              type="text"
+              inputMode="numeric"
+              aria-label="截止天数"
+              aria-invalid={days === null}
+              className={`${sel} w-14 text-center ${days === null ? "border-destructive" : ""}`}
+              value={daysRaw}
+              onChange={(e) => edit(setDaysRaw)(e.target.value)}
+            />
+            <span>天后</span>
+            <span className="text-muted-foreground">
+              {days === null ? `请输入 0–${HW_DAYS_MAX} 的整数` : `${days === 0 ? "今天" : fmtMD(addDays(today, days))} 23:59 截止`}
+            </span>
+            {days !== null && days !== prefs.hwDays ? (
+              <button type="button" className="text-primary underline-offset-2 hover:underline" onClick={() => pw.setHwDays(days)}>
+                设为我的默认
+              </button>
+            ) : null}
+          </span>
+        ) : null}
         {dl !== "DEFAULT" && dl !== "NONE" ? (
           <input type="datetime-local" className={sel} value={dl} onChange={(e) => edit(setDl)(e.target.value)} aria-label="截止时间" />
         ) : null}

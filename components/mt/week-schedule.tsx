@@ -4,6 +4,7 @@ import { EmptyState, LinkButton, PageHeader } from "@/components/kit"
 import { MtDemoBar, MtLoadError, MtLoading } from "@/components/mt/shared"
 import { WeekPicker } from "@/components/mt/week-picker"
 import { currentWeek, permittedTasks, useTeacherId } from "@/lib/mt/derive"
+import { resolveStyle, titleClass } from "@/lib/mt/styles"
 import {
   classOf,
   fmtMD,
@@ -164,6 +165,7 @@ export function WeekSchedulePage({ view, switcher }: { view: ScheduleView; switc
                 {day.map((l) => {
                   const t = tasks.find((x) => x.id === l.task_id)!
                   const pd = personalDisplay(t, teacherId, mt.biz.taskPrefs, mt.biz.lessonOverrides, l.id)
+                  const ps = resolveStyle(mt.biz, teacherId, t)
                   const sub = [pd.division, pd.course].filter(Boolean).join(" · ")
                   const done = l.endTs <= nowTs
                   const hasObs = !!mt.biz.observations[`${l.id}|CLASS`]
@@ -180,7 +182,9 @@ export function WeekSchedulePage({ view, switcher }: { view: ScheduleView; switc
                       )}
                     >
                       <span className="font-mono text-[11px] text-muted-foreground">{lessonTimeLabel(l)}</span>
-                      <span className="text-sm font-semibold leading-snug">{pd.className}</span>
+                      <span className={cn("text-sm font-semibold leading-snug", titleClass(ps))} style={ps.hex ? { color: ps.hex } : undefined}>
+                        {pd.className}
+                      </span>
                       {sub ? <span className="text-xs text-muted-foreground">{sub}</span> : null}
                       <span className="flex items-center justify-between gap-2 text-[11px] text-muted-foreground">
                         <span>{l.room ?? ""}</span>
@@ -221,7 +225,7 @@ export function WeekSchedulePage({ view, switcher }: { view: ScheduleView; switc
         ) : (
           <Modal title="无法打开这一天的课堂记录" onClose={() => setParam({ day: null, pane: null, student: null })}>
             <p className="text-sm text-muted-foreground">
-              {!dayTask ? "任务不存在、已失效或无权访问。" : "该日期不在当前周期，或没有本任务的已应用课次。"}已为你保留“我的教学”当前视图。
+              {!dayTask ? "任务不存在、已失效或无权访问。" : "该日期不在当前��期，或没有本任务的已应用课次。"}已为你保留“我的教学”当前视图。
             </p>
           </Modal>
         )

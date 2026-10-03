@@ -553,7 +553,7 @@ function Extras({
   )
 }
 
-function HighlightItem({ text, label, onSave, onRemove }: { text: string; label: string; onSave: (v: string) => void; onRemove: () => void }) {
+export function HighlightItem({ text, label, onSave, onRemove }: { text: string; label: string; onSave: (v: string) => void; onRemove: () => void }) {
   const t = useAutoText(text, (v) => v.trim() && onSave(v.trim()))
   return (
     <span className="flex items-center gap-1 rounded-md bg-accent px-1.5 py-0.5">

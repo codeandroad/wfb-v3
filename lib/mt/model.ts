@@ -652,7 +652,7 @@ const sameSet = (a: string[], b: string[]) => a.length === b.length && a.every((
 
 /**
  * 出勤改变后的评价联动（纯函数，同一原子写入中调用）：
- * - 全部已发生课次未出席：当前等级失效为系统“不适用（未出席）”，旧值转入 gradeVoided 历史；
+ * - 全部已发生课次���出席：当前等级失效为系统“不适用（未出席）”，旧值转入 gradeVoided 历史；
  * - 仍有真实参加但已确认覆盖包含被更正课次：移出该课次，标记需核对覆盖，不机械删除合法评价；
  * - 从不适用恢复为有参加：只恢复为待处理，绝不自动复活旧等级。
  */
@@ -851,7 +851,7 @@ export function planRoutine(days: StudentDay[], standard: RoutineStandard): Rout
       continue
     }
     if (Object.values(r.att).some((a) => a.v !== "NORMAL")) {
-      skip("已有考勤例���，需人工处理")
+      skip("已有考勤例�����，需人工处理")
       continue
     }
     const std = standard(d)
@@ -1095,6 +1095,8 @@ export interface HwResult {
   /** 字段级修订：安全撤销只撤仍未被后续改动的字段 */
   rev?: Partial<Record<HwField, number>>
   qualitySource?: "MANUAL" | "BATCH"
+  /** 教师手工明确清空等级：批量不得重新填入 */
+  qualityCleared?: boolean
   /** 个别延期：只影响该生 */
   extDeadline?: string | null
   /** 参与安排待核对（显式标记，不自动由请假产生） */

@@ -33,7 +33,20 @@ export function effDeadline(a: Assignment, sid: string): string | null {
 
 /** 学校本地第 3 个自然日结束（演示时钟为 +08:00） */
 export function defaultDeadline(fromIso: string): string {
-  return `${addDays(dateOfClock(fromIso), 3)}T23:59:00+08:00`
+  return deadlineInDays(fromIso, 3)
+}
+
+export const HW_DAYS_MAX = 365
+/** 解析“N 天后”：只接受 0–365 的整数；空、负数、小数、非数字返回 null */
+export function parseDays(raw: string): number | null {
+  const t = raw.trim()
+  if (!/^\d{1,3}$/.test(t)) return null
+  const n = Number(t)
+  return n <= HW_DAYS_MAX ? n : null
+}
+/** 按布置当时的学校自然日 + N 天，截止为当日 23:59:59（不漏最后一分钟） */
+export function deadlineInDays(fromIso: string, n: number): string {
+  return `${addDays(dateOfClock(fromIso), n)}T23:59:59+08:00`
 }
 
 export function lockAtOf(a: Assignment, sid: string): number | null {
@@ -296,7 +309,11 @@ export function applyHwPatch(
     }
     if ((patch.score ?? null) !== null && !a.scoreEnabled) return { error: "本作业未启用分数" }
   }
-  if (patch.quality === null && "quality" in patch) r.qualitySource = undefined
+  if (patch.quality === null && "quality" in patch) {
+    r.qualitySource = undefined
+    if ((ctx.source ?? "MANUAL") === "MANUAL" && before.quality) r.qualityCleared = true
+  }
+  if (patch.quality || patch.noGrade) r.qualityCleared = undefined
   return { r, requirement: req }
 }
 
@@ -308,7 +325,16 @@ export type BatchKind = "SUBMIT" | "GRADE" | "ROUTINE"
 export const BATCH_LABEL: Record<BatchKind, string> = {
   SUBMIT: "批量登记提交",
   GRADE: "批量评价",
-  ROUTINE: "确认常规完成",
+  ROUTINE: "按常规登记",
+}
+
+/** 分页：返回当前页切片与校正后的页码（名单变化时不越界） */
+export const PAGE_SIZES = [20, 50, 100] as const
+export type PageSize = (typeof PAGE_SIZES)[number]
+export function pageOf<T>(rows: T[], page: number, size: number): { items: T[]; page: number; pages: number } {
+  const pages = Math.max(1, Math.ceil(rows.length / size))
+  const p = Math.min(Math.max(1, page), pages)
+  return { items: rows.slice((p - 1) * size, p * size), page: p, pages }
 }
 export interface BatchOpts {
   submission?: "ON_TIME" | "LATE" | "SUBMITTED"
@@ -370,10 +396,37 @@ export function planBatch(a: Assignment, kind: BatchKind, opts: BatchOpts, subse
         skip("明确不评价")
         continue
       }
+      if ((r.score ?? null) !== null) {
+        skip("已有分数")
+        continue
+      }
+      if (r.qualityCleared) {
+        skip("等级已被明确清空")
+        continue
+      }
       plan.writes.push({ sid, patch: { quality: opts.level ?? null } })
     } else {
-      if (r?.submission) {
-        skip(r.submission === "LATE" ? "已知迟交" : r.submission === "MISSING" ? "未交" : "已有提交登记")
+      // 按常规登记 = 按时提交 + 当前批量等级；只补齐未知部分，不改变已知事实
+      const sub = r?.submission ?? null
+      if (sub === "LATE") {
+        skip("已知迟交（可用“评价”）")
+        continue
+      }
+      if (sub === "MISSING") {
+        skip("已登记未交")
+        continue
+      }
+      if (sub === "SUBMITTED") {
+        skip("提交时效未定（可用“评价”）")
+        continue
+      }
+      if (sub === "ON_TIME") {
+        if (r?.quality) skip("已有等级")
+        else if (r?.noGrade) skip("明确不评价")
+        else if ((r?.score ?? null) !== null) skip("已有分数")
+        else if (r?.qualityCleared) skip("等级已被明确清空")
+        else if (opts.level) plan.writes.push({ sid, patch: { quality: opts.level } })
+        else skip("已按时提交")
         continue
       }
       plan.writes.push({ sid, patch: opts.level ? { submission: "ON_TIME", quality: opts.level } : { submission: "ON_TIME" } })

@@ -51,7 +51,8 @@ import {
 } from "./model"
 import { cleanPhrase, emptyLib, type PersonalPhrase, type PhraseKind, type PhraseLib } from "./phrases"
 import type { HwBatch, HwBatchEntry, HwField, HwLifecycle } from "./model"
-import { applyHwPatch, BATCH_LABEL, blankResult, isSubmitted, lifecycleOf, planBatch, type BatchKind, type BatchOpts, type HwPatch } from "./hw"
+import { applyHwPatch, BATCH_LABEL, blankResult, HW_DAYS_MAX, isSubmitted, lifecycleOf, PAGE_SIZES, planBatch, type BatchKind, type BatchOpts, type HwPatch, type PageSize } from "./hw"
+import { cleanStyle, type StylePref } from "./styles"
 import type { Attendance as AttV } from "./model"
 import {
   bindingKey,
@@ -215,7 +216,25 @@ export interface MtBiz {
   repairLog?: RepairLog[]
   /** 作业未布置草稿（按教师＋任务＋方式） */
   hwDrafts?: Record<string, HwDraft>
+  /** 教师个人偏好（不影响他人、不改业务数据） */
+  teacherPrefs?: Record<string, TeacherPrefs>
+  /** 批量候选参数：`${teacherId}|${assignmentId}|${revId}`；只记参数，不代表已写入任何学生 */
+  batchCands?: Record<string, BatchCand>
+  /** 个人显示样式：`${teacherId}|TASK|CLASS|COURSE|${id}` */
+  styles?: Record<string, StylePref>
 }
+
+export interface TeacherPrefs {
+  /** 布置作业“N 天后”默认值 */
+  hwDays?: number
+  /** 学生列表每页数量 */
+  pageSize?: PageSize
+}
+export interface BatchCand {
+  submission?: "ON_TIME" | "LATE" | "SUBMITTED"
+  level?: string
+}
+export const scopePrefs = (teacherId: string) => `prefs:${teacherId}`
 
 export interface HwDraft {
   teacherId: string
@@ -745,6 +764,64 @@ const cleanReason = (t: string) => t.replace(/[\u0000-\u0008\u000b-\u001f<>]/g, 
 export const scopePhrases = (teacherId: string) => `phr:${teacherId}`
 
 /** 常用内容写入：只改本人个人库，不触碰系统原文、他人库或任何已保存的学生记录 */
+/** 教师个人偏好 / 批量候选 / 个人样式：只写当前教师的个人记录，不触碰排课版本与业务结果 */
+export function usePrefWriters(teacherId: string | null) {
+  const mt = useMt()
+  return useMemo(() => {
+    const write = (label: string, field: string, run: (s: MtBiz) => MtBiz | { error: string }) => {
+      if (!teacherId) return
+      mt.save({
+        field: `pref:${teacherId}:${field}`,
+        scope: [scopePrefs(teacherId)],
+        label,
+        value: field,
+        run: (s) => {
+          const r = run(s)
+          if ("error" in r) return { error: r.error, kind: "rejected" as const }
+          return r
+        },
+      })
+    }
+    return {
+      setHwDays(n: number) {
+        write("作业默认天数", `hwDays:${n}`, (s) => {
+          if (!Number.isInteger(n) || n < 0 || n > HW_DAYS_MAX) return { error: `请输入 0–${HW_DAYS_MAX} 的整数` }
+          const cur = s.teacherPrefs?.[teacherId!] ?? {}
+          return { ...s, teacherPrefs: { ...(s.teacherPrefs ?? {}), [teacherId!]: { ...cur, hwDays: n } } }
+        })
+      },
+      setPageSize(n: PageSize) {
+        write("列表每页数量", `pageSize:${n}`, (s) => {
+          if (!PAGE_SIZES.includes(n)) return { error: "不支持的每页数量" }
+          const cur = s.teacherPrefs?.[teacherId!] ?? {}
+          return { ...s, teacherPrefs: { ...(s.teacherPrefs ?? {}), [teacherId!]: { ...cur, pageSize: n } } }
+        })
+      },
+      setBatchCand(key: string, cand: BatchCand) {
+        write("批量候选参数", `cand:${key}:${cand.submission ?? ""}:${cand.level ?? ""}`, (s) => ({
+          ...s,
+          batchCands: { ...(s.batchCands ?? {}), [`${teacherId}|${key}`]: cand },
+        }))
+      },
+      setStyle(key: string, pref: StylePref | null) {
+        write(pref ? "我的显示样式" : "恢复默认样式", `style:${key}:${JSON.stringify(pref)}`, (s) => {
+          const next = { ...(s.styles ?? {}) }
+          const clean = pref ? cleanStyle(pref) : null
+          if (clean) next[key] = clean
+          else delete next[key]
+          return { ...s, styles: next }
+        })
+      },
+    }
+  }, [mt, teacherId])
+}
+
+export function useTeacherPrefs(teacherId: string | null): Required<TeacherPrefs> {
+  const mt = useMt()
+  const p = teacherId ? mt.biz.teacherPrefs?.[teacherId] : undefined
+  return { hwDays: p?.hwDays ?? 3, pageSize: p?.pageSize ?? 20 }
+}
+
 export function usePhraseWriters(teacherId: string | null) {
   const mt = useMt()
   return useMemo(() => {
