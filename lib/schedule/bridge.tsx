@@ -6,7 +6,7 @@
 import { useMemo, type ReactNode } from "react"
 import { useTimetable, teacherWeekEntries, teacherCurrent } from "@/lib/timetable/store"
 import { useCalendarEvents, effectiveWithCalendar } from "@/lib/timetable/calendar-store"
-import { PERIODS, addDays } from "@/lib/timetable/data"
+import { PERIODS, addDays, weekStartOf } from "@/lib/timetable/data"
 import { setScheduleSource, type ScheduleRead } from "@/lib/mt/model"
 import { ScheduleRevContext } from "@/lib/mt/store"
 import { useDemo } from "@/lib/demo/store"
@@ -32,9 +32,10 @@ export function ScheduleBridge({ children }: { children: ReactNode }) {
         else {
           const dates = Array.from({ length: 7 }, (_, i) => addDays(weekStartIso, i))
           const { entries } = teacherWeekEntries(tt, teacherId, weekStartIso)
-          const { effective } = effectiveWithCalendar(events, entries, dates, tt.adoptions[teacherId]?.personalEdits ?? [])
+          const { effective } = effectiveWithCalendar(events, entries, dates, tt.adoptions[teacherId]?.personalEdits ?? [], date => teacherWeekEntries(tt, teacherId, weekStartOf(date)).entries)
           out = {
             status: "ok",
+            exclusions: events.filter(e => (e.kind === "holiday" && dates.some(d => d >= e.date && d <= (e.endDate ?? e.date))) || (e.kind === "swap" && dates.includes(e.date))).map(e => ({ date: e.date, reason: e.kind === "swap" ? `校历调休至 ${e.targetDate}` : `校历停课${e.endDate ? `至 ${e.endDate}` : ""}` })),
             lessons: effective
               .filter((e) => e.taskId && !e.movedTo && dates.includes(e.date))
               .map((e) => {

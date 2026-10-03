@@ -59,11 +59,12 @@ export function swapClonesFor(
   date: string,
   stopped: Set<string>,
   makeupEdits?: SlotEdit[],
+  sourceEntries?: (date: string) => ProjectedEntry[],
 ): ProjectedEntry[] {
   const out: ProjectedEntry[] = []
   for (const s of events.filter((e) => e.kind === "swap" && e.targetDate === date)) {
-    const srcWeekday = weekdayOfIso(s.date)
-    for (const e of entries.filter((x) => x.weekday === srcWeekday && !stopped.has(x.date))) {
+    const source = sourceEntries ? sourceEntries(s.date) : entries
+    for (const e of source.filter(x => x.date === s.date && !x.makeupFrom && !x.movedTo)) {
       const clone: ProjectedEntry = { ...e, date, makeupFrom: s.date, origin: "calendar", key: `${e.key}@swap-${s.date}` }
       const ed = [...(makeupEdits ?? [])].reverse().find((x) => x.key === clone.key && x.onDate === date)
       if (!ed) {
@@ -94,9 +95,10 @@ export function effectiveWithCalendar(
   entries: ProjectedEntry[],
   weekDates: string[],
   makeupEdits?: SlotEdit[],
+  sourceEntries?: (date: string) => ProjectedEntry[],
 ): { effective: ProjectedEntry[]; stopped: Set<string> } {
   const stopped = stoppedDatesFor(events, [...new Set([...entries.map((e) => e.date), ...weekDates])])
-  const clones = weekDates.flatMap((d) => swapClonesFor(events, entries, d, stopped, makeupEdits))
+  const clones = weekDates.flatMap((d) => swapClonesFor(events, entries, d, stopped, makeupEdits, sourceEntries))
   return { effective: [...entries.filter((e) => !stopped.has(e.date)), ...clones], stopped }
 }
 

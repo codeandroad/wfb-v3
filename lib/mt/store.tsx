@@ -8,7 +8,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
 import { schoolNow } from "./clock"
-import { generationOf, type RegradeHistory } from "./regrading"
+import { generationOf } from "./regrading"
 import {
   addDaysIso,
   applyRoutineItem,
@@ -54,7 +54,7 @@ import {
 import { cleanPhrase, emptyLib, type PersonalPhrase, type PhraseKind, type PhraseLib } from "./phrases"
 import type { HwBatch, HwBatchEntry, HwField, HwLifecycle } from "./model"
 import { applyHwPatch, BATCH_LABEL, blankResult, HW_DAYS_MAX, isSubmitted, lifecycleOf, isPageSize, planBatch, type BatchKind, type BatchOpts, type HwPatch, type PageSize } from "./hw"
-import { cleanStyle, type StylePref } from "./styles"
+import { saveStylePatch, type StylePref } from "./styles"
 import type { Attendance as AttV } from "./model"
 import {
   bindingKey,
@@ -186,7 +186,7 @@ export interface RoutineOp {
 
 export interface MtBiz {
   evaluationGenerations?: Record<string, number>
-  regradeHistory?: RegradeHistory[]
+  regradeRequests?: Record<string, string>
   schema: 3
   variant: VariantId
   clock: string
@@ -473,7 +473,13 @@ export function MtProvider({ children }: { children: ReactNode }) {
     }
     const loaded = readBiz(variant)
     const repaired = repairEligibility(loaded)
-    const b = { ...repaired.biz, clock: demoClock.current ?? schoolNow() }
+    const b = { ...repaired.biz, clock: demoClock.current ?? schoolNow(), schemes: { ...repaired.biz.schemes, taskOverrides: Object.fromEntries(Object.entries(repaired.biz.schemes.taskOverrides ?? {}).filter(([key]) => !key.endsWith("|CLASSROOM"))) } }
+  delete (b as MtBiz & { regradeHistory?: unknown }).regradeHistory
+  const upgradeWeek = weekOfDate(dateOfClock(b.clock))
+  b.schemes.defaults = Object.fromEntries(Object.entries(b.schemes.defaults).map(([key, list]) => [key, key.endsWith("|CLASSROOM") ? list.filter(entry => entry.fromWeek <= upgradeWeek) : list]))
+  if ((loaded as MtBiz & { regradeHistory?: unknown }).regradeHistory || Object.keys(loaded.schemes.taskOverrides ?? {}).some(key => key.endsWith("|CLASSROOM")) || Object.entries(loaded.schemes.defaults).some(([key, entries]) => key.endsWith("|CLASSROOM") && entries.some(entry => entry.fromWeek > upgradeWeek))) {
+    try { window.localStorage.setItem(bizKey(b.variant), JSON.stringify(b)) } catch { /* 保留内存迁移，下次成功保存时持久化。 */ }
+  }
     if (repaired.log) {
       try {
         window.localStorage.setItem(bizKey(b.variant), JSON.stringify(b))
@@ -687,7 +693,7 @@ export function MtProvider({ children }: { children: ReactNode }) {
         const cur = bizRef.current
         const dup = cur.publications.find((p) => p.idemKey === input.idemKey)
         if (dup) return { ok: true, pub: dup, reused: true }
-        if (input.taskIds.some((t) => cur.revoked.includes(t))) return { ok: false, error: "已失去任务权限，不能发布" }
+        if (input.taskIds.some((t) => cur.revoked.includes(t))) return { ok: false, error: "已失去任务权限，不能��布" }
         const prev = cur.publications.filter(
           (p) => p.periodId === input.periodId && p.taskIds.slice().sort().join() === input.taskIds.slice().sort().join(),
         )
@@ -854,12 +860,9 @@ export function usePrefWriters(teacherId: string | null) {
         }))
       },
       setStyle(key: string, pref: StylePref | null) {
-        write(pref ? "我的显示样式" : "恢复默认样式", `style:${key}:${JSON.stringify(pref)}`, (s) => {
-          const next = { ...(s.styles ?? {}) }
-          const clean = pref ? cleanStyle(pref) : null
-          if (clean) next[key] = clean
-          else delete next[key]
-          return { ...s, styles: next }
+        return mt.command(pref ? "我的显示样式" : "恢复默认样式", (s) => {
+          if (!teacherId || !key.startsWith(`${teacherId}|`)) return { error: "无权修改此偏好" }
+          return { ...s, styles: saveStylePatch(s.styles ?? {}, key, pref) }
         })
       },
     }
@@ -1269,7 +1272,7 @@ export function useTextWriters() {
             if (text !== null) {
               const h = cur.find((x) => x.id === id)
               if (!h) return rejected("找不到该亮点")
-              if (h.void) return rejected("已失效的亮点不能改写为有效亮点，请删除或在参加日重新添加")
+              if (h.void) return rejected("已失效的亮点不能改写为��效亮点，请删除或在参加日重新添加")
               if (h.date) {
                 const e = eligAt(s, `${taskId}|${h.date}|${sid}`, taskId, h.date)
                 if (highlightStatus(h, e) !== "VALID") return rejected(ELIG_REASON[e.kind === "ELIGIBLE" ? "ABSENT" : e.kind])

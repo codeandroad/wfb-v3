@@ -6,6 +6,8 @@ import { eventCovers, stoppedDatesFor, swapClonesFor, useCalendarEvents } from "
 import { recordKey, useLessonRecords } from "@/lib/timetable/lesson-records"
 import { dutyName, useDuties } from "@/lib/timetable/duty-store"
 import { useTeacherId } from "@/lib/mt/derive"
+import { teacherWeekEntries, useTimetable } from "@/lib/timetable/store"
+import { weekStartOf } from "@/lib/timetable/data"
 import { personalDisplay, prefKey, TASKS } from "@/lib/mt/model"
 import { useMt } from "@/lib/mt/store"
 import { cardStyle, resolveStyle, tagStyle, titleClass } from "@/lib/mt/styles"
@@ -74,13 +76,14 @@ export function WeekGrid({
   // 作用于调休补课日镜像课次的单次编辑（键为镜像键，按补课日期命中）
   makeupEdits?: SlotEdit[]
 }) {
+  const timetable = useTimetable()
   const sharedEvents = useCalendarEvents()
   const calendarEvents = calendarEventsProp ?? sharedEvents
   const records = useLessonRecords()
   // null=跟随是否有晚间课自动展开/折叠；true/false=用户手动覆盖
   const [eveningOverride, setEveningOverride] = useState<boolean | null>(null)
   const [over, setOver] = useState<string | null>(null) // `${periodId}@${date}`
-  const [ghost, setGhost] = useState<{ x: number; y: number; label: string } | null>(null)
+  const [ghost, setGhost] = useState<{ x: number; y: number; entry: ProjectedEntry } | null>(null)
   const draggedAtRef = useRef(0)
 
   // 指针拖拽状态：使用 setPointerCapture，事件绑定在课卡自身，
@@ -120,7 +123,7 @@ export function WeekGrid({
       ev.preventDefault()
       const cell = cellFromPoint(ev.clientX, ev.clientY)
       setOver(cell?.getAttribute("data-cell") ?? null)
-      setGhost({ x: ev.clientX, y: ev.clientY, label: s.entry.className })
+      setGhost({ x: ev.clientX, y: ev.clientY, entry: s.entry })
     },
     onPointerUp: (ev: React.PointerEvent<HTMLButtonElement>) => {
       const s = pd.current
@@ -190,7 +193,7 @@ export function WeekGrid({
   // 实际参与渲染的课次：停课日课程保留但以失效态低调显示，追加补课日克隆
   const renderEntries: ProjectedEntry[] = [
     ...entries,
-    ...days.flatMap((d) => swapClonesFor(calendarEvents, entries, d.date, stoppedDates, makeupEdits)),
+    ...days.flatMap((d) => swapClonesFor(calendarEvents, entries, d.date, stoppedDates, makeupEdits, canonical ? undefined : date => [...new Set(entries.map(e => e.teacherId))].flatMap(id => teacherWeekEntries(timetable, id, weekStartOf(date)).entries))),
   ]
 
   const eveningCount = renderEntries.filter(
@@ -349,7 +352,7 @@ export function WeekGrid({
             <span key={e.id} className="inline-flex items-center gap-1">
               {e.kind === "holiday" ? (
                 e.endDate && e.endDate !== e.date ? (
-                  <>{e.title ?? "停课"} {fmtDate(e.date)}–{fmtDate(e.endDate)}（{e.scope}）：期间课表失效</>
+                  <>{e.title ?? "停课"} {fmtDate(e.date)}–{fmtDate(e.endDate)}（{e.scope}）：期间��表失效</>
                 ) : (
                   <>本周 {fmtDate(e.date)} {e.title ?? "停课"}（{e.scope}）</>
                 )
@@ -379,10 +382,10 @@ export function WeekGrid({
 
       {ghost ? (
         <div
-          className="pointer-events-none fixed z-50 -translate-x-1/2 -translate-y-1/2 rounded-md border border-primary bg-primary px-2 py-1 text-[11px] font-semibold text-primary-foreground shadow-lg"
+          className="pointer-events-none fixed z-50 w-40 -translate-x-1/2 -translate-y-1/2 rounded-md bg-card text-foreground shadow-lg"
           style={{ left: ghost.x, top: ghost.y }}
         >
-          {ghost.label}
+          <ClassCard entry={ghost.entry} canonical={canonical} />
         </div>
       ) : null}
     </div>
@@ -415,7 +418,7 @@ export function ClassCard({
   const mt = useMt()
   const teacherId = useTeacherId()
   const lessonCustom = !canonical && entry.displayMode === "CUSTOM" && !!entry.customLabel?.trim()
-  const task = !canonical && !lessonCustom && entry.taskId && teacherId ? TASKS.find((t) => t.id === entry.taskId) : undefined
+  const task = !canonical && !lessonCustom && entry.taskId && teacherId ? TASKS.find((t) => t.id === entry.taskId && t.teacher_id === teacherId) : undefined
   const taskPref = task && teacherId ? mt.biz.taskPrefs[prefKey(teacherId, task.id)] : undefined
   const taskCustom = !!taskPref?.enabled && !!taskPref.text.trim()
   const marker =
@@ -423,7 +426,7 @@ export function ClassCard({
       ? personalDisplay(task, teacherId, mt.biz.taskPrefs, mt.biz.lessonOverrides).division
       : finalMarker(entry, canonical, dutyName(duties, entry.className, entry.group))
   const customShown = lessonCustom || taskCustom
-  const ownTask = !canonical && entry.taskId && teacherId ? TASKS.find((t) => t.id === entry.taskId) : undefined
+  const ownTask = !canonical && entry.taskId && teacherId ? TASKS.find((t) => t.id === entry.taskId && t.teacher_id === teacherId) : undefined
   const courseLabel =
     ownTask && teacherId ? personalDisplay(ownTask, teacherId, mt.biz.taskPrefs, mt.biz.lessonOverrides).course : null
   // 本人样式仅作用于本人真实任务课卡；学校版/差异（canonical）不染色
@@ -456,8 +459,8 @@ export function ClassCard({
       <div className="flex items-center gap-1">
         {draggable ? <GripVertical className="size-3 shrink-0 opacity-50" aria-hidden /> : null}
         <span
-          className={cn("truncate text-[12px] font-semibold leading-tight", ps && !locked && !voided && titleClass(ps))}
-          style={ps?.hex && !locked && !voided ? { color: ps.hex } : undefined}
+          className={cn("truncate text-[12px] font-semibold leading-tight", ps && titleClass(ps))}
+          style={ps?.hex ? { color: ps.hex } : undefined}
         >
           {entry.className}
         </span>
@@ -476,7 +479,7 @@ export function ClassCard({
               "shrink-0 rounded px-1 font-medium",
               customShown ? "bg-[#2a5b6e]/15 text-[#22505f]" : "bg-foreground/10",
             )}
-            style={ps && !locked && !voided ? tagStyle(ps) : undefined}
+            style={ps ? tagStyle(ps) : undefined}
           >
             {marker}
           </span>
@@ -505,14 +508,14 @@ export function ClassCard({
           <CalendarSync className="size-2.5" />补 {fmtDate(entry.makeupFrom!)}
         </span>
       ) : null}
-      {voided ? <span className="sr-only">（放假停课，本节课表失效）</span> : null}
+      {voided ? <span className="text-xs font-medium">停课／调休（本日不授课）</span> : null}
       {meta?.recorded ? (
         <span className="mt-0.5 inline-flex items-center gap-0.5 rounded bg-primary/15 px-1 text-[9px] font-medium leading-4 text-primary">
           <ClipboardPen className="size-2.5" aria-hidden />
           已记录
         </span>
       ) : null}
-      {meta?.draft ? <span className="sr-only">（草稿）</span> : null}
+      {meta?.draft || personal ? <span className="text-xs font-medium">草稿／个人调整</span> : null}
       {meta?.conflict ? <span className="mt-0.5 inline-block text-[10px] font-medium text-destructive">冲突</span> : null}
     </>
   )
@@ -525,8 +528,8 @@ export function ClassCard({
     onClick && "transition-shadow hover:shadow-sm focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring",
   )
 
-  const plainTone = !voided && !locked && !meta?.draft && !personal && !swap && !activity
-  const personalCard = ps && plainTone ? cardStyle(ps) : undefined
+  const plainTone = !!ps
+  const personalCard = ps ? cardStyle(ps) : undefined
 
   if (onClick || draggable) {
     return (

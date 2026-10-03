@@ -26,15 +26,15 @@ export function RegradeControl({ target, currentRev, label }: { target: RegradeT
   }
   return <section className="flex flex-col gap-3 rounded-lg border border-border p-3" aria-label="当前对象立即重评">
     <p className="text-sm font-medium">{label} · {target.kind === "CLASSROOM" ? `第 ${target.week} 周整个周期` : "整份作业"}</p>
-    <p className="text-sm text-muted-foreground">当前：{revById(currentRev)?.name ?? "待核对"} · 评价代次 {generationOf(mt.biz, target)}</p>
+    <p className="text-sm text-muted-foreground">当前：{revById(currentRev)?.name ?? "待核对"}</p>
     <div className="flex flex-wrap items-center gap-2">
       <select aria-label="立即采用方案" value={pick} onChange={e => { setPick(e.target.value); setConfirm(null); setMessage("") }} className="h-9 rounded border border-input bg-card px-2 text-sm">
         <option value="" disabled>选择方案</option>
         {candidates.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
       </select>
-      <Btn disabled={busy || !pick || pick === currentRev} onClick={() => {
+      <Btn disabled={busy || !pick || (pick === currentRev && (target.kind === "HOMEWORK" || mt.biz.schemes.classroomChoices?.[target.taskId] === pick))} onClick={() => {
         const request = { token: crypto.randomUUID(), generation: generationOf(mt.biz, target), stamp: mt.biz.stamp }
-        if (count) setConfirm(request); else submit(request)
+        if (count && pick !== currentRev) setConfirm(request); else submit(request)
       }}>立即采用并重新评价</Btn>
     </div>
     {confirm ? <div role="alert" className="flex flex-col gap-2 text-sm">
@@ -44,6 +44,6 @@ export function RegradeControl({ target, currentRev, label }: { target: RegradeT
     </div> : null}
     {busy ? <p className="text-sm">请先处理当前未保存输入。</p> : null}
     {message ? <p role="status" className="text-sm">{message}</p> : null}
-    <details className="text-sm"><summary>本对象方案更换历史</summary>{(mt.biz.regradeHistory ?? []).filter(h => h.key === regradeKey(target)).map(h => <p key={h.token}>{h.at} · {revById(h.from)?.name} → {revById(h.to)?.name} · 第 {h.generation} 代（旧评价仅留档）</p>)}</details>
+    {target.kind === "CLASSROOM" ? <p className="text-sm text-muted-foreground">本周期立即采用；以后本任务继续使用，直到再次更改。</p> : null}
   </section>
 }
