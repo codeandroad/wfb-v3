@@ -6,6 +6,7 @@ import { LessonDetail } from "@/components/mt/lesson-detail"
 import { PhrasePicker, ReasonField } from "@/components/mt/phrase-picker"
 import { PublishPanel } from "@/components/mt/publish-panel"
 import { RoutineDialog } from "@/components/mt/routine-dialog"
+import { DayQuickActions } from "@/components/mt/day-quick-actions"
 import { AttSelect, GradeSelect, MtLoading, SaveState } from "@/components/mt/shared"
 import { StudentDetailBody } from "@/components/mt/student-drawer"
 import { Btn, Modal, useAutoText } from "@/components/mt/ui"
@@ -255,12 +256,9 @@ export function DayRecordDialog({
             <div className="flex flex-wrap items-center gap-2">
               {!future ? (
                 <>
-                  <Btn size="sm" onClick={() => setDialog("routine")}>
-                    确认本日常规（全体 {card.applicable} 人）
-                  </Btn>
-                  <Btn size="sm" onClick={() => setDialog("attendance")}>
-                    出勤快速处理
-                  </Btn>
+                  <div className="basis-full">
+                    <DayQuickActions tw={tw} sids={allSids} date={date} scopeLabel={`${title} · ${fmtMD(date)}`} />
+                  </div>
                   {carry ? (
                     <Btn size="sm" variant="primary" onClick={() => setDialog("carry")}>
                       沿用本日评价到新课次（{carry} 人）

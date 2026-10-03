@@ -8,6 +8,7 @@ import { dutyName, useDuties } from "@/lib/timetable/duty-store"
 import { useTeacherId } from "@/lib/mt/derive"
 import { personalDisplay, prefKey, TASKS } from "@/lib/mt/model"
 import { useMt } from "@/lib/mt/store"
+import { cardStyle, resolveStyle, tagStyle, titleClass } from "@/lib/mt/styles"
 import {
   addDays,
   finalMarker,
@@ -425,6 +426,8 @@ export function ClassCard({
   const ownTask = !canonical && entry.taskId && teacherId ? TASKS.find((t) => t.id === entry.taskId) : undefined
   const courseLabel =
     ownTask && teacherId ? personalDisplay(ownTask, teacherId, mt.biz.taskPrefs, mt.biz.lessonOverrides).course : null
+  // 本人样式仅作用于本人真实任务课卡；学校版/差异（canonical）不染色
+  const ps = ownTask && teacherId ? resolveStyle(mt.biz, teacherId, ownTask) : null
   const noteSummary = entry.noteShow && entry.note?.trim() ? entry.note.trim() : null
   const personal = entry.origin === "personal"
   const history = entry.kind === "history"
@@ -452,7 +455,12 @@ export function ClassCard({
       {/* 安排名称：教学班正式名 */}
       <div className="flex items-center gap-1">
         {draggable ? <GripVertical className="size-3 shrink-0 opacity-50" aria-hidden /> : null}
-        <span className="truncate text-[12px] font-semibold leading-tight">{entry.className}</span>
+        <span
+          className={cn("truncate text-[12px] font-semibold leading-tight", ps && !locked && !voided && titleClass(ps))}
+          style={ps?.hex && !locked && !voided ? { color: ps.hex } : undefined}
+        >
+          {entry.className}
+        </span>
         {locked ? (
           <Lock
             className="ml-auto size-3 shrink-0 opacity-60"
@@ -468,6 +476,7 @@ export function ClassCard({
               "shrink-0 rounded px-1 font-medium",
               customShown ? "bg-[#2a5b6e]/15 text-[#22505f]" : "bg-foreground/10",
             )}
+            style={ps && !locked && !voided ? tagStyle(ps) : undefined}
           >
             {marker}
           </span>
@@ -516,12 +525,17 @@ export function ClassCard({
     onClick && "transition-shadow hover:shadow-sm focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring",
   )
 
+  const plainTone = !voided && !locked && !meta?.draft && !personal && !swap && !activity
+  const personalCard = ps && plainTone ? cardStyle(ps) : undefined
+
   if (onClick || draggable) {
     return (
       <button
         type="button"
         onClick={onClick}
         className={cls}
+        style={personalCard}
+        data-style-bg={ps && plainTone ? ps.bg?.label ?? "" : ""}
         draggable={false}
         {...(dragProps ?? {})}
       >
@@ -529,5 +543,9 @@ export function ClassCard({
       </button>
     )
   }
-  return <div className={cls}>{inner}</div>
+  return (
+    <div className={cls} style={personalCard}>
+      {inner}
+    </div>
+  )
 }

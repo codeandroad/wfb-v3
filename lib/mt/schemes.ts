@@ -48,6 +48,31 @@ export interface SchemeState {
   defaults: Record<string, DefaultEntry[]>
   /** `${taskId}|${periodId}` -> 该任务该周期固定的课堂修订 */
   bindings: Record<string, string>
+  /** `${taskId}|${purpose}` -> 本人对该真实任务的覆盖（按生效先后）；仅影响该任务 */
+  taskOverrides?: Record<string, DefaultEntry[]>
+}
+
+export function overrideKey(taskId: string, p: Purpose) {
+  return `${taskId}|${p}`
+}
+/** 任务课堂覆盖：目标周期有效的覆盖修订（无则 null） */
+export function taskClassroomOverrideAt(st: SchemeState, taskId: string, week: number): string | null {
+  let rev: string | null = null
+  for (const e of st.taskOverrides?.[overrideKey(taskId, "CLASSROOM")] ?? []) if (e.fromWeek <= week) rev = e.revId || null
+  return rev
+}
+/** 任务新作业覆盖：此刻有效的覆盖修订（无则 null） */
+export function taskHomeworkOverrideNow(st: SchemeState, taskId: string, nowIso: string): string | null {
+  let rev: string | null = null
+  const now = Date.parse(nowIso)
+  for (const e of st.taskOverrides?.[overrideKey(taskId, "HOMEWORK")] ?? []) if (Date.parse(e.at) <= now) rev = e.revId || null
+  return rev
+}
+/** 新作业候选：任务覆盖 → 教师作业默认 → 系统默认 */
+export function homeworkRevForTask(st: SchemeState, taskId: string, teacherId: string, nowIso: string): { revId: string; source: "TASK" | "TEACHER" } {
+  const o = taskHomeworkOverrideNow(st, taskId, nowIso)
+  if (o) return { revId: o, source: "TASK" }
+  return { revId: homeworkDefaultNow(st, ownerKey(teacherId), nowIso), source: "TEACHER" }
 }
 
 /* ---------------- 系统预设 ---------------- */
@@ -196,6 +221,8 @@ export function homeworkDefaultNow(st: SchemeState, owner: string, nowIso: strin
 export function classroomRevFor(st: SchemeState, taskId: string, teacherId: string, periodId: string, week: number): { revId: string; bound: boolean } {
   const b = st.bindings[bindingKey(taskId, periodId)]
   if (b) return { revId: b, bound: true }
+  const o = taskClassroomOverrideAt(st, taskId, week)
+  if (o) return { revId: o, bound: false }
   return { revId: classroomDefaultAt(st, ownerKey(teacherId), week), bound: false }
 }
 

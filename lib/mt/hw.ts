@@ -329,8 +329,22 @@ export const BATCH_LABEL: Record<BatchKind, string> = {
 }
 
 /** 分页：返回当前页切片与校正后的页码（名单变化时不越界） */
-export const PAGE_SIZES = [20, 50, 100] as const
-export type PageSize = (typeof PAGE_SIZES)[number]
+/** 推荐档位；另支持 1–200 的自定义整数 */
+export const PAGE_SIZES = [20, 30, 50, 100] as const
+export const PAGE_SIZE_MIN = 1
+export const PAGE_SIZE_MAX = 200
+export type PageSize = number
+/** 原位校验：空白返回 null（输入中，不当 0），非法返回提示文字 */
+export function pageSizeError(raw: string): string | null {
+  const v = raw.trim()
+  if (!v) return null
+  if (!/^-?\d+(\.\d+)?$/.test(v)) return "请输入整数"
+  const n = Number(v)
+  if (!Number.isInteger(n)) return "不支持小数"
+  if (n < PAGE_SIZE_MIN || n > PAGE_SIZE_MAX) return `请输入 ${PAGE_SIZE_MIN}–${PAGE_SIZE_MAX} 的整数`
+  return null
+}
+export const isPageSize = (n: number) => Number.isInteger(n) && n >= PAGE_SIZE_MIN && n <= PAGE_SIZE_MAX
 export function pageOf<T>(rows: T[], page: number, size: number): { items: T[]; page: number; pages: number } {
   const pages = Math.max(1, Math.ceil(rows.length / size))
   const p = Math.min(Math.max(1, page), pages)

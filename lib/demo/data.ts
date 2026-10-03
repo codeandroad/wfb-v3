@@ -257,7 +257,7 @@ export function seedP1(): Record<string, StudentFeedback> {
   }
   map.s04.classroom[mon].note = "周一开课状态偏慢，后半周回升"
 
-  // 示例学生03：周二请假（当次课堂无法评价，作业单独判断），其余课��正常记录
+  // 示例学生03：周二请假（当次课堂无法评价，作业单独判断），其余课次正常记录
   map.s03.attendance[tue] = "leave"
   map.s03.classroom[mon] = { grade: "A-", note: "" }
   map.s03.classroom[thu] = { grade: "A-", note: "" }

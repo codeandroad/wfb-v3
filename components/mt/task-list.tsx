@@ -17,7 +17,7 @@ import {
   weekdayIdx,
 } from "@/lib/mt/model"
 import { useMt } from "@/lib/mt/store"
-import { resolveStyle, titleClass } from "@/lib/mt/styles"
+import { resolveStyle, tagStyle, titleClass } from "@/lib/mt/styles"
 import { cn } from "@/lib/utils"
 import { ArrowRight, CalendarDays, Search, Settings2 } from "lucide-react"
 import Link from "next/link"
@@ -53,12 +53,6 @@ export function TaskListPage({ switcher }: { switcher: ReactNode }) {
       <PageHeader
         title="我的教学"
         desc="本人任教的教学班与分工"
-        actions={
-          <LinkButton href={`/teaching/settings?ret=${encodeURIComponent(`/teaching?${sp.toString()}`)}`} variant="outline">
-            <Settings2 className="size-3.5" aria-hidden />
-            教学设置
-          </LinkButton>
-        }
       />
       <div className="mb-4">{switcher}</div>
     </>
@@ -203,7 +197,13 @@ function TaskRow({ tw, teacherId, q, st }: { tw: TaskWeek; teacherId: string; q:
           >
             {d.className}
           </Link>
-          {d.division ? <Badge tone="info">{d.division}</Badge> : null}
+          {d.division ? (
+            ps.tagHex ? (
+              <span className="rounded px-1.5 py-0.5 text-xs font-medium" style={tagStyle(ps)}>{d.division}</span>
+            ) : (
+              <Badge tone="info">{d.division}</Badge>
+            )
+          ) : null}
           {d.course ? <span className="text-sm text-muted-foreground">{d.course}</span> : null}
           <span className="text-sm text-muted-foreground">{tw.rosterCount}人</span>
         </div>

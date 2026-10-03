@@ -51,7 +51,7 @@ import {
 } from "./model"
 import { cleanPhrase, emptyLib, type PersonalPhrase, type PhraseKind, type PhraseLib } from "./phrases"
 import type { HwBatch, HwBatchEntry, HwField, HwLifecycle } from "./model"
-import { applyHwPatch, BATCH_LABEL, blankResult, HW_DAYS_MAX, isSubmitted, lifecycleOf, PAGE_SIZES, planBatch, type BatchKind, type BatchOpts, type HwPatch, type PageSize } from "./hw"
+import { applyHwPatch, BATCH_LABEL, blankResult, HW_DAYS_MAX, isSubmitted, lifecycleOf, isPageSize, planBatch, type BatchKind, type BatchOpts, type HwPatch, type PageSize } from "./hw"
 import { cleanStyle, type StylePref } from "./styles"
 import type { Attendance as AttV } from "./model"
 import {
@@ -202,11 +202,13 @@ export interface MtBiz {
   publications: Publication[]
   routineOps: RoutineOp[]
   revoked: string[]
+  /** 原型演示：大班分页数据开关（隔离任务，关闭即恢复原数据视图） */
+  bigDemo?: boolean
   rosterEvents: string[]
   /** 评价方案 r1：个人方案、修订、默认采用历史与课堂周期绑定 */
   schemes: SchemeState
   /**
-   * r2 课次参考观察（可选）：`${lessonId}|CLASS` 本课教学观察；`${lessonId}|S|${sid}` 指定学生观��。
+   * r2 课次参考观察（可选）：`${lessonId}|CLASS` 本课教学观察；`${lessonId}|S|${sid}` 指定学生观察。
    * 只作参考：不参与评价覆盖、完成度、发布内容或排课版本。
    */
   observations: Record<string, Observation>
@@ -414,6 +416,7 @@ interface Ctx {
   retryLoad: () => void
   resetVariant: () => void
   toggleRevoke: (taskId: string) => void
+  setBigDemo: (on: boolean) => void
   applyRosterEvent: (id: "G1P1_JOIN_21" | "G1P1_LEAVE_12") => void
 }
 
@@ -467,7 +470,7 @@ export function MtProvider({ children }: { children: ReactNode }) {
       try {
         window.localStorage.setItem(bizKey(b.variant), JSON.stringify(b))
       } catch {
-        /* 写入失败时仅本次会��使用修复后的投影 */
+        /* 写入失败时仅本次会话使用修复后的投影 */
       }
     }
     syncRevRegistry(b.schemes.revs)
@@ -708,6 +711,9 @@ export function MtProvider({ children }: { children: ReactNode }) {
         const b = freshBiz(v)
         commitBiz(b)
       },
+      setBigDemo: (on) => {
+        commitBiz({ ...bizRef.current, bigDemo: on })
+      },
       toggleRevoke: (taskId) => {
         const cur = bizRef.current
         const revoked = cur.revoked.includes(taskId) ? cur.revoked.filter((t) => t !== taskId) : [...cur.revoked, taskId]
@@ -792,7 +798,7 @@ export function usePrefWriters(teacherId: string | null) {
       },
       setPageSize(n: PageSize) {
         write("列表每页数量", `pageSize:${n}`, (s) => {
-          if (!PAGE_SIZES.includes(n)) return { error: "不支持的每页数量" }
+          if (!isPageSize(n)) return { error: "每页人数须为 1–200 的整数" }
           const cur = s.teacherPrefs?.[teacherId!] ?? {}
           return { ...s, teacherPrefs: { ...(s.teacherPrefs ?? {}), [teacherId!]: { ...cur, pageSize: n } } }
         })
@@ -819,7 +825,7 @@ export function usePrefWriters(teacherId: string | null) {
 export function useTeacherPrefs(teacherId: string | null): Required<TeacherPrefs> {
   const mt = useMt()
   const p = teacherId ? mt.biz.teacherPrefs?.[teacherId] : undefined
-  return { hwDays: p?.hwDays ?? 3, pageSize: p?.pageSize ?? 20 }
+  return { hwDays: p?.hwDays ?? 3, pageSize: p?.pageSize && isPageSize(p.pageSize) ? p.pageSize : 20 }
 }
 
 export function usePhraseWriters(teacherId: string | null) {
@@ -1108,7 +1114,7 @@ export function useTextWriters() {
       },
       /**
        * 课次参考观察：按实际课次稳定身份 + 作者（+ 学生）唯一，重复重试为覆盖而非新增；空文本即清除误填。
-       * 只写 observations，���触碰 records / summaries / comments / publications / 排课。
+       * 只写 observations，不触碰 records / summaries / comments / publications / 排课。
        */
       setObservation(
         o: { lessonId: string; taskId: string; date: string; periodNo: number; endTs: number; authorId: string; studentId: string | null; allowedStudents: string[] },

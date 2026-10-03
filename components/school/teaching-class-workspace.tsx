@@ -416,7 +416,7 @@ function ResponsibilityEditor({ cls, respId, onClose }: { cls: TeachingClass; re
           <div>
             <p className="mb-1.5 text-[13px] font-medium">任教团队</p>
             <TeamManager targetKey={respKey(existing.id)} />
-            <p className="mt-1.5 text-xs text-muted-foreground">任教团队即时生效，与教职工侧“安排任教”是同一份任教���系；每位教师任期独立。</p>
+            <p className="mt-1.5 text-xs text-muted-foreground">任教团队即时生效，与教职工侧“安排任教”是同一份任教关系；每位教师任期独立。</p>
           </div>
         ) : null}
 

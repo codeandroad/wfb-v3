@@ -786,7 +786,7 @@ function ResultView({ draft, onAccept }: { draft: Draft; onAccept: () => void })
         <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-[#256a49]" />
         <div className="text-[13px]">
           <p className="font-medium text-[#1f5a3d]">
-            ��请编号 <span className="font-mono">{draft.no}</span> 已生成
+            邀请编号 <span className="font-mono">{draft.no}</span> 已生成
           </p>
           <p className="mt-0.5 text-[#256a49]/80">编号为稳定标识，可用于对账与查找；它不是邀请码，不能用于登录或授权。</p>
         </div>

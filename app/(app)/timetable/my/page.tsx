@@ -202,7 +202,7 @@ function MyTimetableContent() {
               <Button
                 variant="outline"
                 size="icon"
-                aria-label="撤销��用"
+                aria-label="撤销采用"
                 title="撤销应用"
                 disabled={(adoption?.applyUndo?.length ?? 0) === 0}
                 onClick={() => { const r = tt.undoApply(teacherId); push(r.msg) }}
@@ -366,12 +366,12 @@ function EditView({ teacherId, weekStart, clockDate, onCard }: { teacherId: stri
           <div className="ml-auto flex flex-wrap gap-2">
             <Button variant="ghost" size="xs" disabled={!dirty} onClick={() => { tt.undoDraft(teacherId); push("已撤销上一步") }}><Undo2 className="size-3 mr-1" />撤销</Button>
             <Button variant="ghost" size="xs" onClick={() => { tt.discardDraft(teacherId); push("已放弃本轮草稿") }}><X className="size-3 mr-1" />放弃</Button>
-            <Button variant="outline" size="xs" disabled={!dirty} onClick={() => { tt.saveDraft(teacherId); push("草���已保存，尚未应用；刷新后可恢复") }}>保存草稿</Button>
+            <Button variant="outline" size="xs" disabled={!dirty} onClick={() => { tt.saveDraft(teacherId); push("草稿已保存，尚未应用；刷新后可恢复") }}>保存草稿</Button>
             <Button size="xs" disabled={!dirty} onClick={() => { const r = tt.applyDraft(teacherId); push(r.msg) }}><Check className="size-3 mr-1" />确认应用</Button>
           </div>
         </div>
         <p className="mt-1.5 text-[11px] text-muted-foreground">
-          拖动课卡到空闲格移动；点击课卡可改教室或删除；点击空闲格的「+」可新增课次��草稿仅本人可见，教务看到的现用安排不变，直至你确认应用。所有课次均可本地编排，最终以确认应用为��。
+          拖动课卡到空闲格移动；点击课卡可改教室或删除；点击空闲格的「+」可新增课次；草稿仅本人可见，教务看到的现用安排不变，直至你确认应用。所有课次均可本地编排，最终以确认应用为准。
         </p>
       </div>
 

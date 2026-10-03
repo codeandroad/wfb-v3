@@ -202,7 +202,7 @@ function DrawerBody({ tw, sid }: { tw: TaskWeek; sid: string }) {
         </div>
       </Section>
 
-      {routine ? <RoutineDialog tw={tw} sids={[sid]} scopeLabel={`该��� ${nameOf(sid)}`} onClose={() => setRoutine(false)} /> : null}
+      {routine ? <RoutineDialog tw={tw} sids={[sid]} scopeLabel={`该生 ${nameOf(sid)}`} onClose={() => setRoutine(false)} /> : null}
     </div>
   )
 }

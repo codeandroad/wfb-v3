@@ -2,14 +2,17 @@
 
 import { Badge, Card, CardHeader, Input, Segmented } from "@/components/kit"
 import { buttonVariants } from "@/components/ui/button"
-import { HW_DAYS_MAX, PAGE_SIZES, type PageSize } from "@/lib/mt/hw"
+import { HW_DAYS_MAX, PAGE_SIZE_MAX, PAGE_SIZE_MIN, PAGE_SIZES, pageSizeError } from "@/lib/mt/hw"
 import { permittedTasks } from "@/lib/mt/derive"
-import { ATT_LABEL, classOf, courseOf, type Attendance, type STask } from "@/lib/mt/model"
+import { ATT_LABEL, classOf, courseOf, dutyOf, personalDisplay, type Attendance, type STask } from "@/lib/mt/model"
 import {
   FONT_LABEL,
   LEVEL_LABEL,
   resolveStyle,
   STYLE_COLORS,
+  STYLE_BGS,
+  cardStyle,
+  tagStyle,
   styleKey,
   titleClass,
   WEIGHT_LABEL,
@@ -39,7 +42,7 @@ export function TeacherPrefsPanel({ teacherId }: { teacherId: string }) {
   )
 }
 
-function StyleCard({ teacherId }: { teacherId: string }) {
+export function StyleCard({ teacherId }: { teacherId: string }) {
   const mt = useMt()
   const pw = usePrefWriters(teacherId)
   const tasks = permittedTasks(mt.biz, teacherId)
@@ -49,7 +52,10 @@ function StyleCard({ teacherId }: { teacherId: string }) {
     for (const t of tasks) {
       const id = level === "TASK" ? t.id : level === "CLASS" ? t.class_id : t.course_id
       if (!id || seen.has(id)) continue
-      const label = level === "TASK" ? t.label || classOf(t).name : level === "CLASS" ? classOf(t).name : (courseOf(t)?.name ?? id)
+      const duty = dutyOf(t)?.normative_label ?? null
+      const pd = personalDisplay(t, teacherId, mt.biz.taskPrefs, mt.biz.lessonOverrides)
+      const custom = pd.division && pd.division !== duty ? `（显示为「${pd.division}」）` : ""
+      const label = level === "TASK" ? `${classOf(t).name} · ${duty ?? "整科"}${courseOf(t)?.name ? ` · ${courseOf(t)!.name}` : ""}${custom}` : level === "CLASS" ? classOf(t).name : (courseOf(t)?.name ?? id)
       seen.set(id, { id, label, task: t })
     }
     const list = [...seen.values()]
@@ -65,6 +71,7 @@ function StyleCard({ teacherId }: { teacherId: string }) {
   const [pick, setPick] = useState<string | null>(null)
   const target = targets.find((x) => x.id === pick) ?? targets[0]
   if (!target) return null
+  const targetDivision = personalDisplay(target.task, teacherId, mt.biz.taskPrefs, mt.biz.lessonOverrides).division
   const key = styleKey(teacherId, level, target.id)
   const own = mt.biz.styles?.[key] ?? {}
   const eff = resolveStyle(mt.biz, teacherId, target.task)
@@ -98,14 +105,22 @@ function StyleCard({ teacherId }: { teacherId: string }) {
               ))}
             </select>
           </label>
-          <div className="rounded-lg border border-border bg-card px-3 py-2.5">
+          <div className="rounded-lg border border-border bg-card px-3 py-2.5" style={cardStyle(eff)} data-testid="style-preview">
             <p className="text-[11px] text-muted-foreground">卡片预览（当前生效）</p>
             <p className={cn("text-sm font-semibold leading-snug", titleClass(eff))} style={eff.hex ? { color: eff.hex } : undefined}>
               {classOf(target.task).name}
             </p>
+            {targetDivision ? (
+              <span className="mt-1 inline-block rounded px-1 text-xs font-medium" style={tagStyle(eff) ?? { backgroundColor: "rgba(0,0,0,.06)" }}>
+                {targetDivision}
+              </span>
+            ) : (
+              <span className="mt-1 block text-[11px] text-muted-foreground">整科任务，无分工标签</span>
+            )}
+            <span className="mt-1 block text-[11px] font-medium text-[#8a5a10]">待评价 3 · 示例状态文字</span>
             <p className="mt-1 text-[11px] text-muted-foreground">
-              {(["color", "weight", "font"] as const)
-                .map((f) => `${f === "color" ? "颜色" : f === "weight" ? "字重" : "字体"}：${eff.from[f] ? LEVEL_LABEL[eff.from[f]!] : "系统默认"}`)
+              {(["color", "tag", "bg", "weight", "font"] as const)
+                .map((f) => `${{ color: "文字", tag: "分工", bg: "背景", weight: "字重", font: "字体" }[f]}：${eff.from[f] ? LEVEL_LABEL[eff.from[f]!] : "系统默认"}`)
                 .join(" · ")}
             </p>
           </div>
@@ -133,6 +148,49 @@ function StyleCard({ teacherId }: { teacherId: string }) {
                 />
               ))}
             </div>
+          </fieldset>
+          <fieldset className="flex flex-col gap-2">
+            <legend className="mb-1 text-xs text-muted-foreground">分工标签</legend>
+            <div className="flex flex-wrap gap-2">
+              <button type="button" aria-pressed={!own.tag} onClick={() => set({ tag: undefined })} className={cn("rounded-md border px-2 py-1 text-xs", !own.tag ? "border-primary ring-2 ring-primary/30" : "border-border")}>
+                继承
+              </button>
+              {STYLE_COLORS.map((c) => (
+                <button
+                  key={c.id}
+                  type="button"
+                  aria-pressed={own.tag === c.id}
+                  aria-label={`分工 ${c.label}`}
+                  title={c.label}
+                  onClick={() => set({ tag: c.id })}
+                  className={cn("rounded-md border-2 px-1.5 py-0.5 text-xs font-medium", own.tag === c.id ? "border-foreground" : "border-transparent")}
+                  style={{ color: c.hex, backgroundColor: `${c.hex}1a` }}
+                >
+                  P1
+                </button>
+              ))}
+            </div>
+          </fieldset>
+          <fieldset className="flex flex-col gap-2">
+            <legend className="mb-1 text-xs text-muted-foreground">课卡背景</legend>
+            <div className="flex flex-wrap gap-2">
+              <button type="button" aria-pressed={!own.bg} onClick={() => set({ bg: undefined })} className={cn("rounded-md border px-2 py-1 text-xs", !own.bg ? "border-primary ring-2 ring-primary/30" : "border-border")}>
+                继承
+              </button>
+              {STYLE_BGS.map((b) => (
+                <button
+                  key={b.id}
+                  type="button"
+                  aria-pressed={own.bg === b.id}
+                  onClick={() => set({ bg: b.id })}
+                  className={cn("rounded-md border px-2 py-1 text-xs", own.bg === b.id ? "ring-2 ring-foreground" : "")}
+                  style={b.id === "NONE" ? { borderStyle: "dashed" } : { backgroundColor: b.hex, borderColor: b.border }}
+                >
+                  {b.label}
+                </button>
+              ))}
+            </div>
+            <p className="text-[11px] text-muted-foreground">{"「无染色」是明确设置，会盖住上级背景；「继承」才沿用课程/班级层。背景均为浅底，待办、锁定、冲突等状态文字保持可读。"}</p>
           </fieldset>
           <div className="flex flex-wrap gap-6">
             <div className="flex flex-col gap-1">
@@ -162,7 +220,7 @@ function StyleCard({ teacherId }: { teacherId: string }) {
   )
 }
 
-function HwDaysCard({ teacherId }: { teacherId: string }) {
+export function HwDaysCard({ teacherId }: { teacherId: string }) {
   const prefs = useTeacherPrefs(teacherId)
   const pw = usePrefWriters(teacherId)
   const [draft, setDraft] = useState<string | null>(null)
@@ -193,25 +251,64 @@ function HwDaysCard({ teacherId }: { teacherId: string }) {
   )
 }
 
-function PageSizeCard({ teacherId }: { teacherId: string }) {
+export function PageSizeCard({ teacherId }: { teacherId: string }) {
   const prefs = useTeacherPrefs(teacherId)
   const pw = usePrefWriters(teacherId)
+  const [draft, setDraft] = useState<string | null>(null)
+  const value = draft ?? String(prefs.pageSize)
+  const err = pageSizeError(value)
+  const canSave = !!value.trim() && !err && Number(value.trim()) !== prefs.pageSize
   return (
     <Card>
-      <CardHeader title="学生列表每页数量" desc="作业核对与周反馈矩阵共用。切换后回到第 1 页，已勾选的学生保留。" />
-      <div className="px-5 py-4">
-        <Segmented<string>
-          ariaLabel="每页数量"
-          value={String(prefs.pageSize)}
-          onChange={(v) => pw.setPageSize(Number(v) as PageSize)}
-          options={PAGE_SIZES.map((s) => ({ value: String(s), label: `${s} 人` }))}
-        />
+      <CardHeader title="学生列表每页人数" desc="作业评阅、周反馈矩阵共用此偏好；各列表页码独立。改动只影响显示分页，不缩小批量、搜索、统计或发布范围。" />
+      <div className="flex flex-col gap-3 px-5 py-4">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs text-muted-foreground">推荐</span>
+          {PAGE_SIZES.map((n) => (
+            <button
+              key={n}
+              type="button"
+              aria-pressed={prefs.pageSize === n}
+              onClick={() => (pw.setPageSize(n), setDraft(null))}
+              className={cn("rounded-md border px-2.5 py-1 text-xs", prefs.pageSize === n ? "border-primary bg-accent font-medium text-primary" : "border-border")}
+            >
+              每页 {n} 人
+            </button>
+          ))}
+        </div>
+        <form
+          className="flex flex-wrap items-center gap-2"
+          onSubmit={(e) => {
+            e.preventDefault()
+            if (!canSave) return
+            pw.setPageSize(Number(value.trim()))
+            setDraft(null)
+          }}
+        >
+          <label htmlFor="page-size-custom" className="text-xs text-muted-foreground">自定义</label>
+          <span className="text-sm">每页</span>
+          <Input
+            id="page-size-custom"
+            inputMode="numeric"
+            className="h-8 w-20"
+            value={value}
+            onChange={(e) => setDraft(e.target.value)}
+            aria-invalid={!!err}
+            aria-describedby="page-size-hint"
+            data-testid="page-size-input"
+          />
+          <span className="text-sm">人</span>
+          <button type="submit" className={btn("default")} disabled={!canSave}>保存</button>
+          <span id="page-size-hint" className={cn("w-full text-xs", err ? "text-destructive" : "text-muted-foreground")}>
+            {err ?? (value.trim() ? `范围 ${PAGE_SIZE_MIN}–${PAGE_SIZE_MAX}；当前生效：每页 ${prefs.pageSize} 人` : "请输入人数（输入中不按 0 处理）")}
+          </span>
+        </form>
       </div>
     </Card>
   )
 }
 
-function PhraseLibraryCard({ teacherId }: { teacherId: string }) {
+export function PhraseLibraryCard({ teacherId }: { teacherId: string }) {
   const mt = useMt()
   const pw = usePhraseWriters(teacherId)
   const [kind, setKind] = useState<PhraseKind>("REASON")

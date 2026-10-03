@@ -4,7 +4,7 @@ import { EmptyState, LinkButton, PageHeader } from "@/components/kit"
 import { MtDemoBar, MtLoadError, MtLoading } from "@/components/mt/shared"
 import { WeekPicker } from "@/components/mt/week-picker"
 import { currentWeek, permittedTasks, useTeacherId } from "@/lib/mt/derive"
-import { resolveStyle, titleClass } from "@/lib/mt/styles"
+import { cardStyle, resolveStyle, tagStyle, titleClass } from "@/lib/mt/styles"
 import {
   classOf,
   fmtMD,
@@ -176,6 +176,8 @@ export function WeekSchedulePage({ view, switcher }: { view: ScheduleView; switc
                       onClick={() => setParam({ lesson: l.id })}
                       aria-haspopup="dialog"
                       id={`lesson-${l.id}`}
+                      data-style-bg={ps.bg?.label ?? ""}
+                      style={sp.get("focus") === l.id ? (ps.bg ? { backgroundColor: ps.bg.hex } : undefined) : cardStyle(ps)}
                       className={cn(
                         "flex flex-col gap-1 rounded-lg border bg-card px-3 py-2.5 text-left transition-colors hover:border-primary focus-visible:outline-2 focus-visible:outline-primary",
                         sp.get("focus") === l.id ? "border-primary ring-2 ring-primary/30" : "border-border",
@@ -185,7 +187,12 @@ export function WeekSchedulePage({ view, switcher }: { view: ScheduleView; switc
                       <span className={cn("text-sm font-semibold leading-snug", titleClass(ps))} style={ps.hex ? { color: ps.hex } : undefined}>
                         {pd.className}
                       </span>
-                      {sub ? <span className="text-xs text-muted-foreground">{sub}</span> : null}
+                      {pd.division || pd.course ? (
+                        <span className="flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
+                          {pd.division ? <span className="rounded px-1 font-medium" style={tagStyle(ps)}>{pd.division}</span> : null}
+                          {pd.course ? <span>{pd.course}</span> : null}
+                        </span>
+                      ) : null}
                       <span className="flex items-center justify-between gap-2 text-[11px] text-muted-foreground">
                         <span>{l.room ?? ""}</span>
                         <span className="flex items-center gap-1.5">
@@ -225,7 +232,7 @@ export function WeekSchedulePage({ view, switcher }: { view: ScheduleView; switc
         ) : (
           <Modal title="无法打开这一天的课堂记录" onClose={() => setParam({ day: null, pane: null, student: null })}>
             <p className="text-sm text-muted-foreground">
-              {!dayTask ? "任务不存在、已失效或无权访问。" : "该日期不在当前��期，或没有本任务的已应用课次。"}已为你保留“我的教学”当前视图。
+              {!dayTask ? "任务不存在、已失效或无权访问。" : "该日期不在当前周期，或没有本任务的已应用课次。"}已为你保留“我的教学”当前视图。
             </p>
           </Modal>
         )

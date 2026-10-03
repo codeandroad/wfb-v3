@@ -127,7 +127,7 @@ function ExportFlow({ initialPack, initialScope }: { initialPack?: PackKind; ini
               <label className="flex flex-col gap-1 text-xs text-muted-foreground">
                 期间
                 <Select value={period} onChange={(e) => setPeriod(e.target.value)} className="w-56">
-                  <option>2026—2027学年 第��学期</option>
+                  <option>2026—2027学年 第一学期</option>
                   <option>2025—2026学年 第二学期</option>
                 </Select>
               </label>

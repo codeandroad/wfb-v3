@@ -256,7 +256,7 @@ export function EditableCardModal({
             </Field>
           ) : null}
           {allowScope && scope === "range" ? (
-            <Field label="生效日期" hint="仅影响生效日��后；不改��其之前的已用安排与已记录事实。">
+            <Field label="生效日期" hint="仅影响生效日期之后；不改变其之前的已用安排与已记录事实。">
               <input
                 type="date"
                 value={effectiveDate ?? ""}
