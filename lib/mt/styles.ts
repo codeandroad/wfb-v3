@@ -73,23 +73,18 @@ export function resolveStyle(biz: MtBiz, teacherId: string | null, task: STask):
     if (!p) continue
     if (!out.from.color && p.color) {
       const c = STYLE_COLORS.find((x) => x.id === p.color)
-      if (c) {
-        out.hex = c.hex
-        out.colorLabel = c.label
+      const hex = normalizeHex(p.color) ?? c?.hex
+      if (hex) {
+        out.hex = hex
+        out.colorLabel = c?.label ?? hex
         out.from.color = lvl
-      }
-    }
-    if (!out.from.tag && p.tag) {
-      const c = STYLE_COLORS.find((x) => x.id === p.tag)
-      if (c) {
-        out.tagHex = c.hex
-        out.from.tag = lvl
       }
     }
     if (!out.from.bg && p.bg) {
       const b = STYLE_BGS.find((x) => x.id === p.bg)
-      if (b) {
-        out.bg = { hex: b.hex, border: b.border, label: b.label }
+      const hex = normalizeHex(p.bg)
+      if (b || hex || p.bg === "AUTO") {
+        out.bg = p.bg === "AUTO" ? { hex: "AUTO", border: "", label: "自动配套" } : b ? { ...b } : { hex: hex!, border: hex!, label: hex! }
         out.from.bg = lvl
       }
     }
@@ -102,7 +97,20 @@ export function resolveStyle(biz: MtBiz, teacherId: string | null, task: STask):
       out.from.font = lvl
     }
   }
+  out.tagHex = out.hex
+  if (out.bg?.hex === "AUTO") {
+    const c = out.hex ?? "#55606b"
+    const channels = [1, 3, 5].map(i => Math.round(parseInt(c.slice(i, i + 2), 16) * .12 + 255 * .88).toString(16).padStart(2, "0"))
+    out.bg = { hex: `#${channels.join("")}`, border: `${c}55`, label: "自动配套" }
+  }
   return out
+}
+
+export function normalizeHex(raw: string): string | null {
+  const s = raw.trim()
+  if (/^#[0-9a-f]{6}$/i.test(s)) return s.toUpperCase()
+  if (/^#[0-9a-f]{3}$/i.test(s)) return `#${s.slice(1).split("").map(c => c + c).join("")}`.toUpperCase()
+  return null
 }
 
 /** 标题文字类：只在有个人设置时覆盖，否则沿用调用方默认 */
@@ -117,9 +125,8 @@ export function titleClass(s: ResolvedStyle): string {
 
 export function cleanStyle(p: StylePref): StylePref | null {
   const out: StylePref = {}
-  if (p.color && STYLE_COLORS.some((c) => c.id === p.color)) out.color = p.color
-  if (p.tag && STYLE_COLORS.some((c) => c.id === p.tag)) out.tag = p.tag
-  if (p.bg && STYLE_BGS.some((c) => c.id === p.bg)) out.bg = p.bg
+  if (p.color && (normalizeHex(p.color) || STYLE_COLORS.some((c) => c.id === p.color))) out.color = normalizeHex(p.color) ?? p.color
+  if (p.bg && (p.bg === "AUTO" || normalizeHex(p.bg) || STYLE_BGS.some((c) => c.id === p.bg))) out.bg = normalizeHex(p.bg) ?? p.bg
   if (p.weight && p.weight in WEIGHT_LABEL) out.weight = p.weight
   if (p.font && p.font in FONT_LABEL) out.font = p.font
   return Object.keys(out).length ? out : null

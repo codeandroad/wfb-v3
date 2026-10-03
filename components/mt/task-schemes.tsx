@@ -17,6 +17,7 @@ import type { STask } from "@/lib/mt/model"
 import { useMt } from "@/lib/mt/store"
 import { useClassroomStandard } from "@/lib/mt/use-schemes"
 import { useState } from "react"
+import { RegradeControl } from "./regrade-control"
 
 /** 当前任务的双用途方案入口：课堂实际方案 + 新作业默认；可仅对本任务快捷采用 */
 export function TaskSchemes({ task, week }: { task: Pick<STask, "id" | "teacher_id" | "label">; week: number }) {
@@ -87,10 +88,12 @@ function TaskSchemesModal({ task, week, onClose }: { task: Pick<STask, "id" | "t
       <div className="flex flex-col gap-5">
         <section aria-labelledby="ts-cls" className="flex flex-col gap-2">
           <h3 id="ts-cls" className="text-sm font-semibold">课堂评价</h3>
+          <RegradeControl key={`${task.id}:${week}`} target={{ kind: "CLASSROOM", taskId: task.id, week }} currentRev={std.revId} label={task.label} />
+          <h4 className="text-sm font-semibold">单独设置后续默认（不重置当前结果）</h4>
           <p className="text-sm">
             {`第 ${week} 周实际方案：`}
             <b>{std.rev?.name}</b>
-            <span className="ml-1 text-muted-foreground">{std.bound ? "（已使用，固定）" : clsOverrideNow && viewingCurrent ? "（本任务覆盖）" : "（候选，尚未评价）"}</span>
+            <span className="ml-1 text-muted-foreground">{std.bound ? "（当前工作版本）" : clsOverrideNow && viewingCurrent ? "（本任务覆盖）" : "（候选，尚未评价）"}</span>
             <button type="button" className="ml-2 text-primary underline-offset-2 hover:underline" onClick={() => std.rev && setView(std.rev)}>查看释义</button>
           </p>
           {used && clsOverrideNext && clsOverrideNext !== std.revId ? (
@@ -109,7 +112,7 @@ function TaskSchemesModal({ task, week, onClose }: { task: Pick<STask, "id" | "t
             {clsOverrideNow || clsOverrideNext ? <Btn onClick={() => apply("CLASSROOM", null)}>恢复教师默认</Btn> : null}
           </div>
           <p className="text-xs leading-relaxed text-muted-foreground">
-            {used ? "本期已有课堂评价或发布，继续使用原方案；选择只用于后续周期。" : "本期尚未评价，可立即换用；选方案不会为学生评分。"}
+            {used ? "此处仅设置后续默认；要更换本期工作方案，请使用上方立即重评入口。" : "本期尚未评价，可立即换用；选方案不会为学生评分。"}
           </p>
           {msg?.p === "CLASSROOM" ? <p role={msg.error ? "alert" : "status"} className={msg.error ? "text-sm text-destructive" : "text-sm text-primary"}>{msg.text}</p> : null}
         </section>

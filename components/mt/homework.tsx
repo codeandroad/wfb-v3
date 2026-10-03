@@ -391,6 +391,8 @@ interface BatchMsg {
   reasons: [string, number][]
 }
 
+import { RegradeControl } from "./regrade-control"
+
 export function HwReview({
   a,
   manageHref,
@@ -512,6 +514,7 @@ export function HwReview({
 
   return (
     <Card className="overflow-hidden">
+      <RegradeControl key={`regrade:${a.id}`} target={{ kind: "HOMEWORK", taskId: a.taskId, assignmentId: a.id }} currentRev={a.schemeRevId ?? null} label={a.title} />
       <div className="flex flex-col gap-2 border-b border-border px-4 py-3">
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div className="min-w-0">
@@ -1082,7 +1085,7 @@ export function AssignForm({
         </div>
       ) : null}
       {copyFrom ? <p className="text-xs text-muted-foreground">复制题目内容自「{copyFrom.title}」；不复制提交、成绩、免做、延期或结束状态。</p> : null}
-      <input className={inputCls} placeholder="作业标题" value={title} onChange={(e) => edit(setTitle)(e.target.value)} aria-label="作业标题" />
+      <input className={inputCls} placeholder="作业标题" value={title} onChange={(e) => edit(setTitle)(e.target.value)} aria-label="作业��题" />
       <textarea
         className={inputCls}
         rows={3}
