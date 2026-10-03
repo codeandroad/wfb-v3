@@ -158,35 +158,35 @@ export function TaskWorkspacePage({ id }: { id: string }) {
       </div>
       <MtDemoBar />
 
-      <Card className="mb-4 p-4">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="flex items-baseline gap-2">
-            <h1 className="text-balance text-xl font-semibold">{taskTitle(task, teacherId, mt.biz, siblings)}</h1>
+      <Card className="mb-3 overflow-hidden">
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-3">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <h1 className="text-balance text-lg font-semibold">{taskTitle(task, teacherId, mt.biz, siblings)}</h1>
             <span className="text-sm text-muted-foreground" title={`名单以 ${tw.rosterBaseDate} 为基准`}>
               {tw.rosterCount}人
             </span>
-          </div>
-          <div className="flex flex-col items-end gap-2">
             <Badge tone={tw.status.tone}>{tw.status.label}</Badge>
-            <div className="flex flex-wrap items-center gap-2">
-              <TaskSchemes task={task} week={week} />
-              <WeekPicker week={week} current={currentWeek(mt.biz)} onChange={(w) => guard.go(href({ week: String(w), student: null }))} />
-              {siblings.length > 1 ? (
-                <select
-                  aria-label="切换任务"
-                  value={id}
-                  onChange={(e) => guard.go(href({ student: null, f: null, sq: null }, `/teaching/task/${e.target.value}`))}
-                  className="h-9 max-w-56 rounded-lg border border-input bg-card px-2 text-sm"
-                >
-                  {siblings.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {taskTitle(t, teacherId, mt.biz, siblings)}
-                    </option>
-                  ))}
-                </select>
-              ) : null}
-            </div>
           </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <WeekPicker week={week} current={currentWeek(mt.biz)} onChange={(w) => guard.go(href({ week: String(w), student: null }))} />
+            {siblings.length > 1 ? (
+              <select
+                aria-label="切换任务"
+                value={id}
+                onChange={(e) => guard.go(href({ student: null, f: null, sq: null }, `/teaching/task/${e.target.value}`))}
+                className="h-9 w-full rounded-lg border border-input bg-card px-2 text-sm sm:w-48"
+              >
+                {siblings.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {taskTitle(t, teacherId, mt.biz, siblings)}
+                  </option>
+                ))}
+              </select>
+            ) : null}
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center border-t border-border px-4 py-2">
+          <TaskSchemes task={task} week={week} />
         </div>
       </Card>
 

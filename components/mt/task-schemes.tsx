@@ -32,7 +32,7 @@ export function TaskSchemes({ task, week }: { task: Pick<STask, "id" | "teacher_
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex h-9 items-center gap-2 rounded-lg border border-input bg-card px-3 text-sm hover:bg-muted"
+        className="inline-flex min-h-8 flex-wrap items-center justify-start gap-x-2 gap-y-1 rounded-lg border border-input bg-card px-2 py-1 text-left text-sm hover:bg-muted"
       >
         <span className="text-muted-foreground">{"课堂评价："}</span>
         <span className="font-medium text-foreground">{std.rev.name}</span>
