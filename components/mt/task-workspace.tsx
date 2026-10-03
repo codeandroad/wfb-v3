@@ -23,7 +23,7 @@ import { useEffect, useState } from "react"
 
 const TABS = [
   { k: "feedback", label: "整周反馈" },
-  { k: "homework", label: "作业" },
+  { k: "homework", label: "作业评价" },
   { k: "publish", label: "发布与历史" },
   { k: "plan", label: "教学计划" },
 ] as const

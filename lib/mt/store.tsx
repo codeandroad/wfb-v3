@@ -50,6 +50,8 @@ import {
   type VariantId,
 } from "./model"
 import { cleanPhrase, emptyLib, type PersonalPhrase, type PhraseKind, type PhraseLib } from "./phrases"
+import type { HwBatch, HwBatchEntry, HwField, HwLifecycle } from "./model"
+import { applyHwPatch, BATCH_LABEL, blankResult, isSubmitted, lifecycleOf, planBatch, type BatchKind, type BatchOpts, type HwPatch } from "./hw"
 import type { Attendance as AttV } from "./model"
 import {
   bindingKey,
@@ -203,7 +205,7 @@ export interface MtBiz {
   /** 评价方案 r1：个人方案、修订、默认采用历史与课堂周期绑定 */
   schemes: SchemeState
   /**
-   * r2 课次参考观察（可选）：`${lessonId}|CLASS` 本课教学观察；`${lessonId}|S|${sid}` 指定学生观察。
+   * r2 课次参考观察（可选）：`${lessonId}|CLASS` 本课教学观察；`${lessonId}|S|${sid}` 指定学生观��。
    * 只作参考：不参与评价覆盖、完成度、发布内容或排课版本。
    */
   observations: Record<string, Observation>
@@ -211,6 +213,22 @@ export interface MtBiz {
   phrases: Record<string, PhraseLib>
   /** r4：出勤—评价资格存量修复记录（可审计） */
   repairLog?: RepairLog[]
+  /** 作业未布置草稿（按教师＋任务＋方式） */
+  hwDrafts?: Record<string, HwDraft>
+}
+
+export interface HwDraft {
+  teacherId: string
+  taskId: string
+  mode: "NEW" | "OFFLINE" | "COPY"
+  title: string
+  instructions: string
+  requirement: "REQUIRED" | "OPTIONAL"
+  deadline: string
+  originalDate?: string
+  sourceDate?: string | null
+  copiedFrom?: string | null
+  savedAt?: string
 }
 
 export interface Observation {
@@ -430,7 +448,7 @@ export function MtProvider({ children }: { children: ReactNode }) {
       try {
         window.localStorage.setItem(bizKey(b.variant), JSON.stringify(b))
       } catch {
-        /* 写入失败时仅本次会话使用修复后的投影 */
+        /* 写入失败时仅本次会��使用修复后的投影 */
       }
     }
     syncRevRegistry(b.schemes.revs)
@@ -1197,51 +1215,180 @@ export function useDisplayWriters() {
 export function useHomeworkWriters() {
   const mt = useMt()
   return useMemo(() => {
-    const patchA = (s: MtBiz, id: string, fn: (a: Assignment) => Assignment): MtBiz | { error: string } => {
+    const scopes = (a: Pick<Assignment, "id" | "taskId">, sid?: string) =>
+      [scopeTask(a.taskId), `hw:${a.id}`, ...(sid ? [`hwstu:${a.taskId}|${sid}`] : [])]
+    const patchA = (s: MtBiz, id: string, fn: (a: Assignment) => Assignment | { error: string }): MtBiz | { error: string; kind: "rejected" } => {
       const a = s.assignments.find((x) => x.id === id)
-      if (!a) return { error: "作业不存在" }
+      if (!a) return { error: "作业不存在或已被删除", kind: "rejected" }
       const n = fn(a)
+      if ("error" in n) return { error: n.error, kind: "rejected" }
       return { ...s, assignments: s.assignments.map((x) => (x.id === id ? { ...n, revision: a.revision + 1, stamp: s.stamp + 1 } : x)) }
     }
+    const logA = (a: Assignment, at: string, what: string) => [...(a.log ?? []), { at, what }].slice(-40)
     return {
-      setResult(a: Assignment, sid: string, patch: Partial<HwResult>, label: string) {
+      /** 单条结果写入：始终针对当前存储状态执行全部守卫 */
+      setResult(a: Assignment, sid: string, patch: HwPatch, label: string) {
         mt.save({
           field: `hw:${a.id}:${sid}:${Object.keys(patch).join("+")}`,
-          scope: [scopeTask(a.taskId), `hw:${a.id}`, `hwstu:${a.taskId}|${sid}`],
+          scope: scopes(a, sid),
           label,
           value: patch,
           taskId: a.taskId,
-          run: (s) => {
-            if (patch.quality) {
-              const cur = s.assignments.find((x) => x.id === a.id)
-              if (!revById(cur?.schemeRevId)?.levels.some((l) => l.id === patch.quality))
-                return { error: "所选质量等级不属于该作业的标准", kind: "rejected" as const }
-            }
-            return patchA(s, a.id, (x) => {
-              const prev: HwResult = x.results[sid] ?? { submission: null, submissionConfirmed: false, quality: null, score: null }
-              return { ...x, results: { ...x.results, [sid]: { ...prev, ...patch } } }
-            })
-          },
+          run: (s) =>
+            patchA(s, a.id, (x) => {
+              const out = applyHwPatch(x, sid, patch, { nowTs: Date.parse(s.clock), at: s.clock })
+              if ("error" in out) return out
+              return { ...x, results: { ...x.results, [sid]: out.r } }
+            }),
         })
       },
-      setRequirement(a: Assignment, sid: string, req: Requirement) {
+      setRequirement(a: Assignment, sid: string, req: Requirement, reason?: string) {
         mt.save({
           field: `hw:${a.id}:${sid}:req`,
-          scope: [scopeTask(a.taskId), `hw:${a.id}`, `hwstu:${a.taskId}|${sid}`],
+          scope: scopes(a, sid),
           label: "作业要求",
           value: req,
           taskId: a.taskId,
-          run: (s) => patchA(s, a.id, (x) => ({ ...x, requirementOverrides: { ...x.requirementOverrides, [sid]: req } })),
+          run: (s) =>
+            patchA(s, a.id, (x) => {
+              const out = applyHwPatch(x, sid, reason !== undefined ? { reason } : {}, { nowTs: Date.parse(s.clock), at: s.clock, requirement: req })
+              if ("error" in out) return out
+              return { ...x, requirementOverrides: { ...x.requirementOverrides, [sid]: req }, results: { ...x.results, [sid]: out.r } }
+            }),
         })
       },
       setDeadline(a: Assignment, deadline: string | null) {
         mt.save({
           field: `hw:${a.id}:deadline`,
-          scope: [scopeTask(a.taskId), `hw:${a.id}`],
+          scope: scopes(a),
           label: "截止时间",
           value: deadline,
           taskId: a.taskId,
-          run: (s) => patchA(s, a.id, (x) => ({ ...x, deadline })),
+          run: (s) => patchA(s, a.id, (x) => (lifecycleOf(x) === "WITHDRAWN" ? { error: "作业已撤回" } : { ...x, deadline, log: logA(x, s.clock, `截止改为 ${deadline ?? "无截止"}`) })),
+        })
+      },
+      setScoreEnabled(a: Assignment, on: boolean) {
+        mt.save({
+          field: `hw:${a.id}:score`,
+          scope: scopes(a),
+          label: "分数设置",
+          value: on,
+          taskId: a.taskId,
+          run: (s) => patchA(s, a.id, (x) => ({ ...x, scoreEnabled: on })),
+        })
+      },
+      /** 生命周期：结束检查 / 恢复处理 / 撤回（均保留结果与历史） */
+      setLifecycle(a: Assignment, status: HwLifecycle, what: string) {
+        return mt.command(what, (s) =>
+          patchA(s, a.id, (x) => {
+            if (lifecycleOf(x) === "WITHDRAWN" && status !== "WITHDRAWN") return { error: "已撤回的作业不能恢复，请复制为新作业" }
+            return { ...x, status, log: logA(x, s.clock, what) }
+          }),
+        )
+      },
+      /** 追加对象：按真实追加时点记录；截止已过时必须给出个别截止 */
+      addRecipients(a: Assignment, sids: string[], extDeadline: string | null) {
+        return mt.command("追加作业对象", (s) =>
+          patchA(s, a.id, (x) => {
+            if (lifecycleOf(x) !== "ACTIVE") return { error: "只有进行中的作业可以追加对象" }
+            const add = sids.filter((id) => !x.recipients.includes(id))
+            if (!add.length) return { error: "所选学生已在作业对象中" }
+            const results = { ...x.results }
+            const addedAt = { ...(x.addedAt ?? {}) }
+            for (const id of add) {
+              addedAt[id] = s.clock
+              if (extDeadline) results[id] = { ...blankResult(), extDeadline }
+            }
+            return { ...x, recipients: [...x.recipients, ...add], results, addedAt, log: logA(x, s.clock, `追加对象 ${add.length} 人`) }
+          }),
+        )
+      },
+      /** 原子批量：提交时重新计划；与确认时预览不一致则拒绝，不按过期预览写入 */
+      runBatch(token: string, aId: string, kind: BatchKind, opts: BatchOpts, subset: string[] | null, previewSids: string[]) {
+        let result: { batch: HwBatch; reused: boolean } | null = null
+        const r = mt.command(BATCH_LABEL[kind], (s) =>
+          patchA(s, aId, (x) => {
+            const dup = (x.batches ?? []).find((b) => b.token === token)
+            if (dup) {
+              result = { batch: dup, reused: true }
+              return x
+            }
+            const nowTs = Date.parse(s.clock)
+            const plan = planBatch(x, kind, opts, subset, nowTs)
+            const sids = plan.writes.map((w) => w.sid).sort()
+            if (sids.join() !== [...previewSids].sort().join()) return { error: "确认后范围已变化（有人修改或时间已推进），请重新核对后再执行" }
+            if (!plan.writes.length) return { error: "没有符合条件的对象，未写入任何结果" }
+            const results = { ...x.results }
+            const entries: HwBatchEntry[] = []
+            for (const w of plan.writes) {
+              const before = results[w.sid] ?? blankResult()
+              const out = applyHwPatch({ ...x, results }, w.sid, w.patch, { nowTs, at: s.clock, source: "BATCH" })
+              if ("error" in out) return { error: `批量写入被拒绝：${out.error}` }
+              for (const f of Object.keys(w.patch) as HwField[]) {
+                entries.push({ sid: w.sid, field: f, before: (before as unknown as Record<string, unknown>)[f] ?? null, after: (out.r as unknown as Record<string, unknown>)[f], rev: out.r.rev?.[f] ?? 0 })
+              }
+              results[w.sid] = out.r
+            }
+            const batch: HwBatch = {
+              id: `HB_${s.seq}`,
+              token,
+              kind,
+              at: s.clock,
+              label: BATCH_LABEL[kind],
+              entries,
+              skipped: plan.skipped,
+            }
+            result = { batch, reused: false }
+            return { ...x, results, batches: [batch, ...(x.batches ?? [])].slice(0, 20) }
+          }),
+        )
+        if (!r.ok) return r
+        const out = result as { batch: HwBatch; reused: boolean } | null
+        return out ? { ok: true as const, ...out } : { ok: false as const, error: "批量执行未完成" }
+      },
+      /** 安全撤销：只撤仍等于本次写入、且之后没有被改动的字段；保持资格不变量 */
+      undoBatch(aId: string, batchId: string) {
+        let res = { restored: 0, kept: 0 }
+        const r = mt.command("撤销批量", (s) =>
+          patchA(s, aId, (x) => {
+            const b = (x.batches ?? []).find((y) => y.id === batchId)
+            if (!b) return { error: "找不到该批量操作" }
+            if (b.undone) {
+              res = b.undone
+              return x
+            }
+            const results = { ...x.results }
+            const order = [...b.entries].sort((p, q) => (p.field === "submission" ? 1 : 0) - (q.field === "submission" ? 1 : 0))
+            for (const e of order) {
+              const cur = results[e.sid]
+              if (!cur || (cur.rev?.[e.field] ?? 0) !== e.rev) {
+                res.kept++
+                continue
+              }
+              const n: HwResult = { ...cur, rev: { ...(cur.rev ?? {}), [e.field]: e.rev + 1 } }
+              ;(n as unknown as Record<string, unknown>)[e.field] = e.before
+              if (e.field === "quality") n.qualitySource = undefined
+              // 恢复为“未登记提交”时若仍有有效等级（后续人工写入），保留提交以免产生无提交的等级
+              if (e.field === "submission" && !isSubmitted(n.submission) && (n.quality || n.noGrade || (n.score ?? null) !== null)) {
+                res.kept++
+                continue
+              }
+              if (e.field === "submission" && !e.before) n.submissionConfirmed = false
+              results[e.sid] = n
+              res.restored++
+            }
+            const undone = { ...res, at: s.clock }
+            return { ...x, results, batches: (x.batches ?? []).map((y) => (y.id === batchId ? { ...y, undone } : y)) }
+          }),
+        )
+        return r.ok ? { ok: true as const, ...res } : r
+      },
+      saveDraft(key: string, d: HwDraft | null) {
+        return mt.command("作业草稿", (s) => {
+          const drafts = { ...(s.hwDrafts ?? {}) }
+          if (d) drafts[key] = { ...d, savedAt: s.clock }
+          else delete drafts[key]
+          return { ...s, hwDrafts: drafts }
         })
       },
     }

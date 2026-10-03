@@ -1,12 +1,12 @@
 "use client"
 
+import { hwStatus } from "./hw"
 import { useDemo } from "@/lib/demo/store"
 import {
   assignmentWeek,
   buildStudentDay,
   dateOfClock,
   feedbackPeriodId,
-  hwStatus,
   isMemberOn,
   leaveSources,
   lessonsOfWeek,
@@ -105,7 +105,7 @@ export function taskWeek(biz: MtBiz, task: STask, week: number): TaskWeek {
   const rosterBaseDate = today < wd[0] ? wd[0] : today > wd[6] ? wd[6] : today
   const rosterCount = membersOn(ms, rosterBaseDate).length
 
-  const assignments = biz.assignments.filter((a) => a.taskId === task.id && assignmentWeek(a) === week)
+  const assignments = biz.assignments.filter((a) => a.taskId === task.id && assignmentWeek(a) === week && a.status !== "WITHDRAWN")
   let hwPending = 0
   for (const a of assignments) for (const sid of a.recipients) if (hwStatus(a, sid, nowTs).pending) hwPending++
 

@@ -1,10 +1,10 @@
+import { hwStatus } from "./hw"
 import type { TaskWeek } from "@/lib/mt/derive"
 import {
   ATT_LABEL,
   fmtMD,
   formalTaskName,
   feedbackPeriodId,
-  hwStatus,
   lessonTimeLabel,
   studentById,
   uniq,
