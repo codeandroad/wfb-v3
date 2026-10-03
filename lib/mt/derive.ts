@@ -24,7 +24,7 @@ import {
   type STask,
   type StudentDay,
 } from "./model"
-import { entryKey, type MtBiz } from "./store"
+import { entryKey, highlightStatus, type MtBiz } from "./store"
 
 export function useTeacherId(): string | null {
   const demo = useDemo()
@@ -180,7 +180,10 @@ export function filterStudents(biz: MtBiz, tw: TaskWeek, f: FilterKey, q: string
     if (f === "pending") return ds.some((d) => d.state === "PENDING")
     if (f === "exception") return ds.some((d) => d.exception)
     if (f === "homework") return studentHwPending(biz, tw, sid) > 0
-    if (f === "highlight") return (biz.highlights[`${k}|${sid}`]?.items.length ?? 0) > 0
+    if (f === "highlight")
+      return (biz.highlights[`${k}|${sid}`]?.items ?? []).some(
+        (h) => highlightStatus(h, h.date ? ds.find((d) => d.date === h.date)?.elig : undefined) === "VALID",
+      )
     return true
   })
 }

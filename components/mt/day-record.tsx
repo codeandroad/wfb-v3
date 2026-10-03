@@ -23,7 +23,8 @@ import {
   type STask,
   type StudentDay,
 } from "@/lib/mt/model"
-import { entryKey as entryKeyOf, scopeTask, useMt, useRecordWriters, useTextWriters } from "@/lib/mt/store"
+import { entryKey as entryKeyOf, highlightStatus, scopeTask, useMt, useRecordWriters, useTextWriters } from "@/lib/mt/store"
+import { ELIG_REASON } from "@/lib/mt/model"
 import { useClassroomStandard } from "@/lib/mt/use-schemes"
 import { cn } from "@/lib/utils"
 import { ArrowLeft, ChevronDown, ChevronLeft, ChevronRight, ClipboardList, Eye, Search, X } from "lucide-react"
@@ -364,7 +365,10 @@ function DayRow({ d, tw, date, onOpen }: { d: StudentDay; tw: TaskWeek; date: st
   const [open, setOpen] = useState(!single && (mixed || exceptional))
   const na = d.state === "NOT_APPLICABLE"
   const name = nameOf(d.studentId)
-  const hls = (mt.biz.highlights[entryKeyOf(tw.task.id, tw.week, d.studentId)]?.items ?? []).filter((h) => h.date === date)
+  const dayHls = (mt.biz.highlights[entryKeyOf(tw.task.id, tw.week, d.studentId)]?.items ?? []).filter((h) => h.date === date)
+  const hls = dayHls.filter((h) => highlightStatus(h, d.elig) === "VALID")
+  const voidHls = dayHls.filter((h) => highlightStatus(h, d.elig) !== "VALID")
+  const canEval = d.elig.kind === "ELIGIBLE"
   const hasNote = !!d.rec.note
   return (
     <>
@@ -406,19 +410,34 @@ function DayRow({ d, tw, date, onOpen }: { d: StudentDay; tw: TaskWeek; date: st
           )}
         </td>
         <td className="py-2 pr-3">
-          {na ? null : (
-            <GradeSelect
-              label={`${name} 本日评价`}
-              value={d.rec.grade}
-              handling={d.rec.gradeHandling}
-              rev={std.rev}
-              disabled={!elapsed.length}
-              onChange={(v) => rw.setGrade(d, tw.week, v, std.revId)}
-            />
+          {na ? null : !canEval ? (
+            <span className="text-xs text-muted-foreground" data-testid="eval-na">
+              {d.elig.kind === "ABSENT" ? "未出席 · 无需评价" : ELIG_REASON[d.elig.kind]}
+            </span>
+          ) : (
+            <div className="flex flex-col gap-1">
+              <GradeSelect
+                label={`${name} 本日评价`}
+                value={d.gradeEff}
+                handling={d.handlingEff}
+                rev={std.rev}
+                onChange={(v) => rw.setGrade(d, tw.week, v, std.revId)}
+              />
+              {d.coverageReview ? (
+                <span className="flex items-center gap-1 text-xs text-warning-foreground" data-testid="coverage-review">
+                  出勤已更正，评价覆盖待核对
+                  <button type="button" className="underline hover:text-foreground" onClick={() => rw.confirmCoverage(d, tw.week)}>
+                    确认保留
+                  </button>
+                </span>
+              ) : null}
+            </div>
           )}
         </td>
         <td className="py-2">
-          {na ? null : <Extras d={d} tw={tw} date={date} hls={hls} hasNote={hasNote} />}
+          {na ? null : (
+            <Extras d={d} tw={tw} date={date} hls={hls} voidHls={voidHls} canAdd={canEval} hasNote={hasNote} />
+          )}
         </td>
       </tr>
       {open && !single && elapsed.length && !na ? (
@@ -448,7 +467,23 @@ function DayRow({ d, tw, date, onOpen }: { d: StudentDay; tw: TaskWeek; date: st
 }
 
 /** 亮点与内部备注：已有内容直接可见；空白时只显示添加入口，不常驻空输入框 */
-function Extras({ d, tw, date, hls, hasNote }: { d: StudentDay; tw: TaskWeek; date: string; hls: { id: string; text: string }[]; hasNote: boolean }) {
+function Extras({
+  d,
+  tw,
+  date,
+  hls,
+  voidHls,
+  canAdd,
+  hasNote,
+}: {
+  d: StudentDay
+  tw: TaskWeek
+  date: string
+  hls: { id: string; text: string }[]
+  voidHls: { id: string; text: string }[]
+  canAdd: boolean
+  hasNote: boolean
+}) {
   const tx = useTextWriters()
   const [draft, setDraft] = useState("")
   const [adding, setAdding] = useState(false)
@@ -464,6 +499,21 @@ function Extras({ d, tw, date, hls, hasNote }: { d: StudentDay; tw: TaskWeek; da
       {hls.map((h) => (
         <HighlightItem key={h.id} text={h.text} label={`${name} 亮点`} onSave={(v) => tx.editHighlight(tw.task.id, tw.week, d.studentId, h.id, v || null)} onRemove={() => tx.editHighlight(tw.task.id, tw.week, d.studentId, h.id, null)} />
       ))}
+      {voidHls.map((h) => (
+        <span key={h.id} className="flex items-center gap-1.5 text-xs text-muted-foreground" data-testid="void-highlight">
+          <span className="line-through">{h.text}</span>
+          <span>已失效（未出席，不计入、不发布）</span>
+          <button
+            type="button"
+            className="underline hover:text-foreground"
+            aria-label={`删除失效亮点 ${h.text}`}
+            onClick={() => tx.editHighlight(tw.task.id, tw.week, d.studentId, h.id, null)}
+          >
+            删除
+          </button>
+        </span>
+      ))}
+      {canAdd ? (
       <div className="flex flex-wrap items-center gap-1.5">
         <PhrasePicker kind="HIGHLIGHT" label={`${name} 常用亮点`} triggerLabel="+ 常用亮点" saveText={draft} onPick={(t, pid) => add(t, pid)} />
         {adding ? (
@@ -491,12 +541,13 @@ function Extras({ d, tw, date, hls, hasNote }: { d: StudentDay; tw: TaskWeek; da
             自由填写
           </button>
         )}
-        {!noteOpen ? (
-          <button type="button" className="text-xs text-muted-foreground hover:text-foreground" onClick={() => setNoteOpen(true)}>
-            + 内部备注
-          </button>
-        ) : null}
       </div>
+      ) : null}
+      {!noteOpen ? (
+        <button type="button" className="self-start text-xs text-muted-foreground hover:text-foreground" onClick={() => setNoteOpen(true)}>
+          + 内部备注
+        </button>
+      ) : null}
       {noteOpen ? <NoteInput d={d} week={tw.week} /> : null}
     </div>
   )
