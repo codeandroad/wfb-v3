@@ -173,7 +173,7 @@ export function MtDemoBar() {
         <FlaskConical className="size-3.5" aria-hidden />
         <span className="font-semibold">原型演示控制</span>
         <span className="truncate text-[#2a5b6e]/80">
-          {VARIANTS.find((v) => v.id === mt.biz.variant)?.label} · 演示时钟 {clockLabel(cur)}
+          {VARIANTS.find((v) => v.id === mt.biz.variant)?.label} · {mt.clockMode === "demo" ? "演示时钟" : "实时 · Asia/Shanghai"} {clockLabel(cur)}
           {f.saveFail || f.storageFail || f.delayMs > 1000 || f.publishLost || f.imageFail ? " · 故障注入中" : ""}
         </span>
         <ChevronDown className={cn("ml-auto size-3.5 transition-transform", open && "rotate-180")} aria-hidden />
@@ -199,7 +199,9 @@ export function MtDemoBar() {
             ))}
           </div>
           <div className="flex flex-col gap-1.5">
-            <p className="font-semibold text-foreground">演示时钟（只前进）</p>
+            <p className="font-semibold text-foreground">演示时钟（学校时区）</p>
+            <button type="button" onClick={() => mt.resumeRealtime()} className="text-left underline">恢复实时</button>
+            <input aria-label="指定演示时间" type="datetime-local" onChange={e => { if (e.target.value) mt.setClock(`${e.target.value}:00+08:00`) }} className="rounded border border-input bg-card p-2" />
             <select
               aria-label="演示时钟"
               value={cur}
@@ -207,7 +209,7 @@ export function MtDemoBar() {
               className="h-8 rounded-md border border-input bg-card px-2"
             >
               {CLOCK_PRESETS.map((c) => (
-                <option key={c.iso} value={c.iso} disabled={Date.parse(c.iso) < Date.parse(cur)}>
+                <option key={c.iso} value={c.iso}>
                   {c.label}
                 </option>
               ))}

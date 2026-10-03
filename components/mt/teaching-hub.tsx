@@ -7,6 +7,12 @@ import { Settings2 } from "lucide-react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useEffect } from "react"
+import { PageHeader, LinkButton } from "@/components/kit"
+import { MtDemoBar, MtLoadError, MtLoading } from "@/components/mt/shared"
+import { WeekPicker } from "@/components/mt/week-picker"
+import { useMt } from "@/lib/mt/store"
+import { currentWeek, permittedTasks, useTeacherId } from "@/lib/mt/derive"
+import { classOf, MAX_WEEK, weekStart } from "@/lib/mt/model"
 
 export type SettingsTab = "schemes" | "list" | "style" | "phrases"
 export const SETTINGS_TABS: [SettingsTab, string][] = [
@@ -53,6 +59,22 @@ const VIEW_SCOPED_PARAMS = ["lesson", "day", "pane", "student", "focus", "q", "s
 export function TeachingHub() {
   const sp = useSearchParams()
   const router = useRouter()
+  const mt = useMt()
+  const teacherId = useTeacherId()
+  const cw = currentWeek(mt.biz)
+  const wq = Number(sp.get("week"))
+  const week = wq >= 1 && wq <= MAX_WEEK ? wq : cw
+  const tasks = permittedTasks(mt.biz, teacherId)
+  const classes = [...new Map(tasks.map(t => [t.class_id, classOf(t)])).values()]
+  const setParam = (key: string, value: string) => {
+    const p = new URLSearchParams(sp.toString())
+    if (value) p.set(key, value); else p.delete(key)
+    if (key === "class") p.delete("task")
+    router.replace(`/teaching?${p}`, { scroll: false })
+  }
+  useEffect(() => {
+    if (!sp.get("week") && mt.ready) setParam("week", String(week))
+  }, [mt.ready, sp, week])
   const vq = sp.get("view")
   const view: TeachingView = vq === "tasks" || vq === "lessons" || vq === "days" ? vq : readViewPref()
 
@@ -107,5 +129,21 @@ export function TeachingHub() {
     </div>
   )
 
-  return view === "tasks" ? <TaskListPage switcher={switcher} /> : <WeekSchedulePage view={view} switcher={switcher} />
+  return <>
+    <header data-testid="teaching-workspace-header">
+      <PageHeader title="我的教学" desc="本人任教任务、课次与按日记录" actions={
+        <LinkButton variant="outline" href={`/timetable/my?${new URLSearchParams({ from: "schedule", week: weekStart(week), back: new URLSearchParams(ret.split("?")[1]).toString() })}`}>我的完整课表</LinkButton>
+      } />
+      <div className="mb-4">{switcher}</div>
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <WeekPicker week={week} current={cw} onChange={w => setParam("week", String(w))} />
+        <select aria-label="筛选教学班" value={sp.get("class") ?? ""} onChange={e => setParam("class", e.target.value)} className="h-9 rounded-lg border border-input bg-card px-2 text-sm">
+          <option value="">全部教学班</option>
+          {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+        </select>
+      </div>
+      <MtDemoBar />
+    </header>
+    {!mt.ready ? <MtLoading /> : mt.loadError ? <MtLoadError /> : view === "tasks" ? <TaskListPage /> : <WeekSchedulePage view={view} />}
+  </>
 }

@@ -26,6 +26,7 @@ import { useMt, usePhraseWriters, usePrefWriters, useTeacherPrefs } from "@/lib/
 import { cn } from "@/lib/utils"
 import { ArrowDown, ArrowUp, Check, Pencil, Plus, Trash2, X } from "lucide-react"
 import { useState } from "react"
+import { StyleColorInput } from "@/components/mt/style-color-input"
 
 const btn = (variant: "outline" | "ghost" | "default" = "outline") => cn(buttonVariants({ variant, size: "sm" }), "h-7 gap-1 px-2 text-xs")
 
@@ -55,7 +56,7 @@ export function StyleCard({ teacherId }: { teacherId: string }) {
       const duty = dutyOf(t)?.normative_label ?? null
       const pd = personalDisplay(t, teacherId, mt.biz.taskPrefs, mt.biz.lessonOverrides)
       const custom = pd.division && pd.division !== duty ? `（显示为「${pd.division}」）` : ""
-      const label = level === "TASK" ? `${classOf(t).name} · ${duty ?? "整科"}${courseOf(t)?.name ? ` · ${courseOf(t)!.name}` : ""}${custom}` : level === "CLASS" ? classOf(t).name : (courseOf(t)?.name ?? id)
+      const label = level === "TASK" ? `${classOf(t).name}${duty ? ` · ${duty}` : ""}` : level === "CLASS" ? classOf(t).name : (courseOf(t)?.name ?? id)
       seen.set(id, { id, label, task: t })
     }
     const list = [...seen.values()]
@@ -63,12 +64,12 @@ export function StyleCard({ teacherId }: { teacherId: string }) {
     return list.map((x) => {
       const total = list.filter((y) => y.label === x.label).length
       if (total < 2) return x
-      const n = (count.get(x.label) ?? 0) + 1
-      count.set(x.label, n)
-      return { ...x, label: `${x.label}（${n}）` }
+      return { ...x, label: `${x.label} · ${courseOf(x.task)?.name ?? x.task.valid_from}` }
     })
   })()
   const [pick, setPick] = useState<string | null>(null)
+  const [styleNotice, setStyleNotice] = useState("")
+  const [undoStyles, setUndoStyles] = useState<{ stamp: number; entries: Record<string, StylePref> } | null>(null)
   const target = targets.find((x) => x.id === pick) ?? targets[0]
   if (!target) return null
   const targetDivision = personalDisplay(target.task, teacherId, mt.biz.taskPrefs, mt.biz.lessonOverrides).division
@@ -125,8 +126,43 @@ export function StyleCard({ teacherId }: { teacherId: string }) {
             </p>
           </div>
           <button type="button" className={cn(btn(), "self-start")} disabled={!mt.biz.styles?.[key]} onClick={() => pw.setStyle(key, null)}>
-            恢复此{LEVEL_LABEL[level].slice(1)}默认
+            恢复{LEVEL_LABEL[level]}继承
           </button>
+          {level === "CLASS" ? <>
+            <p className="text-sm">本教学班全部本人任务</p>
+            {tasks.filter(t => t.class_id === target.id).map(t => {
+              const style = resolveStyle(mt.biz, teacherId, t)
+              const separate = mt.biz.styles?.[styleKey(teacherId, "TASK", t.id)]
+              const display = personalDisplay(t, teacherId, mt.biz.taskPrefs, mt.biz.lessonOverrides)
+              return <div key={t.id} className="rounded border border-border p-3 text-sm" style={cardStyle(style)}>
+                <strong style={{ color: style.hex ?? undefined }}>{display.division ?? classOf(t).subject}</strong>
+                <p>{dutyOf(t)?.normative_label ?? "整科"} · {separate ? "有独立覆盖（普通班级修改不会清除）" : "继承班级样式"}</p>
+                <p>{(["color", "bg", "weight", "font"] as const).map(f => `${{ color: "主题", bg: "背景", weight: "字重", font: "字体" }[f]}：${style.from[f] ? LEVEL_LABEL[style.from[f]!] : "系统"}`).join(" · ")}</p>
+              </div>
+            })}
+            <button type="button" className={btn()} onClick={() => {
+              let snapshot: Record<string, StylePref> = {}
+              let stamp = 0
+              const result = mt.command("统一使用本班样式", s => {
+                const styles = { ...s.styles }
+                for (const t of permittedTasks(s, teacherId).filter(t => t.class_id === target.id)) {
+                  const k = styleKey(teacherId, "TASK", t.id)
+                  if (styles[k]) snapshot[k] = styles[k]
+                  delete styles[k]
+                }
+                stamp = s.stamp + 1
+                return { ...s, styles }
+              })
+              if (result.ok) { setUndoStyles({ stamp, entries: snapshot }); setStyleNotice("已统一本人本班任务，个人分工名称与其他设置不变。") }
+              else setStyleNotice(result.error)
+            }}>统一使用本班样式（{tasks.filter(t => t.class_id === target.id).length} 个任务）</button>
+          </> : null}
+          {styleNotice ? <p role="status" className="text-sm">{styleNotice}</p> : null}
+          {undoStyles ? <button type="button" className={btn()} onClick={() => {
+            const result = mt.command("撤销统一样式", s => s.stamp !== undoStyles.stamp ? { error: "之后已有修改，为保护新设置，本次撤销未执行。" } : { ...s, styles: { ...s.styles, ...undoStyles.entries } })
+            setStyleNotice(result.ok ? "已恢复统一前的任务样式。" : result.error)
+            setUndoStyles(null)
+          }}>撤销统一本班</button> : null}
         </div>
         <div className="flex flex-col gap-4">
           <fieldset className="flex flex-col gap-2">
@@ -149,34 +185,14 @@ export function StyleCard({ teacherId }: { teacherId: string }) {
               ))}
             </div>
           </fieldset>
-          <fieldset className="flex flex-col gap-2">
-            <legend className="mb-1 text-xs text-muted-foreground">分工标签</legend>
-            <div className="flex flex-wrap gap-2">
-              <button type="button" aria-pressed={!own.tag} onClick={() => set({ tag: undefined })} className={cn("rounded-md border px-2 py-1 text-xs", !own.tag ? "border-primary ring-2 ring-primary/30" : "border-border")}>
-                继承
-              </button>
-              {STYLE_COLORS.map((c) => (
-                <button
-                  key={c.id}
-                  type="button"
-                  aria-pressed={own.tag === c.id}
-                  aria-label={`分工 ${c.label}`}
-                  title={c.label}
-                  onClick={() => set({ tag: c.id })}
-                  className={cn("rounded-md border-2 px-1.5 py-0.5 text-xs font-medium", own.tag === c.id ? "border-foreground" : "border-transparent")}
-                  style={{ color: c.hex, backgroundColor: `${c.hex}1a` }}
-                >
-                  P1
-                </button>
-              ))}
-            </div>
-          </fieldset>
+          <StyleColorInput key={`${key}:color:${own.color}`} label="主题色" value={own.color?.startsWith("#") ? own.color : STYLE_COLORS.find(c => c.id === own.color)?.hex ?? eff.hex ?? ""} onChange={color => set({ color })} />
           <fieldset className="flex flex-col gap-2">
             <legend className="mb-1 text-xs text-muted-foreground">课卡背景</legend>
             <div className="flex flex-wrap gap-2">
               <button type="button" aria-pressed={!own.bg} onClick={() => set({ bg: undefined })} className={cn("rounded-md border px-2 py-1 text-xs", !own.bg ? "border-primary ring-2 ring-primary/30" : "border-border")}>
                 继承
               </button>
+              <button type="button" aria-pressed={own.bg === "AUTO"} onClick={() => set({ bg: "AUTO" })} className="rounded-md border px-2 py-1 text-sm">跟随主题色</button>
               {STYLE_BGS.map((b) => (
                 <button
                   key={b.id}
@@ -192,6 +208,7 @@ export function StyleCard({ teacherId }: { teacherId: string }) {
             </div>
             <p className="text-[11px] text-muted-foreground">{"「无染色」是明确设置，会盖住上级背景；「继承」才沿用课程/班级层。背景均为浅底，待办、锁定、冲突等状态文字保持可读。"}</p>
           </fieldset>
+          <StyleColorInput key={`${key}:bg:${own.bg}`} label="背景色" value={own.bg?.startsWith("#") ? own.bg : STYLE_BGS.find(b => b.id === own.bg)?.hex ?? ""} onChange={bg => set({ bg })} />
           <div className="flex flex-wrap gap-6">
             <div className="flex flex-col gap-1">
               <span className="text-xs text-muted-foreground">字重</span>

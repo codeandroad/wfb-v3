@@ -26,7 +26,7 @@ import type { ReactNode } from "react"
 
 type StatusFilter = "all" | "todo" | "ready" | "published"
 
-export function TaskListPage({ switcher }: { switcher: ReactNode }) {
+export function TaskListPage() {
   const mt = useMt()
   const teacherId = useTeacherId()
   const sp = useSearchParams()
@@ -48,21 +48,13 @@ export function TaskListPage({ switcher }: { switcher: ReactNode }) {
     router.replace(`/teaching?${p.toString()}`, { scroll: false })
   }
 
-  const header = (
-    <>
-      <PageHeader
-        title="我的教学"
-        desc="本人任教的教学班与分工"
-      />
-      <div className="mb-4">{switcher}</div>
-    </>
-  )
+  const header = null
 
   if (!teacherId) {
     return (
       <div>
         {header}
-        <MtDemoBar />
+        
         <EmptyState
           icon={<CalendarDays className="size-7" />}
           title="当前身份没有任教任务"
@@ -79,6 +71,7 @@ export function TaskListPage({ switcher }: { switcher: ReactNode }) {
     const text = `${formalTaskName(tw.task)} ${classOf(tw.task).name} ${courseOf(tw.task)?.name ?? ""} ${
       resolveLabel(tw.task, teacherId, mt.biz.taskPrefs, mt.biz.lessonOverrides).text ?? ""
     }`
+    if (sp.get("class") && tw.task.class_id !== sp.get("class")) return false
     if (q && !text.includes(q)) return false
     if (st === "todo") return ["start", "progress"].includes(tw.status.key)
     if (st === "ready") return ["ready", "changed"].includes(tw.status.key)
@@ -94,10 +87,10 @@ export function TaskListPage({ switcher }: { switcher: ReactNode }) {
   return (
     <div>
       {header}
-      <MtDemoBar />
+      
 
       <div className="mb-4 flex flex-wrap items-center gap-3">
-        <WeekPicker week={week} current={cw} onChange={(w) => setParam({ week: String(w) })} />
+
         <label className="relative min-w-52 flex-1">
           <span className="sr-only">搜索教学任务</span>
           <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" aria-hidden />
@@ -131,12 +124,9 @@ export function TaskListPage({ switcher }: { switcher: ReactNode }) {
         </div>
       </div>
 
-      <dl className="mb-4 grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-border bg-border sm:grid-cols-4">
-        <Stat label="任务数" value={`${tasks.length}`} />
-        <Stat label="学生数" value={`${uniqueStudents}`} />
-        <Stat label="课次数" value={scheduleRead.status === "ok" ? `${totalLessons}` : "—"} />
-        <Stat label="已处理记录" value={scheduleRead.status === "ok" ? `${processed}/${elapsed}` : "—"} />
-      </dl>
+      <p className="mb-4 text-sm text-muted-foreground">
+        {tasks.length} 个任务 · {uniqueStudents} 名去重学生 · 原始课次 {scheduleRead.status === "ok" ? totalLessons : "—"} · 已处理记录 {scheduleRead.status === "ok" ? `${processed}/${elapsed}` : "—"}
+      </p>
       {scheduleRead.status !== "ok" ? (
         <p role="alert" className="mb-4 rounded-lg border border-[#e0c48a] bg-[#fbf3e2] px-3 py-2 text-sm text-[#7a4f0e]">
           {scheduleRead.message}。课次数与记录暂不统计（不是 0）。

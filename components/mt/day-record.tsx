@@ -7,6 +7,7 @@ import { PhrasePicker, ReasonField } from "@/components/mt/phrase-picker"
 import { PublishPanel } from "@/components/mt/publish-panel"
 import { RoutineDialog } from "@/components/mt/routine-dialog"
 import { DayQuickActions } from "@/components/mt/day-quick-actions"
+import { RegradeControl } from "./regrade-control"
 import { AttSelect, GradeSelect, MtLoading, SaveState } from "@/components/mt/shared"
 import { StudentDetailBody } from "@/components/mt/student-drawer"
 import { Btn, Modal, useAutoText } from "@/components/mt/ui"
@@ -142,6 +143,7 @@ export function DayRecordDialog({
   return (
     <Modal wide title={modalTitle} onClose={onClose}>
       <div className="flex flex-col gap-4" data-testid="day-record-dialog" data-pane={pane.kind}>
+        {pane.kind === "record" ? <details><summary className="cursor-pointer text-sm">课堂方案 · 更换作用于第 {week} 周整个周期</summary><RegradeControl target={{ kind: "CLASSROOM", taskId: task.id, week }} currentRev={std.revId} label={title} /></details> : null}
         {/* 整周反馈准备：进入后保持挂载，处理学生问题再返回时保留本次准备的选择 */}
         {previewMounted ? (
           <div className={cn("flex flex-col gap-3", pane.kind !== "preview" && "hidden")} data-testid="week-preview">

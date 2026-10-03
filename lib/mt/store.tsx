@@ -7,6 +7,8 @@
 // - 重置只清本原型命名空间的键，不清空整个浏览器存储。
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
+import { schoolNow } from "./clock"
+import { generationOf, type RegradeHistory } from "./regrading"
 import {
   addDaysIso,
   applyRoutineItem,
@@ -183,6 +185,8 @@ export interface RoutineOp {
 }
 
 export interface MtBiz {
+  evaluationGenerations?: Record<string, number>
+  regradeHistory?: RegradeHistory[]
   schema: 3
   variant: VariantId
   clock: string
@@ -411,6 +415,8 @@ interface Ctx {
 
   // 演示控制
   setVariant: (v: VariantId) => void
+  clockMode: "realtime" | "demo"
+  resumeRealtime: () => void
   setClock: (iso: string) => void
   setFault: (patch: Partial<Faults>) => void
   retryLoad: () => void
@@ -429,6 +435,8 @@ export function MtProvider({ children }: { children: ReactNode }) {
   const [saves, setSaves] = useState<Record<string, SaveEntry>>({})
   const [loadError, setLoadError] = useState(false)
 
+  const [clockMode, setClockMode] = useState<"realtime" | "demo">("realtime")
+  const demoClock = useRef<string | null>(null)
   const bizRef = useRef(biz)
   const faultsRef = useRef(faults)
   const runners = useRef<Record<string, SaveReq>>({})
@@ -465,7 +473,7 @@ export function MtProvider({ children }: { children: ReactNode }) {
     }
     const loaded = readBiz(variant)
     const repaired = repairEligibility(loaded)
-    const b = repaired.biz
+    const b = { ...repaired.biz, clock: demoClock.current ?? schoolNow() }
     if (repaired.log) {
       try {
         window.localStorage.setItem(bizKey(b.variant), JSON.stringify(b))
@@ -483,6 +491,25 @@ export function MtProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     load()
   }, [load])
+
+  useEffect(() => {
+    const tick = () => {
+      if (demoClock.current || !ready) return
+      const next = { ...bizRef.current, clock: schoolNow() }
+      bizRef.current = next
+      setBiz(next)
+    }
+    const timer = window.setInterval(tick, 1000)
+    window.addEventListener("focus", tick)
+    window.addEventListener("pageshow", tick)
+    document.addEventListener("visibilitychange", tick)
+    return () => {
+      window.clearInterval(timer)
+      window.removeEventListener("focus", tick)
+      window.removeEventListener("pageshow", tick)
+      document.removeEventListener("visibilitychange", tick)
+    }
+  }, [ready])
 
   /** 写入模拟存储；成功才更新内存状态 */
   const commitBiz = useCallback((next: MtBiz): string | null => {
@@ -574,6 +601,8 @@ export function MtProvider({ children }: { children: ReactNode }) {
         const cur = bizRef.current
         const existing = cur.routineOps.find((o) => o.token === token)
         if (existing) return { ok: true, op: existing, written: 0 }
+        if (plan.items.some(it => generationOf(cur, { kind: "CLASSROOM", taskId: it.taskId, week: weekOfDate(it.date) }) !== generationOf(biz, { kind: "CLASSROOM", taskId: it.taskId, week: weekOfDate(it.date) }))) return { ok: false, error: "评价代次已更换，请重新核对批量候选" }
+        if (plan.items.some(it => cur.revoked.includes(it.taskId))) return { ok: false, error: "已失去任务权限" }
         if (!plan.items.length) return { ok: false, error: "没有符合常规条件的待处理目标，未写入任何记录" }
         const byKey = new Map(days.map((d) => [d.rec.key, d]))
         const records = { ...cur.records }
@@ -648,6 +677,8 @@ export function MtProvider({ children }: { children: ReactNode }) {
         const cur = bizRef.current
         const out = run(cur)
         if ("error" in out) return { ok: false, error: out.error }
+        if (out === cur) return { ok: true }
+        if (faultsRef.current.saveFail) return { ok: false, error: "保存失败（故障注入），数据未变" }
         const err = commitBiz({ ...out, stamp: cur.stamp + 1 })
         return err ? { ok: false, error: err } : { ok: true }
       },
@@ -685,9 +716,22 @@ export function MtProvider({ children }: { children: ReactNode }) {
         setSaves({})
         load(v)
       },
+      clockMode,
+      resumeRealtime: () => {
+        demoClock.current = null
+        setClockMode("realtime")
+        const next = { ...bizRef.current, clock: schoolNow() }
+        bizRef.current = next
+        setBiz(next)
+      },
       setClock: (iso) => {
-        const cur = bizRef.current
-        commitBiz({ ...cur, clock: iso })
+        const timestamp = Date.parse(iso)
+        if (!Number.isFinite(timestamp)) return
+        demoClock.current = schoolNow(timestamp)
+        setClockMode("demo")
+        const next = { ...bizRef.current, clock: demoClock.current }
+        bizRef.current = next
+        setBiz(next)
       },
       setFault: (patch) => {
         const nf = { ...faultsRef.current, ...patch }
@@ -734,7 +778,7 @@ export function MtProvider({ children }: { children: ReactNode }) {
         commitBiz({ ...cur, memberships: ms, rosterEvents: [...cur.rosterEvents, id] })
       },
     }
-  }, [ready, loadError, biz, faults, saves, dispatch, commitBiz, load, persistMeta])
+  }, [ready, loadError, biz, faults, saves, dispatch, commitBiz, load, persistMeta, clockMode])
 
   return <MtContext.Provider value={value}>{children}</MtContext.Provider>
 }
@@ -1031,6 +1075,8 @@ export function useRecordWriters() {
           value,
           taskId: d.taskId,
           run: (s) => {
+            const target = { kind: "CLASSROOM" as const, taskId: d.taskId, week }
+            if (generationOf(s, target) !== generationOf(mt.biz, target)) return { error: "课堂评价方案已更换，旧输入已保留但未写入，请按新方案重新选择", kind: "conflict" as const }
             // 提交时按当前已保存出勤重新判定：页面状态过期、旧请求或直接调用都不能给未出席学生写评价
             if (!isMemberOn(s.memberships[d.taskId] ?? [], d.studentId, d.date)) return rejected("该学生当天不在本任务适用名单中")
             const e = eligAt(s, d.rec.key, d.taskId, d.date, d.lessons)
@@ -1303,6 +1349,8 @@ export function useHomeworkWriters() {
     const patchA = (s: MtBiz, id: string, fn: (a: Assignment) => Assignment | { error: string }): MtBiz | { error: string; kind: "rejected" } => {
       const a = s.assignments.find((x) => x.id === id)
       if (!a) return { error: "作业不存在或已被删除", kind: "rejected" }
+      const target = { kind: "HOMEWORK" as const, taskId: a.taskId, assignmentId: id }
+      if (generationOf(s, target) !== generationOf(mt.biz, target)) return { error: "作业方案已更换，旧输入／批量已拒绝，请按新方案重试", kind: "rejected" }
       const n = fn(a)
       if ("error" in n) return { error: n.error, kind: "rejected" }
       return { ...s, assignments: s.assignments.map((x) => (x.id === id ? { ...n, revision: a.revision + 1, stamp: s.stamp + 1 } : x)) }
@@ -1414,6 +1462,7 @@ export function useHomeworkWriters() {
             }
             const batch: HwBatch = {
               id: `HB_${s.seq}`,
+              generation: generationOf(s, { kind: "HOMEWORK", taskId: x.taskId, assignmentId: x.id }),
               token,
               kind,
               at: s.clock,
@@ -1436,6 +1485,7 @@ export function useHomeworkWriters() {
           patchA(s, aId, (x) => {
             const b = (x.batches ?? []).find((y) => y.id === batchId)
             if (!b) return { error: "找不到该批量操作" }
+            if ((b.generation ?? 0) !== generationOf(s, { kind: "HOMEWORK", taskId: x.taskId, assignmentId: x.id })) return { error: "该批量属于旧评价代次，不能撤销影响新结果" }
             if (b.undone) {
               res = b.undone
               return x

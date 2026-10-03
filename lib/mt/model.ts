@@ -226,7 +226,7 @@ export type VariantId = "BASE" | "ADJACENT_LESSONS" | "SEPARATED_LESSONS" | "MID
 
 export const VARIANTS: { id: VariantId; label: string; desc: string }[] = [
   { id: "BASE", label: "基线（第5周 · 9/30 18:00）", desc: "10个本人课次，56条已发生日记录" },
-  { id: "ADJACENT_LESSONS", label: "连堂：计算机周三第1+2节", desc: "课��11张，日记录不翻倍" },
+  { id: "ADJACENT_LESSONS", label: "连堂：计算机周三第1+2节", desc: "课���11张，日记录不翻倍" },
   { id: "SEPARATED_LESSONS", label: "不连续：P1周一第3、5节", desc: "两张卡、各自时间" },
   { id: "MIDDAY_PARTIAL", label: "部分当天：连堂 + 9/30 08:45", desc: "第一课已结束、第二课未开始" },
 ]
@@ -335,8 +335,7 @@ export function weekRangeLabel(n: number): string {
   return `${fmtMD(ds[0])}–${fmtMD(ds[6])}`
 }
 export function dateOfClock(iso: string): string {
-  // 演示时钟全部为 +08:00（学校时区），直接取日期部分
-  return iso.slice(0, 10)
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Shanghai", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(iso))
 }
 export function clockLabel(iso: string): string {
   const d = dateOfClock(iso)
@@ -659,7 +658,7 @@ export const GRADE_DICT: { v: string; label: string }[] = [
 ]
 
 /* ============================================================
- * r4 课堂评价资格：只依据已确认的出勤事实与真实课次，不读显示文字。
+ * r4 课堂评价资格：只依据已确认��出勤事实与真实课次，不读显示文字。
  * 请假 / 缺勤 / 在他班 = 未出席本任务课堂；迟到 / 早退 = 实际参加了一部分。
  * 唯一判定来源：日记录、周矩阵、学生抽屉、常用/自由亮点、观察采用、常规确认与发布都读这里。
  * ========================================================== */
@@ -1189,6 +1188,7 @@ export interface HwBatchEntry {
   rev: number
 }
 export interface HwBatch {
+  generation?: number
   id: string
   token: string
   kind: "SUBMIT" | "GRADE" | "ROUTINE"
@@ -1279,7 +1279,7 @@ export function requirementOf(a: Assignment, sid: string): Requirement {
 }
 /**
  * 作业归期（原型回退口径）：有截止按截止日期所在周；无截止按真实布置／补录原布置日期所在周。
- * 个别延期不移动全班归期。这是原型核验口径，不代表已修改产品政策。
+ * 个别延期不移动全班归期。这是原型核验口径，不代表已修改���品政策。
  */
 export function assignmentWeek(a: Assignment): number {
   return weekOfDate(dateOfClock(a.deadline ?? a.issuedAt))

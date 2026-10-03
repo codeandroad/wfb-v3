@@ -32,7 +32,7 @@ import { dayCardsOfWeek } from "@/lib/mt/daycards"
 
 type ScheduleView = "lessons" | "days"
 
-export function WeekSchedulePage({ view, switcher }: { view: ScheduleView; switcher: ReactNode }) {
+export function WeekSchedulePage({ view }: { view: ScheduleView }) {
   const mt = useMt()
   const teacherId = useTeacherId()
   const sp = useSearchParams()
@@ -86,34 +86,7 @@ export function WeekSchedulePage({ view, switcher }: { view: ScheduleView; switc
 
   return (
     <div>
-      <PageHeader
-        title="我的教学"
-        desc={`第 ${week} 周 · ${weekRangeLabel(week)} · ${view === "days" ? "点击日卡在原位打开本日记录" : "点击课卡在原位查看课次详情，可记录可选观察或更正本节考勤"}`}
-        actions={
-          <LinkButton href={myTimetableHref} variant="outline">
-            <CalendarRange className="size-3.5" aria-hidden />
-            我的完整课表
-          </LinkButton>
-        }
-      />
-      <MtDemoBar />
-
       <div className="mb-4 flex flex-wrap items-center gap-3">
-        {switcher}
-        <WeekPicker week={week} current={cw} onChange={(w) => setParam({ week: String(w) })} />
-        <select
-          aria-label="筛选教学班"
-          value={classFilter}
-          onChange={(e) => setParam({ class: e.target.value, task: null })}
-          className="h-9 rounded-lg border border-input bg-card px-2 text-sm"
-        >
-          <option value="">全部教学班</option>
-          {classes.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </select>
         {taskOfFilter ? (
           <span className="inline-flex items-center gap-1 rounded-full bg-accent px-3 py-1 text-xs text-accent-foreground">
             仅任务：{classOf(taskOfFilter).name} ·{" "}
@@ -130,7 +103,7 @@ export function WeekSchedulePage({ view, switcher }: { view: ScheduleView; switc
             清除条件
           </button>
         ) : null}
-        <span className="ml-auto text-xs text-muted-foreground">共 {lessons.length} 个课次</span>
+        <span className="ml-auto text-sm text-muted-foreground">{view === "days" ? `${weekCards.length} 张合并日卡 · ` : ""}{lessons.length} 个原始课次</span>
       </div>
 
       {!teacherId ? (
