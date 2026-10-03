@@ -68,8 +68,8 @@ export function DayCardsView({
                     focus === c.key ? "border-primary ring-2 ring-primary/30" : "border-border",
                   )}
                 >
-                  <span className="flex flex-wrap items-start gap-1.5">
-                    <span className={cn("text-sm font-semibold leading-snug", titleClass(ps))} style={ps.hex ? { color: ps.hex } : undefined}>
+                  <span className="flex w-full items-start justify-between gap-1">
+                    <span className={cn("min-w-0 text-sm font-semibold leading-snug", titleClass(ps))} style={ps.hex ? { color: ps.hex } : undefined}>
                       {pd.className}
                     </span>
                     {c.merged > 1 ? (
