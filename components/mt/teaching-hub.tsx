@@ -3,7 +3,23 @@
 import { TaskListPage } from "@/components/mt/task-list"
 import { WeekSchedulePage } from "@/components/mt/week-schedule"
 import { cn } from "@/lib/utils"
+import { Settings2 } from "lucide-react"
+import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
+import { useEffect } from "react"
+
+export type SettingsTab = "schemes" | "list" | "style" | "phrases"
+export const SETTINGS_TABS: [SettingsTab, string][] = [
+  ["schemes", "评价方案"],
+  ["list", "作业与列表"],
+  ["style", "显示样式"],
+  ["phrases", "常用内容"],
+]
+const scrollKey = (ret: string) => `tgs-mt:scroll:${ret}`
+/** 所有入口打开同一个设置工作区；明确的分类优先于上次访问的分类 */
+export function settingsHref(ret: string, tab?: SettingsTab) {
+  return `/teaching/settings?${tab ? `tab=${tab}&` : ""}ret=${encodeURIComponent(ret)}`
+}
 
 export type TeachingView = "tasks" | "lessons" | "days"
 
@@ -48,7 +64,21 @@ export function TeachingHub() {
     router.replace(`/teaching?${p.toString()}`, { scroll: false })
   }
 
+  const ret = `/teaching?${(() => {
+    const p = new URLSearchParams(sp.toString())
+    p.set("view", view)
+    return p.toString()
+  })()}`
+  useEffect(() => {
+    const y = Number(window.sessionStorage.getItem(scrollKey(ret)))
+    if (y > 0) {
+      window.sessionStorage.removeItem(scrollKey(ret))
+      requestAnimationFrame(() => window.scrollTo({ top: y }))
+    }
+  }, [ret])
+
   const switcher = (
+    <div className="flex flex-wrap items-center justify-between gap-2">
     <div role="radiogroup" aria-label="我的教学视图" className="inline-flex rounded-lg border border-border bg-muted p-0.5">
       {VIEWS.map(([k, label]) => (
         <button
@@ -65,6 +95,15 @@ export function TeachingHub() {
           {label}
         </button>
       ))}
+    </div>
+      <Link
+        href={settingsHref(ret)}
+        onClick={() => window.sessionStorage.setItem(scrollKey(ret), String(window.scrollY))}
+        className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border bg-card px-3 text-sm font-medium text-foreground hover:bg-muted"
+      >
+        <Settings2 className="size-4" aria-hidden />
+        教学设置
+      </Link>
     </div>
   )
 

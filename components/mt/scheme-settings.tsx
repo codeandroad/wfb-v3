@@ -40,9 +40,12 @@ import {
 import { useMt } from "@/lib/mt/store"
 import { cn } from "@/lib/utils"
 import { ArrowDown, ArrowLeft, ArrowUp, Plus, Trash2 } from "lucide-react"
-import { useSearchParams } from "next/navigation"
-import { TeacherPrefsPanel } from "@/components/mt/teacher-prefs"
-import { useMemo, useState } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
+import { HwDaysCard, PageSizeCard, PhraseLibraryCard, StyleCard } from "@/components/mt/teacher-prefs"
+import { SETTINGS_TABS, type SettingsTab } from "@/components/mt/teaching-hub"
+import { useEffect, useMemo, useState } from "react"
+
+const LAST_TAB_KEY = "tgs-mt:settings-tab"
 
 function safeRet(v: string | null): string | null {
   return v && v.startsWith("/teaching") && !v.startsWith("//") ? v : null
@@ -64,18 +67,54 @@ export function SchemeSettings() {
   const [retire, setRetire] = useState<{ scheme: Scheme; mode: "ARCHIVE" | "DELETE" } | null>(null)
   const [viewing, setViewing] = useState<SchemeRev | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
+  const router = useRouter()
+  const urlTab = SETTINGS_TABS.find(([k]) => k === sp.get("tab"))?.[0] ?? null
+  const [lastTab, setLastTab] = useState<SettingsTab>("schemes")
+  useEffect(() => {
+    const v = window.localStorage.getItem(LAST_TAB_KEY)
+    if (SETTINGS_TABS.some(([k]) => k === v)) setLastTab(v as SettingsTab)
+  }, [])
+  const tab: SettingsTab = urlTab ?? lastTab
+  const goTab = (t: SettingsTab) => {
+    setLastTab(t)
+    window.localStorage.setItem(LAST_TAB_KEY, t)
+    const p = new URLSearchParams(sp.toString())
+    p.set("tab", t)
+    router.replace(`/teaching/settings?${p.toString()}`, { scroll: false })
+  }
 
   const header = (
-    <PageHeader
-      title="教学设置 · 评价方案"
-      desc="管理课堂评价与作业质量使用的等级方案。保存不会改变已采用的标准，也不会给学生评分。"
-      actions={
-        <LinkButton href={ret ?? "/teaching"} variant="outline">
-          <ArrowLeft className="size-3.5" aria-hidden />
-          {ret ? "返回原处" : "返回我的教学"}
-        </LinkButton>
-      }
-    />
+    <>
+      <PageHeader
+        title="教学设置"
+        desc="只影响你本人的教学界面与之后的新操作；不改写学生已有结果，也不改变他人设置。"
+        actions={
+          <LinkButton href={ret ?? "/teaching"} variant="outline">
+            <ArrowLeft className="size-3.5" aria-hidden />
+            {ret ? "返回原处" : "返回我的教学"}
+          </LinkButton>
+        }
+      />
+      <div role="tablist" aria-label="设置分类" className="mb-5 flex flex-wrap gap-1 border-b border-border">
+        {SETTINGS_TABS.map(([k, label]) => (
+          <button
+            key={k}
+            type="button"
+            role="tab"
+            id={`settings-tab-${k}`}
+            aria-selected={tab === k}
+            aria-controls={`settings-panel-${k}`}
+            onClick={() => goTab(k)}
+            className={cn(
+              "-mb-px border-b-2 px-3 py-2 text-sm font-medium transition-colors",
+              tab === k ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground",
+            )}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+    </>
   )
 
   if (!mt.ready) return <>{header}<MtLoading /></>
@@ -121,6 +160,13 @@ export function SchemeSettings() {
     <>
       {header}
 
+      {notice ? (
+        <div role="status" className="mb-4 rounded-lg border border-[#cfe3d6] bg-[#eef6f0] px-3 py-2 text-sm text-[#1f5a3a]">
+          {notice}
+        </div>
+      ) : null}
+
+      <div role="tabpanel" id="settings-panel-schemes" aria-labelledby="settings-tab-schemes" hidden={tab !== "schemes"}>
       <section aria-label="当前默认" className="mb-5 grid gap-3 md:grid-cols-2">
         <DefaultCard
           purpose="CLASSROOM"
@@ -144,14 +190,8 @@ export function SchemeSettings() {
         />
       </section>
       <p className="mb-5 text-xs leading-relaxed text-muted-foreground">
-        默认适用于本人全部有权的教学任务（含不同教学班、实际分工与整科教学），不受列表搜索、班级筛选或正在浏览的周次影响；不改变其他教师的任务。
+        课堂默认与作业默认相互独立：设置其中一个不会改变另一个。默认适用于本人全部有权的教学任务，单个任务可在其课堂或作业页另行选择；不受列表搜索、筛选或正在浏览的周次影响，不改变其他教师。
       </p>
-
-      {notice ? (
-        <div role="status" className="mb-4 rounded-lg border border-[#cfe3d6] bg-[#eef6f0] px-3 py-2 text-sm text-[#1f5a3a]">
-          {notice}
-        </div>
-      ) : null}
 
       <div className="grid gap-5 lg:grid-cols-2">
         <Card className="p-4">
@@ -247,6 +287,20 @@ export function SchemeSettings() {
           ) : null}
         </Card>
       </div>
+      </div>
+
+      <div role="tabpanel" id="settings-panel-list" aria-labelledby="settings-tab-list" hidden={tab !== "list"}>
+        <div className="grid gap-4 md:grid-cols-2">
+          <HwDaysCard teacherId={teacherId} />
+          <PageSizeCard teacherId={teacherId} />
+        </div>
+      </div>
+      <div role="tabpanel" id="settings-panel-style" aria-labelledby="settings-tab-style" hidden={tab !== "style"}>
+        <StyleCard teacherId={teacherId} />
+      </div>
+      <div role="tabpanel" id="settings-panel-phrases" aria-labelledby="settings-tab-phrases" hidden={tab !== "phrases"}>
+        <PhraseLibraryCard teacherId={teacherId} />
+      </div>
 
       {viewing ? <ViewModal rev={viewing} onClose={() => setViewing(null)} /> : null}
 
@@ -314,8 +368,6 @@ export function SchemeSettings() {
           }}
         />
       ) : null}
-
-      <TeacherPrefsPanel teacherId={teacherId} />
     </>
   )
 }

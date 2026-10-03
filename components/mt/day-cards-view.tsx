@@ -5,7 +5,7 @@ import { dayCardsOfWeek, lessonTimingLabel, periodsLabel } from "@/lib/mt/daycar
 import { Layers } from "lucide-react"
 import { fmtMD, personalDisplay, WEEKDAY_CN, type STask } from "@/lib/mt/model"
 import { useMt } from "@/lib/mt/store"
-import { resolveStyle, titleClass } from "@/lib/mt/styles"
+import { cardStyle, resolveStyle, tagStyle, titleClass } from "@/lib/mt/styles"
 import { cn } from "@/lib/utils"
 
 /** 按日记录视图：同一教学任务同一日期的原课次合并为一张日卡 */
@@ -56,6 +56,8 @@ export function DayCardsView({
                   onClick={() => onOpen(c.key)}
                   aria-haspopup="dialog"
                   data-testid="day-card"
+                  data-style-bg={ps.bg?.label ?? ""}
+                  style={focus === c.key ? (ps.bg ? { backgroundColor: ps.bg.hex } : undefined) : cardStyle(ps)}
                   id={`day-${c.key}`}
                   data-merged={c.merged}
                   data-eval={c.status.key}
@@ -77,7 +79,12 @@ export function DayCardsView({
                       </span>
                     ) : null}
                   </span>
-                  {sub ? <span className="-mt-1 text-xs text-muted-foreground">{sub}</span> : null}
+                  {pd.division || pd.course ? (
+                    <span className="-mt-1 flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
+                      {pd.division ? <span className="rounded px-1 font-medium" style={tagStyle(ps)}>{pd.division}</span> : null}
+                      {pd.course ? <span>{pd.course}</span> : null}
+                    </span>
+                  ) : null}
                   <ul className="flex flex-col gap-0.5 text-[11px] text-muted-foreground">
                     {c.lessons.map((l) => {
                       const tl = allFuture ? null : lessonTimingLabel(l, nowTs)

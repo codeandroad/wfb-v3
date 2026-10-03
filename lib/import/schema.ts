@@ -117,7 +117,7 @@ export const SHEETS: SheetDef[] = [
   },
   {
     code: "14", name: "家长监护人", group: "family", role: "object", unit: "位家长/监护人", guard: "一个真实家长可被多名学生引用；不自动开家长账号",
-    fields: [id("家长标识"), f("name", "��名", "text", req), f("email", "邮箱", "email"), f("phone", "电话", "phone")],
+    fields: [id("家长标识"), f("name", "姓名", "text", req), f("email", "邮箱", "email"), f("phone", "电话", "phone")],
   },
   {
     code: "15", name: "学生家长关系", group: "family", role: "relation", unit: "条家长关系", guard: "多对多；关系不作为门户身份核验结果",

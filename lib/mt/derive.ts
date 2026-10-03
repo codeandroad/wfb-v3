@@ -16,6 +16,7 @@ import {
   taskById,
   TEACHERS,
   teacherOfPersona,
+  BIG_DEMO_TASK_IDS,
   uniq,
   weekDates,
   weekOfDate,
@@ -36,10 +37,12 @@ export function permittedTasks(biz: MtBiz, teacherId: string | null): STask[] {
   if (!teacherId) return []
   const t = TEACHERS.find((x) => x.id === teacherId)
   if (!t) return []
-  return t.permitted_task_ids
+  const own = t.permitted_task_ids
     .filter((id) => !biz.revoked.includes(id))
     .map((id) => taskById(id))
     .filter((x): x is STask => !!x && x.teacher_id === teacherId)
+  if (!biz.bigDemo || teacherId !== "TEACHER_LYNN") return own
+  return [...own, ...BIG_DEMO_TASK_IDS.map((id) => taskById(id)).filter((x): x is STask => !!x)]
 }
 
 export function currentWeek(biz: MtBiz): number {

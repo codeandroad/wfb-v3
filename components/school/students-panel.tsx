@@ -634,7 +634,7 @@ function AddStudentSheet({
         </Field>
 
         <Field label="监护人姓名">
-          <Input value={guardianName} onChange={(e) => setGuardianName(e.target.value)} placeholder="如 示例��长" />
+          <Input value={guardianName} onChange={(e) => setGuardianName(e.target.value)} placeholder="如 示例家长" />
         </Field>
 
         <Field label="监护人电话">

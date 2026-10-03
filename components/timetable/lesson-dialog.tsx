@@ -463,7 +463,7 @@ export function LessonDialog({
             aria-label="备注"
             className={`${inputCls} min-w-0 flex-1`}
           />
-          <ToggleSwitch label="显���" checked={noteShow} onChange={setNoteShow} />
+          <ToggleSwitch label="显示" checked={noteShow} onChange={setNoteShow} />
         </Row>
 
         {err ? <p className="rounded-lg border border-[#eec4bf] bg-[#fbe6e4] px-3 py-2 text-[12px] text-[#9a2b22]">{err}</p> : null}

@@ -407,7 +407,7 @@ export const TEACHING_CLASSES: TeachingClassRow[] = [
  * 学生资料（列表不显示学号；详情页可控制字段显示）
  * ========================================================== */
 
-// 选课记录：学生在某��教学班内修读某门课程的若干单元
+// 选课记录：学生在某个教学班内修读某门课程的若干单元
 export interface CourseEnrollment {
   teachingClass: string // 教学班正式名
   course: string // 课程显示名

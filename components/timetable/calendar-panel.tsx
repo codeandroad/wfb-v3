@@ -240,7 +240,7 @@ function EventModal({
           </Select>
         </Field>
         {kind === "holiday" ? (
-          <Field label="名称" hint="可选，如“国庆长假”“期中考��周”，将显示在课表日期栏。">
+          <Field label="名称" hint="可选，如“国庆长假”“期中考试周”，将显示在课表日期栏。">
             <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="例如：国庆长假" className={inputCls} />
           </Field>
         ) : null}

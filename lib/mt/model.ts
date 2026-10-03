@@ -149,6 +149,64 @@ interface Scenario {
 
 export const SC = raw as unknown as Scenario
 
+/** 大班分页演示：38/72/123 人隔离任务；归属虚拟教师，仅在原型演示控制开启后并入当前教师可见范围 */
+export const BIG_DEMO_TEACHER = "TEACHER_BIG_DEMO"
+export const BIG_DEMO_SIZES = [38, 72, 123] as const
+export const BIG_DEMO_TASK_IDS = BIG_DEMO_SIZES.map((n) => `TASK_BIG_${n}`)
+;(() => {
+  if (SC.tasks.some((t) => t.id === BIG_DEMO_TASK_IDS[0])) return
+  const pad = (i: number) => String(i).padStart(3, "0")
+  const max = Math.max(...BIG_DEMO_SIZES)
+  const ids = Array.from({ length: max }, (_, i) => `DEMO_BIG_${pad(i + 1)}`)
+  SC.homerooms.push({ id: "HR_BIG", name: "大班演示", student_ids: ids })
+  for (const id of ids) {
+    SC.students.push({
+      id,
+      name: `大班学生${id.slice(-3)}`,
+      homeroom_id: "HR_BIG",
+      membership_from: "2026-09-01",
+      membership_until: "2027-01-31",
+      has_verified_guardian_contact: true,
+    } as SStudent)
+  }
+  const course = SC.courses[SC.courses.length - 1]
+  const slots: [string, string][] = [
+    ["2026-09-28", "PERIOD_5"],
+    ["2026-09-29", "PERIOD_5"],
+    ["2026-09-30", "PERIOD_5"],
+  ]
+  const tpl = SC.lessons[0]
+  BIG_DEMO_SIZES.forEach((n, i) => {
+    const classId = `CLASS_BIG_${n}`
+    const taskId = BIG_DEMO_TASK_IDS[i]
+    const sids = ids.slice(0, n)
+    SC.classes.push({ id: classId, name: `大班演示${n}人 • ${course.subject}`, subject: course.subject, scheduling_homeroom_id: "HR_BIG" })
+    SC.tasks.push({
+      id: taskId,
+      class_id: classId,
+      duty_id: null,
+      teacher_id: BIG_DEMO_TEACHER,
+      student_ids: sids,
+      label: `大班演示${n}人 • ${course.subject}`,
+      course_id: course.id,
+      valid_from: "2026-09-01",
+      valid_through: "2027-01-31",
+    })
+    SC.lessons.push({ ...tpl, id: `LESSON_BIG_${n}`, task_id: taskId, actual_date: slots[i][0], period_id: slots[i][1], room_id: "ROOM_D105" })
+    SC.assignments.push({
+      id: `HW_BIG_${n}`,
+      task_id: taskId,
+      title: `大班分页演示作业（${n}人）`,
+      issued_at: `${slots[i][0]}T12:00:00+08:00`,
+      deadline: "2026-09-30T12:00:00+08:00",
+      recipient_ids: sids,
+      default_requirement: "REQUIRED",
+      is_published: true,
+      results: [],
+    } as unknown as SAssignment)
+  })
+})()
+
 export const SCHOOL = SC.school
 export const TERM = SC.term
 export const STUDENTS = SC.students
@@ -168,7 +226,7 @@ export type VariantId = "BASE" | "ADJACENT_LESSONS" | "SEPARATED_LESSONS" | "MID
 
 export const VARIANTS: { id: VariantId; label: string; desc: string }[] = [
   { id: "BASE", label: "基线（第5周 · 9/30 18:00）", desc: "10个本人课次，56条已发生日记录" },
-  { id: "ADJACENT_LESSONS", label: "连堂：计算机周三第1+2节", desc: "课卡11张，日记录不翻倍" },
+  { id: "ADJACENT_LESSONS", label: "连堂：计算机周三第1+2节", desc: "课��11张，日记录不翻倍" },
   { id: "SEPARATED_LESSONS", label: "不连续：P1周一第3、5节", desc: "两张卡、各自时间" },
   { id: "MIDDAY_PARTIAL", label: "部分当天：连堂 + 9/30 08:45", desc: "第一课已结束、第二课未开始" },
 ]
@@ -407,9 +465,17 @@ export function lessonsOfWeek(_v: VariantId, week: number, taskIds: string[]): L
   const read = scheduleReadOfWeek(week)
   if (read.status !== "ok") return []
   const dates = new Set(weekDates(week))
+  const big = BIG_DEMO_TASK_IDS.filter((id) => taskIds.includes(id)).flatMap((id) => {
+    const base = SC.lessons.find((l) => l.task_id === id)
+    if (!base) return []
+    const date = addDays(base.actual_date, (week - SCENARIO_WEEK) * 7)
+    const lid = week === SCENARIO_WEEK ? base.id : `${base.id}~W${week}`
+    return [lessonView({ ...base, id: lid, actual_date: date, rule_of: week === SCENARIO_WEEK ? undefined : base.id }, _v)]
+  })
   return read.lessons
     .filter((e) => dates.has(e.date) && taskIds.includes(e.taskId))
     .map((e) => lessonFromSchedule(e, week))
+    .concat(big)
     .sort((a, b) => a.startTs - b.startTs)
 }
 export function lessonTimeLabel(l: LessonView): string {
@@ -652,7 +718,7 @@ const sameSet = (a: string[], b: string[]) => a.length === b.length && a.every((
 
 /**
  * 出勤改变后的评价联动（纯函数，同一原子写入中调用）：
- * - 全部已发生课次���出席：当前等级失效为系统“不适用（未出席）”，旧值转入 gradeVoided 历史；
+ * - 全部已发生课次均未出席：当前等级失效为系统“不适用（未出席）”，旧值转入 gradeVoided 历史；
  * - 仍有真实参加但已确认覆盖包含被更正课次：移出该课次，标记需核对覆盖，不机械删除合法评价；
  * - 从不适用恢复为有参加：只恢复为待处理，绝不自动复活旧等级。
  */
@@ -786,12 +852,12 @@ export interface RoutinePlanItem {
   writeAtt: string[] // 将写入“正常”的原课次
   writeGrade: boolean // 将写入该对象标准的常规默认等级
   extendGrade: string[] // 已有常规等级延伸到新发生课次
-  /** 写入的等级与其所属修订（来自对象已绑定或本期有效标准） */
+  /** 写入的���级与其所属修订（来自对象已绑定或本期有效标准） */
   gradeValue: string | null
   revId: string
   /** 标准未设常规默认等级：只处理出勤，评价仍需教师判断 */
   gradeNeedsJudgement: boolean
-  /** 日记录出勤快速处理：班主任请假准确覆盖的原课次直接关联为“请假” */
+  /** 日记录出勤快速处理：班主任请假准确覆盖的原课次直接关��为“请假” */
   leaveAtt?: string[]
   leaveSourceId?: string
 }
@@ -851,7 +917,7 @@ export function planRoutine(days: StudentDay[], standard: RoutineStandard): Rout
       continue
     }
     if (Object.values(r.att).some((a) => a.v !== "NORMAL")) {
-      skip("已有考勤例�����，需人工处理")
+      skip("已有考勤例外，需人工处理")
       continue
     }
     const std = standard(d)

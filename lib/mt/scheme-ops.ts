@@ -12,6 +12,7 @@ import {
   homeworkDefaultNow,
   classroomDefaultAt,
   ownerKey,
+  overrideKey,
   revById,
   revRefs,
   sameContent,
@@ -125,6 +126,33 @@ export function setDefault(biz: MtBiz, teacherId: string, revId: string, purpose
     }
   }
   return { ...biz, schemes: { ...biz.schemes, defaults } }
+}
+
+/** 当前任务本周期课堂是否已实际使用（已绑定/含该任务的发布）：是则覆盖只能下期起 */
+export function taskClassroomUsed(biz: MtBiz, taskId: string): boolean {
+  const pid = feedbackPeriodId(curWeekOf(biz))
+  if (biz.schemes.bindings[bindingKey(taskId, pid)]) return true
+  return biz.publications.some((p) => p.periodId === pid && p.taskIds.includes(taskId))
+}
+
+/**
+ * 仅对一个真实任务设置某用途覆盖；revId 为空表示清除覆盖、恢复教师默认。
+ * 课堂：本期未使用则自本期起，否则自下期起（本期继续用原修订）；作业：仅之后新布置的作业。
+ */
+export function setTaskOverride(biz: MtBiz, teacherId: string, taskId: string, purpose: Purpose, revId: string | null): Out | { error: string } {
+  if (!permittedTasks(biz, teacherId).some((t) => t.id === taskId)) return { error: "无权修改该任务" }
+  if (revId && !revById(revId) && !biz.schemes.revs[revId]) return { error: "找不到该方案修订" }
+  const k = overrideKey(taskId, purpose)
+  const list = [...(biz.schemes.taskOverrides?.[k] ?? [])]
+  const cur = curWeekOf(biz)
+  let next: DefaultEntry[]
+  if (purpose === "CLASSROOM") {
+    const from = taskClassroomUsed(biz, taskId) ? cur + 1 : cur
+    next = [...list.filter((e) => e.fromWeek < from), { revId: revId ?? "", fromWeek: from, at: biz.clock }]
+  } else {
+    next = [...list, { revId: revId ?? "", fromWeek: cur, at: biz.clock }]
+  }
+  return { ...biz, schemes: { ...biz.schemes, taskOverrides: { ...(biz.schemes.taskOverrides ?? {}), [k]: next } } }
 }
 
 /** 某用途在某修订之上的引用（当前有效或待生效）；用于归档/删除前替换 */

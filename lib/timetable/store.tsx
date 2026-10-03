@@ -285,7 +285,7 @@ export function schoolTemplateFor(s: TTState, teacherId: string, seq: number): T
   return rel?.templates[teacherId] ?? BASELINE_TEMPLATES[teacherId] ?? []
 }
 
-// 教师��否有尚未采用的相关���版
+// 教师是否有尚未采用的相关新版
 export function isPending(s: TTState, teacherId: string): boolean {
   const a = s.adoptions[teacherId]
   if (!a) return false
@@ -309,7 +309,7 @@ export type TeacherCurrentStatus =
   | { kind: "no_personal" }
   | { kind: "load_error" }
 
-// 教师当前使用课表（���务/教师共用同一���结果，按日期解析所���周）
+// 教师当前使用课表（任务/教师共用同一份结果，按日期解析所在周）
 export function teacherCurrent(s: TTState, teacherId: string, date: string): TeacherCurrentStatus {
   const teacher = TEACHERS.find((t) => t.id === teacherId)
   if (teacher && !teacher.hasAccount) return { kind: "no_account" }
@@ -474,13 +474,13 @@ function occLabel(e: ProjectedEntry): string {
   return [e.className, e.group].filter(Boolean).join(" ") || e.subject || "已有课次"
 }
 
-// 从冲突中挑出“被移动课次以外、且属于本人”的占��课次���可���强�������覆盖）；跨教师资源冲突返回 null
+// 从冲突中挑出“被移动课次以外、且属于本人”的占用课次（可强制覆盖）；跨教师资源冲突返回 null
 function pickOccupant(conflict: Conflict, movingKey: string, teacherId: string): ProjectedEntry | null {
   const cand = conflict.a.key !== movingKey ? conflict.a : conflict.b
   return cand.key !== movingKey && cand.teacherId === teacherId ? cand : null
 }
 
-/* ---------------- 编辑���稿���影（含未应用草稿） ---------------- */
+/* ---------------- 编辑草稿投影（含未应用草稿） ---------------- */
 
 export function teacherDraftWeekEntries(
   s: TTState,
@@ -671,7 +671,7 @@ export function TimetableProvider({
     }
 
     // 落点是否与学校基线完全一致（星期/节次/教室 + 名称都相同）——用于“拖回原位=撤销”的判定。
-    // 若本次编辑携带了改名（教学班名 / 单元组名与��线不同），则不视为撤销，保留为修改。
+    // 若本次编辑携带了改名（教学班名 / 单元组名与基线不同），则不视为撤销，保留为修改。
     function matchesBase(base: TemplateEntry[], key: string, patch: EditPatch): boolean {
       if (patch.action !== "move" && patch.action !== "room") return false
       const b = base.find((e) => e.key === key)
@@ -800,7 +800,7 @@ export function TimetableProvider({
             notifRead: { ...st.notifRead, [teacherId]: true },
           }
         })
-        return { ok: true, perSeq: per, msg: `已���用 ${rel.id}，${rel.effectiveDate} 起生效` }
+        return { ok: true, perSeq: per, msg: `已采用 ${rel.id}，${rel.effectiveDate} 起生效` }
       },
 
       confirmFutureAdopt: (teacherId) => api.oneClickUpdate(teacherId),
@@ -812,7 +812,7 @@ export function TimetableProvider({
 
       refreshCache: () => setState((s) => ({ ...s, lastCacheAt: fmtClock(s.clock) })),
 
-      /* -------- 教师本人编辑��话 -------- */
+      /* -------- 教师本人编辑会话 -------- */
 
       beginDraft: (teacherId) =>
         setState((s) => {
@@ -929,7 +929,7 @@ export function TimetableProvider({
             const occ = pickOccupant(conflict, edit.key, teacherId)
             // 跨教师资源冲突（教室占用等）无法在个人课表内解决，直接拒绝
             if (!occ) return { ok: false, msg: `落点冲突：${conflict.reason}（不自动交换或覆盖）` }
-            // 同一教师落���已有课次：允许两张课卡并存于���格；原课卡仍可继续拖动或删除
+            // 同一教师落入已有课次：允许两张课卡并存于同一格；原课卡仍可继续拖动或删除
           }
         }
         setState((st) => {
@@ -1105,14 +1105,14 @@ export function TimetableProvider({
         return { ok: true, msg: `已重新应用（${next.label}）` }
       },
 
-      // 回到学校最新课表：清空个人调整并重挂到当前学校来源版；即使学校未发布新版也可用，用于“改多了回不去”时的兜底恢复。可撤销���
+      // 回到学校最新课表：清空个人调整并重挂到当前学校来源版；即使学校未发布新版也可用，用于“改多了回不去”时的兜底恢复。可撤销。
       resetToSchool: (teacherId) => {
         const s = state
         const a = s.adoptions[teacherId]
         if (!a) return { ok: false, msg: "无采用记录" }
         const src = contentSource(s, teacherId)
         const adoptedMax = a.revisions.reduce((m, r) => Math.max(m, r.sourceSch), 0)
-        if (a.personalEdits.length === 0 && src <= adoptedMax) return { ok: false, msg: "���前已是学校课表，无需恢复" }
+        if (a.personalEdits.length === 0 && src <= adoptedMax) return { ok: false, msg: "当前已是学校课表，无需恢复" }
         const rel = releaseBySeq(s, src)
         const per = nextPerSeq(a)
         setState((st) => {
@@ -1142,7 +1142,7 @@ export function TimetableProvider({
         return { ok: true, perSeq: per, msg: rel ? `已恢复到学校课表 ${rel.id}` : "已恢复到学校课表" }
       },
 
-      /* -------- ��务学校草稿会话（多教师累积，统一发布） -------- */
+      /* -------- 教务学校草稿会话（多教师累积，统一发布） -------- */
 
       beginSchoolDraft: (teacherId, weekStart) =>
         setState((s) => {

@@ -184,7 +184,7 @@ export const DUTY_TYPES: DutyTypeDef[] = [
     key: "timetable_mgmt",
     label: "课表管理",
     role: "TEACHING_MANAGER",
-    blurb: "维护并发布本校学校课表，处理全校性的调课与停课安排�������",
+    blurb: "维护并发布本校学校课表，处理全校性的调课与停课安排。",
     scopeKind: "本校学校课表（节次、课次安排、调课 / 停课）",
     canDo: [
       "维护学校课表的节次与课次安排",
@@ -359,7 +359,7 @@ export interface AdminTenureScenario {
 export const ADMIN_TENURE_SCENARIOS: AdminTenureScenario[] = [
   {
     id: "sole",
-    title: "唯一有效治理管理��",
+    title: "唯一有效治理管理员",
     summary: "本校当前仅有一名有效、完整治理管理员。",
     subject: {
       name: "示例赵老师（school.admin）",
@@ -377,14 +377,14 @@ export const ADMIN_TENURE_SCENARIOS: AdminTenureScenario[] = [
   {
     id: "has-peer",
     title: "另有长期有效治理管理员",
-    summary: "存在另一名已激活、当前有效���完整治理且长期有效的管理员。",
+    summary: "存在另一名已激活、当前有效、完整治理且长期有效的管理员。",
     subject: {
       name: "示例赵老师（school.admin）",
       account: "zhao.example",
       note: "非最后一名管理员，允许显式设置期限。",
     },
     allowSetEnd: true,
-    outcome: "允许为该管理员选择结束日期；另一名长期有效��理管理员仍保留，学校不会失去管理能力。",
+    outcome: "允许为该管理员选择结束日期；另一名长期有效治理管理员仍保留，学校不会失去管理能力。",
     outcomeTone: "success",
     others: [
       { name: "peer.admin（示例钱管理）", state: "已激活 · 完整治理 · 长期有效", ok: true },
@@ -1060,7 +1060,7 @@ export const ACCOUNTS: AccountRecord[] = [
     accessTone: "warning",
     systemRoles: [],
     // lastLogin 缺省 → 显示“未提供”
-    note: "邀请已选定王老师��登录名待其接受后设定。此为流程后独立场景，与教职工列表中王老师“未开通账号”场景不自动联动。",
+    note: "邀请已选定王老师，登录名待其接受后设定。此为流程后独立场景，与教职工列表中王老师“未开通账号”场景不自动联动。",
     history: [
       { date: "2026-09-20", text: "发起邀请（已选王老师，无审批）" },
       { date: "2026-09-20", text: "等待受邀人接受并设置登录名" },
@@ -1190,7 +1190,7 @@ export const ACCOUNTS: AccountRecord[] = [
           { label: "账号自助", value: "可管理自身账号信息", ok: true },
           { label: "账号状态", value: "已启用", ok: true },
         ],
-        conclusion: "账号可用于自助，但四角色�����空 → 无任何业务能力",
+        conclusion: "账号可用于自助，但四角色均为空 → 无任何业务能力",
         conclusionOk: false,
       },
     ],
@@ -1216,7 +1216,7 @@ export const DUTY_FILTERS: { value: DutyKey | "all"; label: string }[] = [
 /* ============================================================
  * 职责对象候选（P05 对象选择）
  * 对象只能从既有结构中“搜索选择”，界面内不新建班级 / 课程 / 单元。
- * 候选带父级路径以���歧（如 数学A班·P1 与 数学B班·P1）。
+ * 候选带父级路径以消歧（如 数学A班·P1 与 数学B班·P1）。
  * disabled 表示不可选（归档 / 权限不足 / 主岗冲突），仍展示但不可点。
  * ========================================================== */
 
@@ -1248,7 +1248,7 @@ export const SCOPE_CANDIDATES: Record<DutyKey, ScopeConfig> = {
     searchPlaceholder: "搜索行政班（如 高一1班）",
     emptyHint: "先搜索并选择一个行政班",
     items: [
-      { id: "ac-g1c1", label: "高一1���", parentPath: "高一年级", meta: "主班主任在岗", disabled: true, disabledReason: "主岗已占用（每班最多一人）" },
+      { id: "ac-g1c1", label: "高一1班", parentPath: "高一年级", meta: "主班主任在岗", disabled: true, disabledReason: "主岗已占用（每班最多一人）" },
       { id: "ac-g1c2", label: "高一2班", parentPath: "高一年级", meta: "主岗暂缺" },
       { id: "ac-g1c3", label: "高一3班", parentPath: "高一年级", meta: "主岗暂缺" },
       { id: "ac-g2c1", label: "高二1班", parentPath: "高二年级", meta: "主岗暂缺" },
@@ -1301,7 +1301,7 @@ export const SCOPE_CANDIDATES: Record<DutyKey, ScopeConfig> = {
     searchPlaceholder: "搜索代课目标（如 数学A班 P1）",
     emptyHint: "先搜索并选择代课的实际目标（示例期间 / 课次在下一步填写）",
     items: [
-      { id: "tc-mathA-p1", label: "数学A班 · P1", parentPath: "CAIE数学 / 数学A班", meta: "示例期间��第 6–8 周" },
+      { id: "tc-mathA-p1", label: "数学A班 · P1", parentPath: "CAIE数学 / 数学A班", meta: "示例期间：第 6–8 周" },
       { id: "tc-mathB-p1", label: "数学B班 · P1", parentPath: "CAIE数学 / 数学B班", meta: "示例课次：周三第 3 节" },
       { id: "tc-phyA-full", label: "物理A班 · 整门课程", parentPath: "CAIE物理 / 物理A班", meta: "示例期间：单次调课" },
     ],
@@ -1532,7 +1532,7 @@ export const INVITE_RECORDS: InviteRecord[] = [
     person: "示例待关联账号",
     personSub: "未关联教职工 · 拟仅账号自服务",
     roles: [],
-    workPlan: "仅账号自服务（零角色例���）",
+    workPlan: "仅账号自服务（零角色例外）",
     status: "revoked",
     emailStatus: "none",
     expiresAt: "2026-09-19 18:00",
@@ -1545,7 +1545,7 @@ export const INVITE_RECORDS: InviteRecord[] = [
       { time: "09-12 11:00", text: "有权管理员生成邀请（零角色例外）" },
       { time: "09-13 09:00", text: "撤销邀请：当前所有入口不可再接受" },
     ],
-    note: "已撤销：普通重发不能复活；如仍需开通须重新核对并重新���发。",
+    note: "已撤销：普通重发不能复活；如仍需开通须重新核对并重新签发。",
   },
   {
     id: "INV-DEMO-05",

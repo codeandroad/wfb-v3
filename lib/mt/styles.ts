@@ -1,3 +1,4 @@
+import type React from "react"
 import type { STask } from "./model"
 import type { MtBiz } from "./store"
 
@@ -11,6 +12,10 @@ export type StyleWeight = "normal" | "semibold" | "bold"
 export type StyleFont = "sans" | "serif" | "mono"
 export interface StylePref {
   color?: string
+  /** 分工标签色，取 STYLE_COLORS id */
+  tag?: string
+  /** 课卡背景：STYLE_BGS id；"NONE" 为明确无染色，与未设置（继承）不同 */
+  bg?: string
   weight?: StyleWeight
   font?: StyleFont
 }
@@ -26,6 +31,16 @@ export const STYLE_COLORS: { id: string; label: string; hex: string }[] = [
   { id: "teal", label: "青碧", hex: "#1f6f74" },
   { id: "olive", label: "橄榄", hex: "#5c6b23" },
 ]
+/** 课卡背景：浅底，保证深色正文与状态文字可读 */
+export const STYLE_BGS: { id: string; label: string; hex: string; border: string }[] = [
+  { id: "NONE", label: "无染色", hex: "transparent", border: "" },
+  { id: "mint", label: "薄荷", hex: "#e8f3ec", border: "#bcd9c6" },
+  { id: "sky", label: "天青", hex: "#e7eff8", border: "#bccde2" },
+  { id: "sand", label: "沙黄", hex: "#f8f0dc", border: "#e3d1a6" },
+  { id: "rose", label: "浅绯", hex: "#f8e9e6", border: "#e6c3bc" },
+  { id: "lilac", label: "浅紫", hex: "#f0eaf5", border: "#d5c6e0" },
+  { id: "stone", label: "石灰", hex: "#eef0f2", border: "#cfd4d9" },
+]
 export const WEIGHT_LABEL: Record<StyleWeight, string> = { normal: "常规", semibold: "中粗", bold: "粗体" }
 export const FONT_LABEL: Record<StyleFont, string> = { sans: "无衬线", serif: "衬线", mono: "等宽" }
 export const LEVEL_LABEL: Record<StyleLevel, string> = { TASK: "本任务", CLASS: "本班级", COURSE: "本课程" }
@@ -37,11 +52,14 @@ export interface ResolvedStyle {
   colorLabel: string | null
   weight: StyleWeight | null
   font: StyleFont | null
+  tagHex: string | null
+  /** null＝继承到系统默认；"transparent"＝明确无染色 */
+  bg: { hex: string; border: string; label: string } | null
   from: Partial<Record<keyof StylePref, StyleLevel>>
 }
 
 export function resolveStyle(biz: MtBiz, teacherId: string | null, task: STask): ResolvedStyle {
-  const out: ResolvedStyle = { hex: null, colorLabel: null, weight: null, font: null, from: {} }
+  const out: ResolvedStyle = { hex: null, colorLabel: null, weight: null, font: null, tagHex: null, bg: null, from: {} }
   if (!teacherId) return out
   const all = biz.styles ?? {}
   const chain: [StyleLevel, string][] = [
@@ -59,6 +77,20 @@ export function resolveStyle(biz: MtBiz, teacherId: string | null, task: STask):
         out.hex = c.hex
         out.colorLabel = c.label
         out.from.color = lvl
+      }
+    }
+    if (!out.from.tag && p.tag) {
+      const c = STYLE_COLORS.find((x) => x.id === p.tag)
+      if (c) {
+        out.tagHex = c.hex
+        out.from.tag = lvl
+      }
+    }
+    if (!out.from.bg && p.bg) {
+      const b = STYLE_BGS.find((x) => x.id === p.bg)
+      if (b) {
+        out.bg = { hex: b.hex, border: b.border, label: b.label }
+        out.from.bg = lvl
       }
     }
     if (!out.from.weight && p.weight) {
@@ -86,7 +118,19 @@ export function titleClass(s: ResolvedStyle): string {
 export function cleanStyle(p: StylePref): StylePref | null {
   const out: StylePref = {}
   if (p.color && STYLE_COLORS.some((c) => c.id === p.color)) out.color = p.color
+  if (p.tag && STYLE_COLORS.some((c) => c.id === p.tag)) out.tag = p.tag
+  if (p.bg && STYLE_BGS.some((c) => c.id === p.bg)) out.bg = p.bg
   if (p.weight && p.weight in WEIGHT_LABEL) out.weight = p.weight
   if (p.font && p.font in FONT_LABEL) out.font = p.font
   return Object.keys(out).length ? out : null
+}
+
+/** 课卡容器样式：仅在有个人背景时覆盖；状态（锁定/草稿/冲突）调用方优先 */
+export function cardStyle(s: ResolvedStyle): React.CSSProperties | undefined {
+  if (!s.bg) return undefined
+  if (s.bg.hex === "transparent") return { backgroundColor: "transparent" }
+  return { backgroundColor: s.bg.hex, borderColor: s.bg.border }
+}
+export function tagStyle(s: ResolvedStyle): React.CSSProperties | undefined {
+  return s.tagHex ? { color: s.tagHex, backgroundColor: `${s.tagHex}1a` } : undefined
 }

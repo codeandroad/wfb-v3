@@ -220,6 +220,15 @@ export function MtDemoBar() {
             <button type="button" className="text-left underline-offset-2 hover:underline" onClick={() => mt.applyRosterEvent("G1P1_LEAVE_12")}>
               {mt.biz.rosterEvents.includes("G1P1_LEAVE_12") ? "已模拟：" : ""}学生12 今日后退出 高一1班 P1
             </button>
+            <button
+              type="button"
+              aria-pressed={!!mt.biz.bigDemo}
+              data-testid="big-demo-toggle"
+              className="text-left underline-offset-2 hover:underline"
+              onClick={() => mt.setBigDemo(!mt.biz.bigDemo)}
+            >
+              {mt.biz.bigDemo ? "已加载大班分页演示（38/72/123 人）· 点击移除" : "加载大班分页演示（38/72/123 人，隔离数据）"}
+            </button>
             <select
               aria-label="模拟撤销任务权限"
               value=""

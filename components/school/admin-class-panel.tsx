@@ -209,7 +209,7 @@ export function AdminClassPanel() {
         })}
       </div>
 
-      {/* 班级概要��班主任团队 + 创班日期 + 大事件 */}
+      {/* 班级概要：班主任团队 + 创班日期 + 大事件 */}
       {summary ? (
         <ClassSummarySheet
           cls={summary}

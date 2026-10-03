@@ -13,8 +13,7 @@ import { currentWeek, filterStudents, FILTER_LABEL, permittedTasks, taskWeek, us
 import { parseFrom, taskTitle } from "@/lib/mt/display"
 import { MAX_WEEK, taskById, weekRangeLabel } from "@/lib/mt/model"
 import { scopeTask, useMt } from "@/lib/mt/store"
-import { useClassroomStandard } from "@/lib/mt/use-schemes"
-import { ViewModal } from "@/components/mt/scheme-settings"
+import { TaskSchemes } from "@/components/mt/task-schemes"
 import type { STask } from "@/lib/mt/model"
 import { cn } from "@/lib/utils"
 import { ArrowLeft, ShieldAlert } from "lucide-react"
@@ -170,7 +169,7 @@ export function TaskWorkspacePage({ id }: { id: string }) {
           <div className="flex flex-col items-end gap-2">
             <Badge tone={tw.status.tone}>{tw.status.label}</Badge>
             <div className="flex flex-wrap items-center gap-2">
-              <StandardLink task={task} week={week} />
+              <TaskSchemes task={task} week={week} />
               <WeekPicker week={week} current={currentWeek(mt.biz)} onChange={(w) => guard.go(href({ week: String(w), student: null }))} />
               {siblings.length > 1 ? (
                 <select
@@ -205,7 +204,7 @@ export function TaskWorkspacePage({ id }: { id: string }) {
             )}
           >
             {t.label}
-            {t.k === "homework" && tw.hwPending ? <span className="ml-1 text-xs text-[#8a5a12]">{tw.hwPending} 项���果待确认</span> : null}
+            {t.k === "homework" && tw.hwPending ? <span className="ml-1 text-xs text-[#8a5a12]">{tw.hwPending} 项结果待确认</span> : null}
             {t.k === "publish" && tw.unpublishedChanges ? <span className="ml-1 text-xs text-[#8a5a12]">有未发布修改</span> : null}
           </button>
         ))}
@@ -281,24 +280,3 @@ export function TaskWorkspacePage({ id }: { id: string }) {
   )
 }
 
-function StandardLink({ task, week }: { task: Pick<STask, "id" | "teacher_id">; week: number }) {
-  const std = useClassroomStandard(task, week)
-  const [open, setOpen] = useState(false)
-  if (!std.rev) return null
-  return (
-    <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        title={std.bound ? "本周反馈已固定此标准" : "本周尚未固定，当前按你的课堂默认标准"}
-        className="inline-flex h-9 items-center gap-1 rounded-lg border border-input bg-card px-3 text-sm text-muted-foreground hover:bg-muted hover:text-foreground"
-      >
-        {"课堂标准："}
-        <span className="text-foreground">{std.rev.name}</span>
-        {std.bound ? null : <span className="ml-1 text-xs">{"（默认）"}</span>}
-        <span className="ml-2 text-primary">查看本标准</span>
-      </button>
-      {open ? <ViewModal rev={std.rev} onClose={() => setOpen(false)} /> : null}
-    </>
-  )
-}

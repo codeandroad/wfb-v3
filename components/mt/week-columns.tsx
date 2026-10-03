@@ -161,8 +161,8 @@ export function HomeworkCell({ tw, sid, onOpen }: { tw: TaskWeek; sid: string; o
   if (!list.length) return <span className="text-xs text-muted-foreground">本期无作业</span>
   const s = summarize(list, sid, Date.parse(mt.biz.clock))
   const parts = [
-    s.ungraded ? { t: `待评价 ${s.ungraded}`, c: "text-warning-foreground bg-warning/15" } : null,
-    s.due ? { t: `待核对 ${s.due}`, c: "text-warning-foreground bg-warning/15" } : null,
+    s.ungraded ? { t: `待评价 ${s.ungraded}`, c: "border border-warning/50 bg-warning/10 text-foreground" } : null,
+    s.due ? { t: `待核对 ${s.due}`, c: "border border-warning/50 bg-warning/10 text-foreground" } : null,
     s.missing ? { t: `未交 ${s.missing}`, c: "text-destructive bg-destructive/10" } : null,
     s.checked ? { t: `已核对 ${s.checked}`, c: "text-muted-foreground bg-muted" } : null,
   ].filter(Boolean) as { t: string; c: string }[]

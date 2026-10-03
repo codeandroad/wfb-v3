@@ -41,7 +41,7 @@ import {
   type Requirement,
   type STask,
 } from "@/lib/mt/model"
-import { homeworkDefaultNow, levelText, ownerKey, revById } from "@/lib/mt/schemes"
+import { homeworkDefaultNow, homeworkRevForTask, levelText, ownerKey, revById } from "@/lib/mt/schemes"
 import { scopeTask, useHomeworkWriters, useMt, usePrefWriters, useTeacherPrefs, type HwDraft } from "@/lib/mt/store"
 import { ChevronDown, ChevronLeft, ChevronRight, ClipboardList, ExternalLink, Search, Undo2 } from "lucide-react"
 import Link from "next/link"
@@ -350,7 +350,7 @@ export function Pager({
 }) {
   const teacherId = useTeacherId()
   const pw = usePrefWriters(teacherId)
-  if (total <= PAGE_SIZES[0]) return null
+  if (pages <= 1 && total <= PAGE_SIZES[0]) return null
   const from = (page - 1) * size + 1
   const to = Math.min(total, page * size)
   return (
@@ -361,10 +361,10 @@ export function Pager({
       <span className="flex items-center gap-1.5">
         <label className="flex items-center gap-1">
           每页
-          <select className={sel} value={size} onChange={(e) => (pw.setPageSize(Number(e.target.value) as PageSize), onPage(1))}>
-            {PAGE_SIZES.map((n) => (
+          <select className={sel} value={size} onChange={(e) => (pw.setPageSize(Number(e.target.value)), onPage(1))}>
+            {[...new Set([...PAGE_SIZES, size])].sort((a, b) => a - b).map((n) => (
               <option key={n} value={n}>
-                {n}
+                {PAGE_SIZES.includes(n as (typeof PAGE_SIZES)[number]) ? n : `${n}（自定义）`}
               </option>
             ))}
           </select>
@@ -738,7 +738,7 @@ function ManagePanel({ a, onCopy }: { a: Assignment; onCopy?: (a: Assignment) =>
           <input type="datetime-local" className={sel} value={dl} disabled={life === "WITHDRAWN"} onChange={(e) => setDl(e.target.value)} />
         </label>
         <Btn size="sm" disabled={life === "WITHDRAWN" || dl === toLocalInput(a.deadline) || !dl} onClick={() => w.setDeadline(a, fromLocalInput(dl))}>
-          保��截止
+          保存截止
         </Btn>
         {a.deadline ? (
           <Btn size="sm" variant="ghost" disabled={life === "WITHDRAWN"} onClick={() => (w.setDeadline(a, null), setDl(""))}>
@@ -1051,7 +1051,7 @@ export function AssignForm({
         copiedFrom: copyFrom?.id ?? null,
         ...(mode === "OFFLINE" ? { offline: { registeredAt: s.clock } } : {}),
         // 首次布置绑定当时有效的作业默认方案；补录无依据时留空为“标准待核对”
-        schemeRevId: mode === "OFFLINE" && !useCurrentScheme ? null : homeworkDefaultNow(s.schemes, ownerKey(task.teacher_id), s.clock),
+        schemeRevId: mode === "OFFLINE" && !useCurrentScheme ? null : homeworkRevForTask(s.schemes, task.id, task.teacher_id, s.clock).revId,
         log: [{ at: s.clock, what: mode === "OFFLINE" ? `线下补录（原布置 ${origDate}）` : copyFrom ? `复制自「${copyFrom.title}」` : "布置" }],
       }
       const drafts = { ...(s.hwDrafts ?? {}) }
@@ -1081,7 +1081,7 @@ export function AssignForm({
           </Btn>
         </div>
       ) : null}
-      {copyFrom ? <p className="text-xs text-muted-foreground">复制���目内容自「{copyFrom.title}」；不复制提交、成绩、免做、延期或结束状态。</p> : null}
+      {copyFrom ? <p className="text-xs text-muted-foreground">复制题目内容自「{copyFrom.title}」；不复制提交、成绩、免做、延期或结束状态。</p> : null}
       <input className={inputCls} placeholder="作业标题" value={title} onChange={(e) => edit(setTitle)(e.target.value)} aria-label="作业标题" />
       <textarea
         className={inputCls}
