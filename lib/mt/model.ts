@@ -851,7 +851,7 @@ export function planRoutine(days: StudentDay[], standard: RoutineStandard): Rout
       continue
     }
     if (Object.values(r.att).some((a) => a.v !== "NORMAL")) {
-      skip("已有考勤例外，需人工处理")
+      skip("已有考勤例���，需人工处理")
       continue
     }
     const std = standard(d)
@@ -1090,6 +1090,45 @@ export interface HwResult {
   submissionConfirmed: boolean
   quality: string | null
   score: number | null
+  /** 明确不评价（与从未填写不同） */
+  noGrade?: boolean
+  /** 字段级修订：安全撤销只撤仍未被后续改动的字段 */
+  rev?: Partial<Record<HwField, number>>
+  qualitySource?: "MANUAL" | "BATCH"
+  /** 个别延期：只影响该生 */
+  extDeadline?: string | null
+  /** 参与安排待核对（显式标记，不自动由请假产生） */
+  review?: boolean
+  /** 家长可见结果说明 / 内部备注 / 免做或未参与原因（内部） */
+  note?: string
+  memo?: string
+  reason?: string
+  /** 退出有效状态的旧结果（不物理删除） */
+  history?: HwHistory[]
+}
+export type HwField = "submission" | "quality" | "score" | "noGrade" | "participating"
+export interface HwHistory {
+  at: string
+  what: string
+  from: string
+}
+export type HwLifecycle = "ACTIVE" | "CLOSED" | "WITHDRAWN"
+export interface HwBatchEntry {
+  sid: string
+  field: HwField
+  before: unknown
+  after: unknown
+  rev: number
+}
+export interface HwBatch {
+  id: string
+  token: string
+  kind: "SUBMIT" | "GRADE" | "ROUTINE"
+  at: string
+  label: string
+  entries: HwBatchEntry[]
+  skipped: { sid: string; reason: string }[]
+  undone?: { restored: number; kept: number; at: string }
 }
 export interface Assignment {
   id: string
@@ -1110,6 +1149,17 @@ export interface Assignment {
   createToken?: string
   /** 可选来源：从哪一天的日卡发起（仅作来源，不决定归期或截止） */
   sourceDate?: string | null
+  /** 生命周期：缺省视为 ACTIVE（已布置／进行中） */
+  status?: HwLifecycle
+  /** 线下补录：issuedAt 保存原布置日期（日期精度），registeredAt 为真实系统登记时间 */
+  offline?: { registeredAt: string }
+  /** 是否启用可选数字分数 */
+  scoreEnabled?: boolean
+  batches?: HwBatch[]
+  /** 首次布置后追加的学生及追加时点 */
+  addedAt?: Record<string, string>
+  copiedFrom?: string | null
+  log?: { at: string; what: string }[]
 }
 export const SUBMISSION_LABEL: Record<Submission, string> = {
   ON_TIME: "按时提交",
@@ -1159,36 +1209,9 @@ export function seedAssignments(clockIso: string): Assignment[] {
 export function requirementOf(a: Assignment, sid: string): Requirement {
   return a.requirementOverrides[sid] ?? a.defaultRequirement
 }
-export type HwStatus =
-  | "EXEMPT"
-  | "OPTIONAL_OUT"
-  | "OPTIONAL_UNKNOWN"
-  | "UNRECORDED"
-  | "SUSPECTED_MISSING"
-  | "MISSING"
-  | "UNGRADED"
-  | "GRADED"
-export function hwStatus(a: Assignment, sid: string, nowTs: number): { s: HwStatus; label: string; pending: boolean } {
-  const req = requirementOf(a, sid)
-  const r = a.results[sid]
-  if (req === "EXEMPT") return { s: "EXEMPT", label: "确认免做", pending: false }
-  if (req === "OPTIONAL" && r?.participating === false) return { s: "OPTIONAL_OUT", label: "选做未参与", pending: false }
-  if (!r || !r.submission) {
-    const due = a.deadline ? Date.parse(a.deadline) <= nowTs : false
-    if (req === "OPTIONAL") return { s: "OPTIONAL_UNKNOWN", label: "选做 · 未登记", pending: false }
-    return { s: "UNRECORDED", label: due ? "已过截止 · 未登记" : "��登记", pending: due }
-  }
-  if (r.submission === "MISSING") {
-    return r.submissionConfirmed
-      ? { s: "MISSING", label: "未交（已核实）", pending: false }
-      : { s: "SUSPECTED_MISSING", label: "疑似未交 · 待核实", pending: true }
-  }
-  if (!r.quality) return { s: "UNGRADED", label: `${SUBMISSION_LABEL[r.submission]} · 待评`, pending: true }
-  return { s: "GRADED", label: `${SUBMISSION_LABEL[r.submission]} · ${r.quality}`, pending: false }
-}
 /**
- * 作业归期（原型回退口径）：有截止按截止日期所在周；无截止按布置日期所在周。
- * 这是原型核验口径，不代表已修改产品政策。
+ * 作业归期（原型回退口径）：有截止按截止日期所在周；无截止按真实布置／补录原布置日期所在周。
+ * 个别延期不移动全班归期。这是原型核验口径，不代表已修改产品政策。
  */
 export function assignmentWeek(a: Assignment): number {
   return weekOfDate(dateOfClock(a.deadline ?? a.issuedAt))

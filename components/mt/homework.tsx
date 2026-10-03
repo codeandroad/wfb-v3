@@ -2,283 +2,967 @@
 
 import { Badge, Card, EmptyState } from "@/components/kit"
 import { SaveState } from "@/components/mt/shared"
-import { Btn, inputCls } from "@/components/mt/ui"
-import { nameOf, type TaskWeek } from "@/lib/mt/derive"
+import { Btn, Modal, inputCls } from "@/components/mt/ui"
 import {
-  addDaysIso,
-  assignmentWeek,
+  BATCH_LABEL,
+  BUCKET_LABEL,
+  defaultDeadline,
+  effDeadline,
+  hwBucket,
+  hwProgress,
+  hwState,
+  isSubmitted,
+  lifecycleOf,
+  planBatch,
+  STATE_LABEL,
+  writeBlock,
+  type BatchKind,
+  type BatchOpts,
+  type HwBucket,
+  type HwState,
+} from "@/lib/mt/hw"
+import { nameOf, useTeacherId, type TaskWeek } from "@/lib/mt/derive"
+import {
   clockLabel,
   dateOfClock,
+  fmtMD,
   homeroomName,
-  hwStatus,
   membersOn,
   requirementOf,
   studentById,
-  SUBMISSION_LABEL,
   type Assignment,
-  type STask,
   type Requirement,
-  type Submission,
+  type STask,
 } from "@/lib/mt/model"
 import { homeworkDefaultNow, levelText, ownerKey, revById } from "@/lib/mt/schemes"
-import { scopeTask, useHomeworkWriters, useMt } from "@/lib/mt/store"
-import { ClipboardList, Plus } from "lucide-react"
-import { useState } from "react"
+import { scopeTask, useHomeworkWriters, useMt, type HwDraft } from "@/lib/mt/store"
+import { ChevronDown, ChevronRight, ClipboardList, ExternalLink, Search, Undo2 } from "lucide-react"
+import Link from "next/link"
+import { useMemo, useRef, useState } from "react"
 
-const sel = "h-7 rounded-md border border-input bg-card px-1.5 text-xs"
+const sel = "h-7 rounded-md border border-input bg-card px-1.5 text-xs disabled:cursor-not-allowed disabled:opacity-50"
+const TZ = "+08:00"
+const toLocalInput = (iso: string | null | undefined) => (iso ? iso.slice(0, 16) : "")
+const fromLocalInput = (v: string) => `${v}:00${TZ}`
 
-export function HwResultControls({ a, sid }: { a: Assignment; sid: string }) {
-  const hwRev = revById(a.schemeRevId)
+export const LIFECYCLE_LABEL = { ACTIVE: "进行中", CLOSED: "已结束检查", WITHDRAWN: "已撤回" } as const
+
+function stateTone(s: HwState): "neutral" | "primary" | "success" | "warning" | "info" {
+  if (s === "GRADED" || s === "NO_GRADE") return "success"
+  if (s === "UNGRADED" || s === "DUE_UNRECORDED" || s === "SUSPECTED_MISSING" || s === "REVIEW") return "warning"
+  if (s === "MISSING") return "info"
+  return "neutral"
+}
+
+function deadlineText(iso: string | null) {
+  return iso ? clockLabel(iso) : "无截止"
+}
+
+/* ============================================================
+ * 单条结果：侧栏、周反馈、学生抽屉共用同一控件与写入命令
+ * ========================================================== */
+
+export function HwResultControls({ a, sid, showName }: { a: Assignment; sid: string; showName?: boolean }) {
   const mt = useMt()
   const w = useHomeworkWriters()
-  const req = requirementOf(a, sid)
+  const [more, setMore] = useState(false)
+  const nowTs = Date.parse(mt.biz.clock)
+  const rev = revById(a.schemeRevId ?? null)
   const r = a.results[sid]
-  const st = hwStatus(a, sid, Date.parse(mt.biz.clock))
+  const req = requirementOf(a, sid)
+  const st = hwState(a, sid, nowTs)
+  const block = writeBlock(a, sid, nowTs)
+  const submitted = isSubmitted(r?.submission)
+  const inactive = st === "EXEMPT" || st === "OPTIONAL_OUT"
+  const ext = r?.extDeadline ?? null
+
+  const subValue = !r?.submission ? "" : r.submission === "MISSING" ? (r.submissionConfirmed ? "MISSING" : "SUSPECT") : r.submission
+  const qValue = r?.noGrade ? "__NO__" : (r?.quality ?? "")
+
   return (
-    <div className="flex flex-wrap items-center gap-1.5">
-      <select aria-label="要求" className={sel} value={req} onChange={(e) => w.setRequirement(a, sid, e.target.value as Requirement)}>
-        <option value="REQUIRED">必做</option>
-        <option value="OPTIONAL">选做</option>
-        <option value="EXEMPT">确认免做</option>
-      </select>
-      {req === "OPTIONAL" ? (
-        <select
-          aria-label="参与"
-          className={sel}
-          value={r?.participating === undefined ? "" : r.participating ? "Y" : "N"}
-          onChange={(e) => e.target.value && w.setResult(a, sid, { participating: e.target.value === "Y" }, "选做参与")}
-        >
-          <option value="">参与未登记</option>
-          <option value="Y">参与</option>
-          <option value="N">未参与</option>
-        </select>
-      ) : null}
-      {req !== "EXEMPT" && !(req === "OPTIONAL" && r?.participating === false) ? (
-        <>
-          <select
-            aria-label="提交"
-            className={sel}
-            value={r?.submission ?? ""}
-            onChange={(e) =>
-              e.target.value &&
-              w.setResult(a, sid, { submission: e.target.value as Submission, submissionConfirmed: false }, "提交情况")
-            }
-          >
-            <option value="">提交未登记</option>
-            {(Object.keys(SUBMISSION_LABEL) as Submission[]).map((k) => (
-              <option key={k} value={k}>
-                {SUBMISSION_LABEL[k]}
-              </option>
-            ))}
-          </select>
-          {r?.submission === "MISSING" && !r.submissionConfirmed ? (
-            <Btn size="sm" onClick={() => w.setResult(a, sid, { submissionConfirmed: true }, "核实未交")}>
-              核实为未交
-            </Btn>
-          ) : null}
-          {r?.submission && r.submission !== "MISSING" ? (
-            <>
+    <div className="flex flex-col gap-1.5">
+      <div className="flex flex-wrap items-center gap-1.5">
+        {showName ? <span className="mr-1 min-w-24 text-sm font-medium">{nameOf(sid)}</span> : null}
+        {inactive ? (
+          <span className="text-xs text-muted-foreground">{STATE_LABEL[st]}{r?.reason ? ` · ${r.reason}` : ""}</span>
+        ) : (
+          <>
+            {req === "OPTIONAL" && r?.participating === undefined && !submitted ? (
               <select
-                aria-label="质量"
+                aria-label={`${nameOf(sid)} 选做参与`}
                 className={sel}
-                value={r.quality ?? ""}
-                onChange={(e) => w.setResult(a, sid, { quality: e.target.value || null }, "作业质量")}
+                disabled={!!block}
+                value=""
+                onChange={(e) => e.target.value && w.setResult(a, sid, { participating: e.target.value === "Y" }, "选做参与")}
               >
-                <option value="">质量待评</option>
-                {r.quality && !hwRev?.levels.some((l) => l.id === r.quality) ? (
-                  <option value={r.quality} disabled>
-                    {r.quality}（标准待核对）
-                  </option>
-                ) : null}
-                {(hwRev?.levels ?? []).map((l) => (
-                  <option key={l.id} value={l.id} title={l.guide || undefined}>
-                    {levelText(l)}
-                  </option>
-                ))}
+                <option value="">选做 · 参与未定</option>
+                <option value="Y">参与</option>
+                <option value="N">本次未参与</option>
               </select>
+            ) : null}
+            <select
+              aria-label={`${nameOf(sid)} 提交情况`}
+              className={sel}
+              disabled={!!block}
+              value={subValue}
+              onChange={(e) => {
+                const v = e.target.value
+                if (v === "SUSPECT") return
+                if (v === "") w.setResult(a, sid, { submission: null, submissionConfirmed: false }, "提交情况")
+                else if (v === "MISSING") w.setResult(a, sid, { submission: "MISSING", submissionConfirmed: true }, "核实未交")
+                else w.setResult(a, sid, { submission: v as "ON_TIME", submissionConfirmed: false }, "提交情况")
+              }}
+            >
+              <option value="">提交未登记</option>
+              <option value="ON_TIME">按时提交</option>
+              <option value="LATE">迟交</option>
+              <option value="SUBMITTED">已提交（时效未定）</option>
+              <option value="MISSING">已确认未交</option>
+              {subValue === "SUSPECT" ? (
+                <option value="SUSPECT" disabled>
+                  疑似未交（待核实）
+                </option>
+              ) : null}
+            </select>
+            <select
+              aria-label={`${nameOf(sid)} 作业评价`}
+              className={sel}
+              disabled={!!block || !submitted || !rev}
+              title={!submitted ? "登记提交后才能评价" : !rev ? "评价标准待核对" : undefined}
+              value={qValue}
+              onChange={(e) => {
+                const v = e.target.value
+                if (v === "__NO__") w.setResult(a, sid, { noGrade: true, quality: null }, "明确不评价")
+                else w.setResult(a, sid, { quality: v || null, noGrade: false }, "作业评价")
+              }}
+            >
+              <option value="">{submitted ? "待评价" : "—"}</option>
+              {(rev?.levels ?? []).map((l) => (
+                <option key={l.id} value={l.id} title={l.guide || undefined}>
+                  {levelText(l)}
+                </option>
+              ))}
+              <option value="__NO__">明确不评价</option>
+            </select>
+            {a.scoreEnabled ? (
               <input
-                aria-label="分数（可选）"
+                key={`${sid}-${r?.score ?? "e"}-${r?.rev?.score ?? 0}`}
+                aria-label={`${nameOf(sid)} 分数（可选）`}
                 type="number"
+                inputMode="decimal"
                 min={0}
                 placeholder="分数"
-                defaultValue={r.score ?? ""}
+                disabled={!!block || !submitted}
+                defaultValue={r?.score ?? ""}
                 onBlur={(e) => {
-                  const v = e.target.value === "" ? null : Number(e.target.value)
-                  if (v !== r.score) w.setResult(a, sid, { score: v }, "作业分数")
+                  const v = e.target.value.trim() === "" ? null : Number(e.target.value)
+                  if (v !== (r?.score ?? null) && (v === null || Number.isFinite(v))) w.setResult(a, sid, { score: v }, "作业分数")
                 }}
-                className="h-7 w-16 rounded-md border border-input bg-card px-1.5 text-xs"
+                className="h-7 w-16 rounded-md border border-input bg-card px-1.5 text-xs disabled:opacity-50"
               />
-            </>
-          ) : null}
-        </>
-      ) : null}
-      <Badge tone={st.pending ? "warning" : st.s === "GRADED" ? "success" : "neutral"}>{st.label}</Badge>
+            ) : null}
+          </>
+        )}
+        <Badge tone={stateTone(st)}>{STATE_LABEL[st]}</Badge>
+        {ext ? <span className="text-[11px] text-muted-foreground">个别延期至 {clockLabel(ext)}</span> : null}
+        {r?.note || r?.memo || r?.history?.length ? <span className="size-1.5 rounded-full bg-primary" aria-label="有说明或历史" /> : null}
+        <button
+          type="button"
+          onClick={() => setMore((v) => !v)}
+          aria-expanded={more}
+          className="inline-flex items-center gap-0.5 rounded px-1 text-[11px] text-muted-foreground hover:text-foreground"
+        >
+          {more ? <ChevronDown className="size-3" aria-hidden /> : <ChevronRight className="size-3" aria-hidden />}
+          例外与说明
+        </button>
+      </div>
+      {block ? <p className="text-[11px] text-[#8a5a12]">{block}</p> : null}
+      {more ? <ResultMore a={a} sid={sid} req={req} disabled={!!block} /> : null}
     </div>
   )
 }
+
+function ResultMore({ a, sid, req, disabled }: { a: Assignment; sid: string; req: Requirement; disabled: boolean }) {
+  const w = useHomeworkWriters()
+  const r = a.results[sid]
+  const [reason, setReason] = useState(r?.reason ?? "")
+  return (
+    <div className="flex flex-col gap-2 rounded-md border border-border bg-muted/40 p-2.5 text-xs">
+      <div className="flex flex-wrap items-center gap-2">
+        <label className="flex items-center gap-1">
+          本次要求
+          <select
+            className={sel}
+            disabled={disabled}
+            value={req}
+            onChange={(e) => w.setRequirement(a, sid, e.target.value as Requirement, reason || undefined)}
+          >
+            <option value="REQUIRED">必做</option>
+            <option value="OPTIONAL">选做</option>
+            <option value="EXEMPT">确认免做</option>
+          </select>
+        </label>
+        {req === "OPTIONAL" ? (
+          <label className="flex items-center gap-1">
+            参与
+            <select
+              className={sel}
+              disabled={disabled}
+              value={r?.participating === undefined ? "" : r.participating ? "Y" : "N"}
+              onChange={(e) => e.target.value && w.setResult(a, sid, { participating: e.target.value === "Y" }, "选做参与")}
+            >
+              <option value="">未定</option>
+              <option value="Y">参与</option>
+              <option value="N">本次未参与</option>
+            </select>
+          </label>
+        ) : null}
+        <label className="flex items-center gap-1">
+          原因（内部）
+          <input
+            className="h-7 w-36 rounded-md border border-input bg-card px-1.5"
+            value={reason}
+            placeholder="如：病假、比赛"
+            onChange={(e) => setReason(e.target.value)}
+            onBlur={() => reason !== (r?.reason ?? "") && w.setResult(a, sid, { reason }, "原因")}
+          />
+        </label>
+        <label className="flex items-center gap-1">
+          <input
+            type="checkbox"
+            checked={!!r?.review}
+            disabled={disabled}
+            onChange={(e) => w.setResult(a, sid, { review: e.target.checked }, "参与安排核对")}
+          />
+          参与安排待核对
+        </label>
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <label className="flex items-center gap-1">
+          个别延期
+          <input
+            type="datetime-local"
+            className={sel}
+            value={toLocalInput(r?.extDeadline)}
+            onChange={(e) => e.target.value && w.setResult(a, sid, { extDeadline: fromLocalInput(e.target.value) }, "个别延期")}
+          />
+        </label>
+        {r?.extDeadline ? (
+          <Btn size="sm" variant="ghost" onClick={() => w.setResult(a, sid, { extDeadline: null }, "取消个别延期")}>
+            取消延期
+          </Btn>
+        ) : null}
+        <span className="text-[11px] text-muted-foreground">只影响该生，不改全班截止。</span>
+      </div>
+      <TextField label="结果说明（家长可见）" value={r?.note ?? ""} onCommit={(v) => w.setResult(a, sid, { note: v }, "结果说明")} />
+      <TextField label="内部备注" value={r?.memo ?? ""} onCommit={(v) => w.setResult(a, sid, { memo: v }, "内部备注")} />
+      {r?.history?.length ? (
+        <div>
+          <p className="font-medium">已退出有效状态的旧结果</p>
+          <ul className="mt-0.5 text-[11px] text-muted-foreground">
+            {r.history.map((h, i) => (
+              <li key={i}>
+                {clockLabel(h.at)} · {h.what}（原：{h.from}）
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
+function TextField({ label, value, onCommit }: { label: string; value: string; onCommit: (v: string) => void }) {
+  const [v, setV] = useState(value)
+  return (
+    <label className="flex flex-col gap-0.5">
+      {label}
+      <input
+        className="h-7 rounded-md border border-input bg-card px-1.5"
+        value={v}
+        onChange={(e) => setV(e.target.value)}
+        onBlur={() => v !== value && onCommit(v)}
+      />
+    </label>
+  )
+}
+
+/* ============================================================
+ * 一份作业的统一评阅：筛选 + 搜索 + 三种批量 + 安全撤销
+ * ========================================================== */
+
+type ResultFilter = "all" | "ungraded" | "due" | "missing" | "exception" | "done"
+const FILTERS: { k: ResultFilter; label: string; match: (s: HwState) => boolean }[] = [
+  { k: "all", label: "全部", match: () => true },
+  { k: "ungraded", label: "待评价", match: (s) => s === "UNGRADED" },
+  { k: "due", label: "到期待核对", match: (s) => s === "DUE_UNRECORDED" || s === "SUSPECTED_MISSING" },
+  { k: "missing", label: "已确认未交", match: (s) => s === "MISSING" },
+  { k: "exception", label: "安排例外", match: (s) => s === "REVIEW" || s === "EXEMPT" || s === "OPTIONAL_OUT" },
+  { k: "done", label: "已评价", match: (s) => s === "GRADED" || s === "NO_GRADE" },
+]
+
+export function HwProgressLine({ a }: { a: Assignment }) {
+  const mt = useMt()
+  const p = hwProgress(a, Date.parse(mt.biz.clock))
+  return (
+    <span className="text-xs text-muted-foreground">
+      {p.E === 0 ? (
+        "无需核对"
+      ) : (
+        <>
+          核对 <b className="text-foreground">{p.checked}/{p.E}</b>
+        </>
+      )}
+      {p.graded + p.noGrade ? ` · 已评价 ${p.graded + p.noGrade}` : ""}
+      {p.ungraded ? ` · 待评价 ${p.ungraded}` : ""}
+      {p.missing ? ` · 已确认未交 ${p.missing}` : ""}
+      {p.dueUnrecorded + p.suspected ? ` · 到期待核对 ${p.dueUnrecorded + p.suspected}` : ""}
+      {p.notDue ? ` · 未到截止 ${p.notDue}` : ""}
+      {p.review ? ` · 安排待核对 ${p.review}` : ""}
+      {p.exempt ? ` · 免做 ${p.exempt}` : ""}
+      {p.optionalOut ? ` · 选做未参与 ${p.optionalOut}` : ""}
+    </span>
+  )
+}
+
+export function HwReview({
+  a,
+  manageHref,
+  onCopy,
+  initialStudent,
+}: {
+  a: Assignment
+  manageHref?: string
+  onCopy?: (a: Assignment) => void
+  initialStudent?: string | null
+}) {
+  const mt = useMt()
+  const [filter, setFilter] = useState<ResultFilter>("all")
+  const [q, setQ] = useState(initialStudent ? (nameOf(initialStudent) ?? "") : "")
+  const [picked, setPicked] = useState<Set<string>>(new Set())
+  const [batch, setBatch] = useState<BatchKind | null>(null)
+  const [manage, setManage] = useState(false)
+  const [msg, setMsg] = useState("")
+  const sticky = useRef<Set<string>>(new Set())
+  const nowTs = Date.parse(mt.biz.clock)
+  const life = lifecycleOf(a)
+
+  const rows = a.recipients.filter((sid) => {
+    const st = hwState(a, sid, nowTs)
+    const f = FILTERS.find((x) => x.k === filter)!
+    const nm = nameOf(sid) ?? ""
+    const hitQ = !q || nm.includes(q.trim())
+    if (!hitQ) return false
+    if (f.match(st)) {
+      sticky.current.add(sid)
+      return true
+    }
+    // 刚处理完的学生不立即从筛选结果中消失
+    return sticky.current.has(sid)
+  })
+  const counts = useMemo(() => {
+    const c: Record<ResultFilter, number> = { all: 0, ungraded: 0, due: 0, missing: 0, exception: 0, done: 0 }
+    for (const sid of a.recipients) {
+      const st = hwState(a, sid, nowTs)
+      for (const f of FILTERS) if (f.match(st)) c[f.k]++
+    }
+    return c
+  }, [a, nowTs])
+  const lastBatch = (a.batches ?? []).find((b) => !b.undone) ?? null
+  const w = useHomeworkWriters()
+
+  const changeFilter = (k: ResultFilter) => {
+    sticky.current = new Set()
+    setFilter(k)
+  }
+
+  return (
+    <Card className="overflow-hidden">
+      <div className="flex flex-col gap-2 border-b border-border px-4 py-3">
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <div className="min-w-0">
+            <h3 className="text-pretty font-semibold">{a.title}</h3>
+            <p className="text-xs text-muted-foreground">
+              默认{a.defaultRequirement === "REQUIRED" ? "必做" : "选做"} · 截止 {deadlineText(a.deadline)}
+              {a.offline ? ` · 线下补录（原布置 ${fmtMD(dateOfClock(a.issuedAt))}）` : ` · 布置于 ${clockLabel(a.issuedAt)}`}
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-1.5">
+            {life !== "ACTIVE" ? <Badge tone="neutral">{LIFECYCLE_LABEL[life]}</Badge> : null}
+            {manageHref ? (
+              <Link href={manageHref} className="inline-flex h-7 items-center gap-1 rounded-lg border border-input bg-card px-2.5 text-xs hover:bg-muted">
+                管理这份作业
+                <ExternalLink className="size-3" aria-hidden />
+              </Link>
+            ) : (
+              <Btn size="sm" onClick={() => setManage((v) => !v)} aria-expanded={manage}>
+                管理这份作业
+              </Btn>
+            )}
+          </div>
+        </div>
+        <HwProgressLine a={a} />
+        {a.instructions ? <p className="text-pretty text-xs leading-relaxed">{a.instructions}</p> : null}
+      </div>
+
+      {manage && !manageHref ? <ManagePanel a={a} onCopy={onCopy} /> : null}
+
+      <div className="flex flex-col gap-2 border-b border-border px-4 py-2.5">
+        <div className="flex flex-wrap items-center gap-1" role="group" aria-label="结果筛选">
+          {FILTERS.map((f) => (
+            <button
+              key={f.k}
+              type="button"
+              aria-pressed={filter === f.k}
+              onClick={() => changeFilter(f.k)}
+              className={`h-7 rounded-full border px-2.5 text-xs ${filter === f.k ? "border-primary bg-primary text-primary-foreground" : "border-border bg-card hover:border-primary/50"}`}
+            >
+              {f.label} {counts[f.k]}
+            </button>
+          ))}
+          <label className="relative ml-auto">
+            <span className="sr-only">搜索学生</span>
+            <Search className="pointer-events-none absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" aria-hidden />
+            <input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="姓名或学号"
+              className="h-7 w-40 rounded-md border border-input bg-card pl-7 pr-2 text-xs"
+            />
+          </label>
+        </div>
+        {life === "WITHDRAWN" ? (
+          <p className="text-xs text-muted-foreground">作业已撤回：结果保留可查，不能再登记或批量处理。</p>
+        ) : (
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="text-xs text-muted-foreground">
+              {picked.size ? `已勾选 ${picked.size} 人 · 批量只作用于勾选` : "批量作用于本作业全部符合条件的学生（不受搜索和筛选影响）"}
+            </span>
+            {picked.size ? (
+              <Btn size="sm" variant="ghost" onClick={() => setPicked(new Set())}>
+                清除勾选
+              </Btn>
+            ) : null}
+            <span className="ml-auto flex flex-wrap gap-1.5">
+              <Btn size="sm" onClick={() => setBatch("SUBMIT")}>
+                批量登记提交
+              </Btn>
+              <Btn size="sm" onClick={() => setBatch("GRADE")}>
+                批量评价
+              </Btn>
+              <Btn size="sm" variant="primary" onClick={() => setBatch("ROUTINE")}>
+                按常规登记
+              </Btn>
+            </span>
+          </div>
+        )}
+        {lastBatch ? (
+          <div className="flex flex-wrap items-center gap-2 rounded-md bg-muted px-2.5 py-1.5 text-xs">
+            <span>
+              最近一次：{lastBatch.label} · 写入 {new Set(lastBatch.entries.map((e) => e.sid)).size} 人
+              {lastBatch.skipped.length ? ` · 跳过 ${lastBatch.skipped.length}` : ""} · {clockLabel(lastBatch.at)}
+            </span>
+            <Btn
+              size="sm"
+              variant="ghost"
+              onClick={() => {
+                const r = w.undoBatch(a.id, lastBatch.id)
+                setMsg(r.ok ? `已撤销 ${r.restored} 项；${r.kept} 项因之后已被修改而保留` : r.error)
+              }}
+            >
+              <Undo2 className="size-3" aria-hidden />
+              安全撤销
+            </Btn>
+          </div>
+        ) : null}
+        {msg ? (
+          <p role="status" className="text-xs">
+            {msg}
+          </p>
+        ) : null}
+        <SaveState scope={`hw:${a.id}`} compact />
+      </div>
+
+      {rows.length === 0 ? (
+        <p className="px-4 py-8 text-center text-xs text-muted-foreground">{a.recipients.length ? "没有符合筛选的学生" : "这份作业没有适用学生"}</p>
+      ) : (
+        <ul className="divide-y divide-border">
+          {rows.map((sid) => (
+            <li key={sid} className="flex items-start gap-2.5 px-4 py-2">
+              {life !== "WITHDRAWN" ? (
+                <input
+                  type="checkbox"
+                  className="mt-1.5"
+                  aria-label={`勾选 ${nameOf(sid)}`}
+                  checked={picked.has(sid)}
+                  onChange={(e) => {
+                    const n = new Set(picked)
+                    if (e.target.checked) n.add(sid)
+                    else n.delete(sid)
+                    setPicked(n)
+                  }}
+                />
+              ) : null}
+              <div className="flex min-w-0 flex-1 flex-col gap-0.5 sm:flex-row sm:items-start sm:gap-3">
+                <span className="w-28 shrink-0 pt-1 text-sm">
+                  {nameOf(sid)}
+                  <span className="block text-[11px] text-muted-foreground">{homeroomName(studentById(sid)?.homeroom_id ?? "")}</span>
+                </span>
+                <HwResultControls a={a} sid={sid} />
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {batch ? (
+        <BatchDialog
+          a={a}
+          kind={batch}
+          subset={picked.size ? [...picked] : null}
+          onClose={(m) => {
+            setBatch(null)
+            if (m) setMsg(m)
+          }}
+        />
+      ) : null}
+    </Card>
+  )
+}
+
+function BatchDialog({
+  a,
+  kind,
+  subset,
+  onClose,
+}: {
+  a: Assignment
+  kind: BatchKind
+  subset: string[] | null
+  onClose: (msg?: string) => void
+}) {
+  const mt = useMt()
+  const w = useHomeworkWriters()
+  const rev = revById(a.schemeRevId ?? null)
+  const [token] = useState(() => `HBT_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`)
+  const [submission, setSubmission] = useState<"ON_TIME" | "LATE" | "SUBMITTED">("ON_TIME")
+  const [level, setLevel] = useState<string>(kind === "ROUTINE" ? (rev?.defaultLevelId ?? "") : "")
+  const [err, setErr] = useState("")
+  const nowTs = Date.parse(mt.biz.clock)
+  const opts: BatchOpts = kind === "SUBMIT" ? { submission } : { level: level || null }
+  const plan = planBatch(a, kind, opts, subset, nowTs)
+  const reasons = new Map<string, number>()
+  for (const s of plan.skipped) reasons.set(s.reason, (reasons.get(s.reason) ?? 0) + 1)
+  const lvl = rev?.levels.find((l) => l.id === level)
+  const needLevel = kind === "GRADE" && !level
+  const action =
+    kind === "SUBMIT"
+      ? { ON_TIME: "按时提交", LATE: "迟交", SUBMITTED: "已提交（时效未定）" }[submission]
+      : kind === "GRADE"
+        ? lvl
+          ? `评价为 ${levelText(lvl)}`
+          : "请选择等级"
+        : `按时提交${lvl ? ` · ${levelText(lvl)}` : "（仅登记提交，不评等级）"}`
+
+  const run = () => {
+    if (needLevel) return setErr("请选择要采用的等级")
+    if (!plan.writes.length) return setErr("没有符合条件的学生，未写入任何结果")
+    const r = w.runBatch(
+      token,
+      a.id,
+      kind,
+      opts,
+      subset,
+      plan.writes.map((x) => x.sid),
+    )
+    if (!r.ok) return setErr(r.error)
+    const n = new Set(r.batch.entries.map((e) => e.sid)).size
+    onClose(`${BATCH_LABEL[kind]}：写入 ${n} 人${r.batch.skipped.length ? `，跳过 ${r.batch.skipped.length} 人` : ""}${r.reused ? "（重复提交，未再次写入）" : ""}`)
+  }
+
+  return (
+    <Modal
+      title={kind === "ROUTINE" ? "按常规登记" : BATCH_LABEL[kind]}
+      desc={`${a.title} · ${subset ? `仅勾选的 ${subset.length} 人` : `本作业全部 ${a.recipients.length} 名适用学生`}`}
+      onClose={() => onClose()}
+      footer={
+        <>
+          <Btn variant="ghost" onClick={() => onClose()}>
+            取消
+          </Btn>
+          <Btn variant="primary" onClick={run} disabled={needLevel || !plan.writes.length}>
+            {plan.writes.length ? `确认写入 ${plan.writes.length} 人` : "没有符合项"}
+          </Btn>
+        </>
+      }
+    >
+      <div className="flex flex-col gap-3 text-sm">
+        {kind === "SUBMIT" ? (
+          <label className="flex items-center gap-2">
+            登记为
+            <select className={sel} value={submission} onChange={(e) => setSubmission(e.target.value as "ON_TIME")}>
+              <option value="ON_TIME">按时提交</option>
+              <option value="LATE">迟交</option>
+              <option value="SUBMITTED">已提交（时效未定）</option>
+            </select>
+          </label>
+        ) : rev ? (
+          <label className="flex items-center gap-2">
+            {kind === "ROUTINE" ? "常规等级" : "等级"}
+            <select className={sel} value={level} onChange={(e) => setLevel(e.target.value)}>
+              <option value="">{kind === "ROUTINE" ? "不评等级，仅登记按时提交" : "请选择"}</option>
+              {rev.levels.map((l) => (
+                <option key={l.id} value={l.id}>
+                  {levelText(l)}
+                  {l.id === rev.defaultLevelId ? "（本作业常规默认）" : ""}
+                </option>
+              ))}
+            </select>
+          </label>
+        ) : (
+          <p className="text-xs text-[#8a5a12]">这份作业的评价标准待核对，只能登记提交。</p>
+        )}
+        <div className="rounded-md bg-muted px-3 py-2">
+          <p>
+            将为 <b>{plan.writes.length}</b> 人登记：<b>{action}</b>
+          </p>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            {kind === "SUBMIT"
+              ? "只登记提交，不评分；已有相反的提交结论不会被覆盖。"
+              : kind === "GRADE"
+                ? "只处理已提交且待评价的学生；迟交仍为迟交，已有手工等级、分数或明确不评价保留。"
+                : "只处理未登记提交的常规候选；跳过迟交、未交、免做、未参与和已处理的学生。"}
+          </p>
+        </div>
+        {reasons.size ? (
+          <div>
+            <p className="text-xs font-medium">跳过 {plan.skipped.length} 人</p>
+            <ul className="mt-0.5 flex flex-wrap gap-1.5 text-xs text-muted-foreground">
+              {[...reasons].map(([k, n]) => (
+                <li key={k} className="rounded bg-muted px-1.5 py-0.5">
+                  {k} {n}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+        {err ? (
+          <p role="alert" className="text-xs text-[#9a2b22]">
+            {err}
+          </p>
+        ) : null}
+      </div>
+    </Modal>
+  )
+}
+
+function ManagePanel({ a, onCopy }: { a: Assignment; onCopy?: (a: Assignment) => void }) {
+  const mt = useMt()
+  const w = useHomeworkWriters()
+  const [msg, setMsg] = useState("")
+  const [dl, setDl] = useState(toLocalInput(a.deadline))
+  const [addSel, setAddSel] = useState<Set<string>>(new Set())
+  const [addDl, setAddDl] = useState("")
+  const life = lifecycleOf(a)
+  const nowTs = Date.parse(mt.biz.clock)
+  const p = hwProgress(a, nowTs)
+  const candidates = membersOn(mt.biz.memberships[a.taskId] ?? [], dateOfClock(mt.biz.clock)).filter((s) => !a.recipients.includes(s))
+  const pastDue = a.deadline ? Date.parse(a.deadline) < nowTs : false
+  const say = (r: { ok: boolean; error?: string }, ok: string) => setMsg(r.ok ? ok : (r as { error: string }).error)
+
+  return (
+    <div className="flex flex-col gap-3 border-b border-border bg-muted/30 px-4 py-3 text-xs">
+      <div className="flex flex-wrap items-center gap-2">
+        <label className="flex items-center gap-1.5">
+          全班截止
+          <input type="datetime-local" className={sel} value={dl} disabled={life === "WITHDRAWN"} onChange={(e) => setDl(e.target.value)} />
+        </label>
+        <Btn size="sm" disabled={life === "WITHDRAWN" || dl === toLocalInput(a.deadline) || !dl} onClick={() => w.setDeadline(a, fromLocalInput(dl))}>
+          保存截止
+        </Btn>
+        {a.deadline ? (
+          <Btn size="sm" variant="ghost" disabled={life === "WITHDRAWN"} onClick={() => (w.setDeadline(a, null), setDl(""))}>
+            改为无截止
+          </Btn>
+        ) : null}
+        <label className="ml-auto flex items-center gap-1.5">
+          <input type="checkbox" checked={!!a.scoreEnabled} onChange={(e) => w.setScoreEnabled(a, e.target.checked)} />
+          启用可选数字分数
+        </label>
+      </div>
+      <p className="text-[11px] text-muted-foreground">
+        修改截止不会重算已登记的按时／迟交；录入锁定为有效截止后 3 天，无截止不锁定。评价标准：{revById(a.schemeRevId ?? null)?.name ?? "待核对"}（布置时固定）。
+      </p>
+
+      {life === "ACTIVE" && candidates.length ? (
+        <div className="flex flex-col gap-1.5">
+          <p className="font-medium">追加适用学生（当前在读、未在本作业中）</p>
+          <div className="flex flex-wrap gap-2">
+            {candidates.map((sid) => (
+              <label key={sid} className="flex items-center gap-1">
+                <input
+                  type="checkbox"
+                  checked={addSel.has(sid)}
+                  onChange={(e) => {
+                    const n = new Set(addSel)
+                    if (e.target.checked) n.add(sid)
+                    else n.delete(sid)
+                    setAddSel(n)
+                  }}
+                />
+                {nameOf(sid)}
+              </label>
+            ))}
+          </div>
+          {addSel.size ? (
+            <div className="flex flex-wrap items-center gap-2">
+              {pastDue ? (
+                <label className="flex items-center gap-1">
+                  全班截止已过，新学生的个别截止
+                  <input type="datetime-local" className={sel} value={addDl} onChange={(e) => setAddDl(e.target.value)} />
+                </label>
+              ) : null}
+              <Btn
+                size="sm"
+                disabled={pastDue && !addDl}
+                onClick={() => {
+                  say(w.addRecipients(a, [...addSel], addDl ? fromLocalInput(addDl) : null), `已追加 ${addSel.size} 人`)
+                  setAddSel(new Set())
+                }}
+              >
+                追加 {addSel.size} 人
+              </Btn>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+
+      <div className="flex flex-wrap items-center gap-2">
+        {life === "ACTIVE" ? (
+          <Btn
+            size="sm"
+            onClick={() => {
+              const open = p.ungraded + p.dueUnrecorded + p.suspected + p.review + p.notDue
+              if (open && !confirm(`仍有 ${open} 项未结（待评价、未登记或安排待核对）。结束检查不等于核对完成，这些项会保持原状。继续？`)) return
+              say(w.setLifecycle(a, "CLOSED", "结束检查"), "已结束检查；已确认未交保持不变")
+            }}
+          >
+            结束检查
+          </Btn>
+        ) : null}
+        {life === "CLOSED" ? (
+          <Btn size="sm" onClick={() => say(w.setLifecycle(a, "ACTIVE", "恢复处理（补交）"), "已恢复处理，可在原作业中登记补交")}>
+            恢复处理（补交）
+          </Btn>
+        ) : null}
+        {onCopy && life !== "WITHDRAWN" ? (
+          <Btn size="sm" onClick={() => onCopy(a)}>
+            复制到另一任务
+          </Btn>
+        ) : onCopy ? (
+          <Btn size="sm" onClick={() => onCopy(a)}>
+            复制为新作业
+          </Btn>
+        ) : null}
+        {life !== "WITHDRAWN" ? (
+          <Btn
+            size="sm"
+            variant="danger"
+            onClick={() => {
+              if (!confirm("撤回误布置的作业？已有结果与发布引用会保留，但不能再登记。")) return
+              say(w.setLifecycle(a, "WITHDRAWN", "撤回作业"), "已撤回")
+            }}
+          >
+            撤回误布置
+          </Btn>
+        ) : null}
+        {msg ? <span role="status">{msg}</span> : null}
+      </div>
+      {a.log?.length ? (
+        <details>
+          <summary className="cursor-pointer text-muted-foreground">变更记录（{a.log.length}）</summary>
+          <ul className="mt-1 text-[11px] text-muted-foreground">
+            {[...a.log].reverse().map((l, i) => (
+              <li key={i}>
+                {clockLabel(l.at)} · {l.what}
+              </li>
+            ))}
+          </ul>
+        </details>
+      ) : null}
+    </div>
+  )
+}
+
+/* ============================================================
+ * 周反馈“作业评价”：本期应完成 / 后续安排 / 往期未结
+ * ========================================================== */
 
 export function HomeworkPanel({ tw, focusId }: { tw: TaskWeek; focusId?: string | null }) {
   const mt = useMt()
-  const [showAll, setShowAll] = useState(false)
-  const [openId, setOpenId] = useState<string | null>(focusId ?? tw.assignments[0]?.id ?? null)
-  const [creating, setCreating] = useState(false)
-  const [onlyPending, setOnlyPending] = useState(false)
-  const all = mt.biz.assignments.filter((a) => a.taskId === tw.task.id)
-  const list = showAll ? all : tw.assignments
   const nowTs = Date.parse(mt.biz.clock)
-  const open = all.find((a) => a.id === openId) ?? null
+  const groups = useMemo(() => {
+    const g: Record<HwBucket, Assignment[]> = { THIS: [], LATER: [], PAST_OPEN: [] }
+    for (const a of mt.biz.assignments) {
+      if (a.taskId !== tw.task.id) continue
+      const b = hwBucket(a, tw.week, nowTs)
+      if (b) g[b].push(a)
+    }
+    return g
+  }, [mt.biz.assignments, tw.task.id, tw.week, nowTs])
+  const flat = [...groups.THIS, ...groups.PAST_OPEN, ...groups.LATER]
+  const [openId, setOpenId] = useState<string | null>(focusId && flat.some((a) => a.id === focusId) ? focusId : (flat[0]?.id ?? null))
+  const open = mt.biz.assignments.find((a) => a.id === openId) ?? null
+  const manageBase = `/homework?task=${encodeURIComponent(tw.task.id)}`
+
+  if (!flat.length)
+    return (
+      <EmptyState
+        icon={<ClipboardList className="size-7" />}
+        title="本期没有需要评价的作业"
+        desc="本期应完成、往期未结与后续安排都为空。可在日卡或作业管理中布置。"
+        action={
+          <Link href={manageBase} className="text-sm text-primary underline-offset-2 hover:underline">
+            前往作业管理
+          </Link>
+        }
+      />
+    )
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[18rem_1fr]">
-      <div className="flex flex-col gap-3">
-        <div className="flex items-center justify-between">
-          <label className="flex items-center gap-1.5 text-xs">
-            <input type="checkbox" checked={showAll} onChange={(e) => setShowAll(e.target.checked)} />
-            查看本任务全部作业（{all.length}）
-          </label>
-          <Btn size="sm" variant="primary" onClick={() => setCreating(true)}>
-            <Plus className="size-3" aria-hidden />
-            布置
-          </Btn>
-        </div>
-        {creating ? <CreateHw tw={tw} onDone={(id) => (setCreating(false), id && setOpenId(id))} /> : null}
-        {list.length === 0 ? (
-          <p className="rounded-lg border border-dashed border-border px-3 py-6 text-center text-xs text-muted-foreground">
-            本周期没有作业。{all.length ? "勾选“查看本任务全部作业”可找到跨期未结项。" : ""}
-          </p>
-        ) : (
-          <ul className="flex flex-col gap-1.5">
-            {list.map((a) => {
-              const pending = a.recipients.filter((s) => hwStatus(a, s, nowTs).pending).length
-              return (
-                <li key={a.id}>
-                  <button
-                    type="button"
-                    onClick={() => setOpenId(a.id)}
-                    aria-current={a.id === openId}
-                    className={`w-full rounded-lg border px-3 py-2 text-left ${a.id === openId ? "border-primary bg-accent" : "border-border bg-card hover:border-primary/50"}`}
-                  >
-                    <span className="block text-sm font-medium">{a.title}</span>
-                    <span className="block text-[11px] text-muted-foreground">
-                      第 {assignmentWeek(a)} 周归期 · 截止 {a.deadline ? clockLabel(a.deadline) : "无"}
-                    </span>
-                    <span className="mt-0.5 block text-[11px]">
-                      {a.recipients.length} 人{pending ? <span className="text-[#8a5a12]"> · 待确认 {pending}</span> : null}
-                    </span>
-                  </button>
-                </li>
-              )
-            })}
-          </ul>
+    <div className="grid gap-4 lg:grid-cols-[17rem_1fr]">
+      <nav aria-label="作业" className="flex flex-col gap-3">
+        {(["THIS", "PAST_OPEN", "LATER"] as HwBucket[]).map((b) =>
+          groups[b].length ? (
+            <div key={b} className="flex flex-col gap-1.5">
+              <p className="text-xs font-medium text-muted-foreground">
+                {BUCKET_LABEL[b]} {groups[b].length}
+              </p>
+              <ul className="flex flex-col gap-1.5">
+                {groups[b].map((a) => (
+                  <li key={a.id}>
+                    <HwListItem a={a} active={a.id === openId} onClick={() => setOpenId(a.id)} />
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null,
         )}
         <p className="text-[11px] leading-relaxed text-muted-foreground">
-          归期为原型回退口径：有截止按截止日期所在周，无截止按布置日期所在周；不代表已修改产品政策。
+          归期按有效截止所在周；无截止按布置日期所在周。处理往期作业不会自动加入本周发布。
         </p>
-      </div>
-
-      {open ? (
-        <Card className="overflow-hidden">
-          <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border px-4 py-3">
-            <div>
-              <h3 className="font-semibold">{open.title}</h3>
-              <p className="text-xs text-muted-foreground">
-                ID {open.id} · 布置于 {clockLabel(open.issuedAt)} · 默认{open.defaultRequirement === "REQUIRED" ? "必做" : "选做"} · 适用名单固定于布置时（{open.recipients.length} 人）
-              </p>
-              {open.instructions ? <p className="mt-1 text-xs">{open.instructions}</p> : null}
-            </div>
-            <DeadlineEditor a={open} />
-          </div>
-          <div className="flex items-center justify-between px-4 py-2 text-xs">
-            <label className="flex items-center gap-1.5">
-              <input type="checkbox" checked={onlyPending} onChange={(e) => setOnlyPending(e.target.checked)} />
-              仅看待确认
-            </label>
-            <SaveState scope={`hw:${open.id}`} compact />
-          </div>
-          <ul className="divide-y divide-border">
-            {open.recipients
-              .filter((s) => !onlyPending || hwStatus(open, s, nowTs).pending)
-              .map((sid) => (
-                <li key={sid} className="flex flex-wrap items-center justify-between gap-2 px-4 py-2">
-                  <span className="text-sm">
-                    {nameOf(sid)}
-                    <span className="ml-1.5 text-[11px] text-muted-foreground">{homeroomName(studentById(sid)?.homeroom_id ?? "")}</span>
-                  </span>
-                  <HwResultControls a={open} sid={sid} />
-                </li>
-              ))}
-          </ul>
-        </Card>
-      ) : (
-        <EmptyState icon={<ClipboardList className="size-7" />} title="选择或布置一项作业" desc="作业按真实任务保存，与课堂日期记录分开。" />
-      )}
+        <Link href={manageBase} className="text-xs text-primary underline-offset-2 hover:underline">
+          在作业管理中布置或查看全部
+        </Link>
+      </nav>
+      {open ? <HwReview key={open.id} a={open} manageHref={`${manageBase}&hw=${encodeURIComponent(open.id)}`} /> : null}
     </div>
   )
 }
 
-function DeadlineEditor({ a }: { a: Assignment }) {
-  const w = useHomeworkWriters()
+export function HwListItem({ a, active, onClick, sub }: { a: Assignment; active: boolean; onClick: () => void; sub?: string }) {
+  const mt = useMt()
+  const p = hwProgress(a, Date.parse(mt.biz.clock))
+  const life = lifecycleOf(a)
+  const due = p.dueUnrecorded + p.suspected
   return (
-    <div className="flex items-center gap-1.5 text-xs">
-      <label className="flex items-center gap-1.5">
-        截止
-        <input
-          type="datetime-local"
-          value={a.deadline ? a.deadline.slice(0, 16) : ""}
-          onChange={(e) => e.target.value && w.setDeadline(a, `${e.target.value}:00+08:00`)}
-          className="h-7 rounded-md border border-input bg-card px-1.5"
-        />
-      </label>
-      {a.deadline ? (
-        <Btn size="sm" variant="ghost" onClick={() => w.setDeadline(a, null)}>
-          清空截止
-        </Btn>
-      ) : null}
-    </div>
+    <button
+      type="button"
+      onClick={onClick}
+      aria-current={active}
+      className={`w-full rounded-lg border px-3 py-2 text-left ${active ? "border-primary bg-accent" : "border-border bg-card hover:border-primary/50"}`}
+    >
+      <span className="line-clamp-2 block text-sm font-medium">{a.title}</span>
+      {sub ? <span className="block truncate text-[11px] text-muted-foreground">{sub}</span> : null}
+      <span className="block text-[11px] text-muted-foreground">
+        截止 {deadlineText(a.deadline)}
+        {life !== "ACTIVE" ? ` · ${LIFECYCLE_LABEL[life]}` : ""}
+      </span>
+      <span className="mt-1 flex flex-wrap gap-1 text-[11px]">
+        <span className="text-muted-foreground">{p.E ? `核对 ${p.checked}/${p.E}` : "无需核对"}</span>
+        {p.ungraded ? <span className="rounded bg-[#f6ead2] px-1 text-[#7a4f0e]">待评价 {p.ungraded}</span> : null}
+        {due ? <span className="rounded bg-[#f6ead2] px-1 text-[#7a4f0e]">到期待核对 {due}</span> : null}
+        {p.review ? <span className="rounded bg-muted px-1">安排待核对 {p.review}</span> : null}
+      </span>
+    </button>
   )
 }
 
-function CreateHw({ tw, onDone }: { tw: TaskWeek; onDone: (id: string | null) => void }) {
-  return <AssignForm task={tw.task} onDone={onDone} />
-}
+/* ============================================================
+ * 统一布置：新布置 / 复制 / 线下补录（侧栏、日卡共用）
+ * ========================================================== */
 
-/**
- * 统一布置流程：作业页“布置”与日卡“布置作业”共用同一表单、同一命令、同一 assignments 集合。
- * sourceDate 只记录来源；归期与截止仍按布置/截止规则。createToken 防止重试重复创建。
- */
+export type AssignMode = "NEW" | "OFFLINE" | "COPY"
+
 export function AssignForm({
   task,
   sourceDate,
+  mode = "NEW",
+  copyFrom,
   onDone,
 }: {
   task: Pick<STask, "id" | "teacher_id">
   sourceDate?: string | null
+  mode?: AssignMode
+  copyFrom?: Assignment | null
   onDone: (id: string | null) => void
 }) {
   const mt = useMt()
+  const w = useHomeworkWriters()
+  const teacherId = useTeacherId() ?? task.teacher_id
+  const draftKey = `${teacherId}|${task.id}|${mode}${copyFrom ? `|${copyFrom.id}` : ""}`
+  const draft = mode === "COPY" ? undefined : mt.biz.hwDrafts?.[draftKey]
+  const today = dateOfClock(mt.biz.clock)
+
   const [token] = useState(() => `AS_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`)
-  const [title, setTitle] = useState("")
-  const [instructions, setInstructions] = useState("")
-  const [req, setReq] = useState<"REQUIRED" | "OPTIONAL">("REQUIRED")
-  const [dl, setDl] = useState<"DEFAULT" | "NONE" | "CUSTOM">("DEFAULT")
-  const [custom, setCustom] = useState("")
+  const [title, setTitle] = useState(draft?.title ?? copyFrom?.title ?? "")
+  const [instructions, setInstructions] = useState(draft?.instructions ?? copyFrom?.instructions ?? "")
+  const [req, setReq] = useState<"REQUIRED" | "OPTIONAL">(draft?.requirement ?? copyFrom?.defaultRequirement ?? "REQUIRED")
+  // DEFAULT = 实际布置成功后第 3 个自然日结束；NONE = 明确无截止；其它为手填
+  const [dl, setDl] = useState<string>(draft?.deadline ?? (mode === "OFFLINE" ? "NONE" : "DEFAULT"))
+  const [origDate, setOrigDate] = useState(draft?.originalDate ?? "")
+  const [useCurrentScheme, setUseCurrentScheme] = useState(true)
+  const rosterDate = mode === "OFFLINE" && origDate ? origDate : today
+  const roster = membersOn(mt.biz.memberships[task.id] ?? [], rosterDate)
+  const [excluded, setExcluded] = useState<Set<string>>(new Set())
   const [err, setErr] = useState("")
   const [busy, setBusy] = useState(false)
+  const dirty = useRef(false)
+
+  const persistDraft = () => {
+    if (!dirty.current || mode === "COPY") return
+    const d: HwDraft = { teacherId, taskId: task.id, mode, title, instructions, requirement: req, deadline: dl, originalDate: origDate, sourceDate: sourceDate ?? null }
+    w.saveDraft(draftKey, d)
+  }
+  const edit = <T,>(set: (v: T) => void) => (v: T) => {
+    dirty.current = true
+    set(v)
+  }
+
+  const recipients = roster.filter((s) => !excluded.has(s))
+  const previewDeadline = dl === "DEFAULT" ? defaultDeadline(mt.biz.clock) : dl === "NONE" ? null : fromLocalInput(dl)
+  const pastDeadline = mode !== "OFFLINE" && previewDeadline && Date.parse(previewDeadline) < Date.parse(mt.biz.clock)
+
   const submit = () => {
     if (busy) return
     if (!title.trim()) return setErr("请输入作业标题")
-    if (dl === "CUSTOM" && !custom) return setErr("请选择截止时间")
+    if (mode === "OFFLINE" && !origDate) return setErr("请填写原布置日期")
+    if (mode === "OFFLINE" && origDate > today) return setErr("原布置日期不能晚于今天")
+    if (!recipients.length) return setErr("请至少保留一名适用学生")
+    if (pastDeadline) return setErr("截止早于现在。已经线下布置的旧作业请使用“补录线下作业”")
     setBusy(true)
     let newId: string | null = null
-    const r = mt.command("布置作业", (s) => {
+    const r = mt.command(mode === "OFFLINE" ? "补录线下作业" : "布置作业", (s) => {
       const existing = s.assignments.find((x) => x.createToken === token)
       if (existing) {
         newId = existing.id
         return s
       }
-      const recipients = membersOn(s.memberships[task.id] ?? [], dateOfClock(s.clock))
-      if (!recipients.length) return { error: "布置时点没有有效学生" }
+      const valid = new Set(membersOn(s.memberships[task.id] ?? [], mode === "OFFLINE" ? origDate : dateOfClock(s.clock)))
+      const finalList = recipients.filter((x) => valid.has(x))
+      if (finalList.length !== recipients.length) return { error: "名单在确认前发生变化，请重新核对适用学生" }
       newId = `HW_${task.id}_${s.seq + 1}`
+      const deadline = dl === "NONE" ? null : dl === "DEFAULT" ? defaultDeadline(s.clock) : fromLocalInput(dl)
       const a: Assignment = {
         id: newId,
         taskId: task.id,
@@ -286,65 +970,130 @@ export function AssignForm({
         sourceDate: sourceDate ?? null,
         title: title.trim(),
         instructions: instructions.trim(),
-        issuedAt: s.clock,
-        deadline: dl === "NONE" ? null : dl === "CUSTOM" ? `${custom}:00+08:00` : addDaysIso(s.clock, 3),
-        recipients,
+        issuedAt: mode === "OFFLINE" ? `${origDate}T00:00:00${TZ}` : s.clock,
+        deadline,
+        recipients: finalList,
         defaultRequirement: req,
         requirementOverrides: {},
         results: {},
         revision: 1,
         stamp: s.stamp + 1,
-        // 首次成功布置时固定作业质量标准，后续改默认不影响本作业
-        schemeRevId: homeworkDefaultNow(s.schemes, ownerKey(task.teacher_id), s.clock),
+        status: "ACTIVE",
+        scoreEnabled: copyFrom?.scoreEnabled ?? false,
+        copiedFrom: copyFrom?.id ?? null,
+        ...(mode === "OFFLINE" ? { offline: { registeredAt: s.clock } } : {}),
+        // 首次布置绑定当时有效的作业默认方案；补录无依据时留空为“标准待核对”
+        schemeRevId: mode === "OFFLINE" && !useCurrentScheme ? null : homeworkDefaultNow(s.schemes, ownerKey(task.teacher_id), s.clock),
+        log: [{ at: s.clock, what: mode === "OFFLINE" ? `线下补录（原布置 ${origDate}）` : copyFrom ? `复制自「${copyFrom.title}」` : "布置" }],
       }
-      return { ...s, seq: s.seq + 1, assignments: [...s.assignments, a] }
+      const drafts = { ...(s.hwDrafts ?? {}) }
+      delete drafts[draftKey]
+      return { ...s, seq: s.seq + 1, assignments: [...s.assignments, a], hwDrafts: drafts }
     })
     setBusy(false)
     if (!r.ok) return setErr(r.error)
     onDone(newId)
   }
+
   return (
-    <div className="flex flex-col gap-2 rounded-lg border border-border bg-card p-3">
-      <input className={inputCls} placeholder="作业标题" value={title} onChange={(e) => setTitle(e.target.value)} aria-label="作业标题" />
+    <div className="flex flex-col gap-3 rounded-lg border border-border bg-card p-3" onBlur={persistDraft}>
+      {draft?.savedAt ? (
+        <div className="flex items-center justify-between rounded-md bg-muted px-2.5 py-1.5 text-xs">
+          <span>已恢复 {clockLabel(draft.savedAt)} 的未布置草稿</span>
+          <Btn
+            size="sm"
+            variant="ghost"
+            onClick={() => {
+              w.saveDraft(draftKey, null)
+              dirty.current = false
+              onDone(null)
+            }}
+          >
+            删除草稿
+          </Btn>
+        </div>
+      ) : null}
+      {copyFrom ? <p className="text-xs text-muted-foreground">复制题目内容自「{copyFrom.title}」；不复制提交、成绩、免做、延期或结束状态。</p> : null}
+      <input className={inputCls} placeholder="作业标题" value={title} onChange={(e) => edit(setTitle)(e.target.value)} aria-label="作业标题" />
       <textarea
         className={inputCls}
-        rows={2}
-        placeholder="说明（可选）"
+        rows={3}
+        placeholder="作业要求／内容"
         value={instructions}
-        onChange={(e) => setInstructions(e.target.value)}
-        aria-label="作业说明"
+        onChange={(e) => edit(setInstructions)(e.target.value)}
+        aria-label="作业要求"
       />
-      <div className="flex flex-wrap gap-2 text-xs">
-        <select aria-label="默认要求" className={sel} value={req} onChange={(e) => setReq(e.target.value as "REQUIRED")}>
+      <div className="flex flex-wrap items-center gap-2 text-xs">
+        <select aria-label="默认要求" className={sel} value={req} onChange={(e) => edit(setReq)(e.target.value as "REQUIRED")}>
           <option value="REQUIRED">必做</option>
           <option value="OPTIONAL">选做</option>
         </select>
-        <select aria-label="截止" className={sel} value={dl} onChange={(e) => setDl(e.target.value as "DEFAULT")}>
-          <option value="DEFAULT">截止：布置后 3 天</option>
-          <option value="CUSTOM">自定义截止</option>
-          <option value="NONE">无截止</option>
-        </select>
-        {dl === "CUSTOM" ? (
-          <input type="datetime-local" className={sel} value={custom} onChange={(e) => setCustom(e.target.value)} aria-label="截止时间" />
+        {mode === "OFFLINE" ? (
+          <label className="flex items-center gap-1">
+            原布置日期
+            <input type="date" className={sel} max={today} value={origDate} onChange={(e) => edit(setOrigDate)(e.target.value)} />
+          </label>
         ) : null}
+        <select
+          aria-label="截止"
+          className={sel}
+          value={dl === "DEFAULT" || dl === "NONE" ? dl : "CUSTOM"}
+          onChange={(e) => edit(setDl)(e.target.value === "CUSTOM" ? toLocalInput(previewDeadline ?? defaultDeadline(mt.biz.clock)) : e.target.value)}
+        >
+          {mode !== "OFFLINE" ? <option value="DEFAULT">截止：布置后第 3 天结束</option> : null}
+          <option value="CUSTOM">{mode === "OFFLINE" ? "原截止时间" : "指定截止"}</option>
+          <option value="NONE">{mode === "OFFLINE" ? "原截止未知／无截止" : "不设截止"}</option>
+        </select>
+        {dl !== "DEFAULT" && dl !== "NONE" ? (
+          <input type="datetime-local" className={sel} value={dl} onChange={(e) => edit(setDl)(e.target.value)} aria-label="截止时间" />
+        ) : null}
+        <span className="text-muted-foreground">{previewDeadline ? `将于 ${clockLabel(previewDeadline)} 截止` : "无截止，不会自动逾期或锁定"}</span>
       </div>
-      <p className="text-[11px] text-muted-foreground">
-        布置时间记为演示系统时间；适用名单为布置时点有效学生。创建不会自动登记已交、已评或 A。
-      </p>
+      {mode === "OFFLINE" ? (
+        <label className="flex items-center gap-1.5 text-xs">
+          <input type="checkbox" checked={useCurrentScheme} onChange={(e) => setUseCurrentScheme(e.target.checked)} />
+          原作业按当前作业默认标准评价（不勾选则标记为“标准待核对”，仍可登记提交）
+        </label>
+      ) : null}
+      <details className="text-xs" open={excluded.size > 0}>
+        <summary className="cursor-pointer">
+          适用学生 {recipients.length}/{roster.length}
+          <span className="text-muted-foreground">（{mode === "OFFLINE" && origDate ? `${fmtMD(origDate)} 在读名单` : "当前在读名单"}，非当天到场名单）</span>
+        </summary>
+        <div className="mt-1.5 flex flex-wrap gap-2">
+          {roster.map((sid) => (
+            <label key={sid} className="flex items-center gap-1">
+              <input
+                type="checkbox"
+                checked={!excluded.has(sid)}
+                onChange={(e) => {
+                  const n = new Set(excluded)
+                  if (e.target.checked) n.delete(sid)
+                  else n.add(sid)
+                  setExcluded(n)
+                }}
+              />
+              {nameOf(sid)}
+            </label>
+          ))}
+        </div>
+      </details>
       {err ? (
         <p role="alert" className="text-xs text-[#9a2b22]">
           {err}
         </p>
       ) : null}
-      <div className="flex justify-end gap-2">
-        <Btn size="sm" variant="ghost" onClick={() => onDone(null)}>
+      <div className="flex items-center justify-end gap-2">
+        <SaveState scope={scopeTask(task.id)} compact />
+        <Btn size="sm" variant="ghost" onClick={() => (persistDraft(), onDone(null))}>
           取消
         </Btn>
         <Btn size="sm" variant="primary" onClick={submit} disabled={busy}>
-          布置
+          {mode === "OFFLINE" ? "补录" : "布置作业"}
         </Btn>
       </div>
-      <SaveState scope={scopeTask(task.id)} compact />
     </div>
   )
 }
+
+export { effDeadline }

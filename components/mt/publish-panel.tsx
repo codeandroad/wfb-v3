@@ -1,5 +1,6 @@
 "use client"
 
+import { hwStatus } from "@/lib/mt/hw"
 import { Badge, Card } from "@/components/kit"
 import { SaveState } from "@/components/mt/shared"
 import { Btn, inputCls, Modal, Section, useAutoText } from "@/components/mt/ui"
@@ -11,7 +12,6 @@ import {
   courseOf,
   fmtMD,
   homeroomName,
-  hwStatus,
   STUDENTS,
   uniq,
   WEEKDAY_CN,

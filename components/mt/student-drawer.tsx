@@ -1,5 +1,6 @@
 "use client"
 
+import { hwStatus } from "@/lib/mt/hw"
 import { Badge } from "@/components/kit"
 import { HwResultControls } from "@/components/mt/homework"
 import { PhrasePicker, ReasonField } from "@/components/mt/phrase-picker"
@@ -12,7 +13,6 @@ import {
   entryKeyOf,
   fmtMD,
   homeroomName,
-  hwStatus,
   leaveCoversLesson,
   lessonTimeLabel,
   studentById,
