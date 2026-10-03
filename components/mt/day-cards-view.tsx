@@ -63,19 +63,19 @@ export function DayCardsView({
                   data-eval={c.status.key}
                   aria-label={`${pd.className}${sub ? ` ${sub}` : ""} ${fmtMD(c.date)} ${periodsLabel(c.lessons)}${c.merged > 1 ? `，合并${c.merged}节` : ""}，${c.status.label}${c.attTodo ? `，考勤待核对${c.attTodo}人` : ""}，打开本日记录`}
                   className={cn(
-                    "relative flex flex-col gap-1.5 rounded-lg border bg-card px-3 py-2.5 transition-colors hover:border-primary focus-visible:outline-2 focus-visible:outline-primary",
+                    "relative flex flex-col items-start gap-1.5 rounded-lg border bg-card px-3 py-2.5 text-left transition-colors hover:border-primary focus-visible:outline-2 focus-visible:outline-primary",
                     c.merged > 1 && "border-l-4 border-l-foreground/25",
                     focus === c.key ? "border-primary ring-2 ring-primary/30" : "border-border",
                   )}
                 >
-                  <span className="flex items-start justify-between gap-2">
+                  <span className="flex flex-wrap items-start gap-1.5">
                     <span className={cn("text-sm font-semibold leading-snug", titleClass(ps))} style={ps.hex ? { color: ps.hex } : undefined}>
                       {pd.className}
                     </span>
                     {c.merged > 1 ? (
                       <span className="inline-flex shrink-0 items-center gap-1 rounded border border-foreground/30 px-1.5 py-0.5 text-[11px] font-medium text-foreground">
                         <Layers className="size-3" aria-hidden />
-                        合并{c.merged}节
+                        {c.merged}节
                       </span>
                     ) : null}
                   </span>

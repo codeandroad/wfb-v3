@@ -155,7 +155,7 @@ export function WeekSchedulePage({ view }: { view: ScheduleView }) {
                       data-style-bg={ps.bg?.label ?? ""}
                       style={sp.get("focus") === l.id ? (ps.bg ? { backgroundColor: ps.bg.hex } : undefined) : cardStyle(ps)}
                       className={cn(
-                        "flex flex-col gap-1 rounded-lg border bg-card px-3 py-2.5 text-left transition-colors hover:border-primary focus-visible:outline-2 focus-visible:outline-primary",
+                        "flex flex-col items-start gap-1 rounded-lg border bg-card px-3 py-2.5 text-left transition-colors hover:border-primary focus-visible:outline-2 focus-visible:outline-primary",
                         sp.get("focus") === l.id ? "border-primary ring-2 ring-primary/30" : "border-border",
                       )}
                     >
@@ -169,7 +169,7 @@ export function WeekSchedulePage({ view }: { view: ScheduleView }) {
                           {pd.course ? <span>{pd.course}</span> : null}
                         </span>
                       ) : null}
-                      <span className="flex items-center justify-between gap-2 text-[11px] text-muted-foreground">
+                      <span className="flex flex-wrap items-center justify-start gap-x-2 gap-y-1 text-[11px] text-muted-foreground">
                         <span>{l.room ?? ""}</span>
                         <span className="flex items-center gap-1.5">
                           {hasObs ? <span className="text-muted-foreground">有观察</span> : null}
