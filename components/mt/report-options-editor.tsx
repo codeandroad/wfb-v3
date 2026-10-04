@@ -1,9 +1,10 @@
 'use client'
 import type { ReportTemplate } from '@/lib/mt/reports'
 import { reportOptions, type ReportOptions } from '@/lib/mt/report-options'
+import { ReportThemeEditor } from './report-theme-editor'
 import { inputCls } from './ui'
 
-export function ReportOptionsEditor({value,onChange}:{value:ReportTemplate;onChange:(t:ReportTemplate)=>void}) {
+export function ReportOptionsEditor({value,onChange,includeTheme=true}:{value:ReportTemplate;onChange:(t:ReportTemplate)=>void;includeTheme?:boolean}) {
   const o=reportOptions(value)
   const update=<K extends keyof ReportOptions>(key:K,v:ReportOptions[K])=>onChange({...value,options:{...o,classic:true,[key]:v}})
   const select=<K extends keyof ReportOptions>(label:string,key:K,choices:[string,string][]) => <label className="flex flex-col gap-1 text-sm">{label}<select className={inputCls} value={String(o[key])} onChange={e=>update(key,e.target.value as ReportOptions[K])}>{choices.map(([v,text])=><option key={v} value={v}>{text}</option>)}</select></label>
@@ -14,6 +15,6 @@ export function ReportOptionsEditor({value,onChange}:{value:ReportTemplate;onCha
     {select('边框风格','borderWeight',[['thin','细线'],['strong','加粗']])}{select('空值显示','emptyValue',[['dash','–'],['blank','空白']])}
     <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={o.gradeText} onChange={e=>update('gradeText',e.target.checked)}/>等级附带说明（默认仅 A+）</label>
     {select('教学说明标题','teachingTitle',[['教学介绍','教学介绍'],['教学内容','教学内容']])}{select('学情说明标题','learningTitle',[['学情介绍','学情介绍'],['学情概况','学情概况']])}
-    {(['主色','辅色','表头底色'] as const).map((label,i)=><label key={label} className="flex flex-col gap-1 text-sm">{label} HEX<input className={inputCls} value={i===0?value.color:i===1?o.borderColor:o.headerBackground} onChange={e=>i===0?onChange({...value,color:e.target.value,options:{...o,classic:true,headerText:e.target.value}}):update(i===1?'borderColor':'headerBackground',e.target.value)}/></label>)}
+    {includeTheme?<div className="sm:col-span-2"><ReportThemeEditor value={value} onChange={onChange}/></div>:null}
   </div><p className="text-sm text-muted-foreground">仅保存结构与样式，不保存学生、日期或本周正文。无亮点时不占位。</p></fieldset>
 }
