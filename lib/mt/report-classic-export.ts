@@ -8,9 +8,9 @@ export function classicNotes(r:FrozenReport) {
   const blocks=visibleBlocks(r).filter(b=>['teaching','learning',...(r.kind==='personal'?['comment','next']:[])].includes(b.key)).map(b=>({...b,title:b.key==='teaching'?o.teachingTitle:b.key==='learning'?o.learningTitle:b.title,lines:[...b.lines]}))
   const highlights=visibleBlocks(r).filter(b=>b.key==='highlights').flatMap(b=>b.lines).filter(x=>x.trim())
   if(highlights.length&&o.highlightPlacement!=='off') {
-    const learning=blocks.find(b=>b.key==='learning')
-    if(o.highlightPlacement==='merged'&&learning)learning.lines.push(...highlights)
-    else blocks.push({key:o.highlightPlacement==='merged'?'learning':'highlights',title:o.highlightPlacement==='merged'?o.learningTitle:'本周亮点',lines:highlights})
+    const grouped=new Map<string,string[]>()
+    for(const text of highlights){const match=r.kind==='class'?text.match(/^([^：:]+)[：:]\s*([\s\S]*)$/):null;const name=match?.[1]??'';grouped.set(name,[...(grouped.get(name)??[]),match?.[2]??text])}
+    blocks.push({key:'highlights',title:'亮点',lines:[...grouped].map(([name,items])=>`${name?`${name}：`:''}${[...new Set(items)].join('；')}`)})
   }
   return blocks.filter(b=>b.lines.some(x=>x.trim()))
 }
@@ -19,16 +19,28 @@ export function renderClassicImages(r:FrozenReport):string[] {
   const margin=28,gap=24,ink='#263a33',font=(size:number,bold=false)=>`${bold?'600':'400'} ${size}px "Noto Report", ${r.template.font==='serif'?'serif':'sans-serif'}`
   const scratch=document.createElement('canvas').getContext('2d');if(!scratch)throw new Error('无法创建报告画布')
   const wrap=(text:string,width:number,size:number)=>{scratch.font=font(size);const result:string[]=[];for(const paragraph of text.split('\n')){let line='';for(const char of paragraph){if(line&&scratch.measureText(line+char).width>width){result.push(line);line=''}line+=char}result.push(line)}return result}
+  const columnWidths=(table:ReportTable)=>{
+    const count=Math.max(...table.rows.map(row=>row.length),table.headers[0].reduce((n,c)=>n+(c.span??1),0),1),pad=compact?4:o.padding
+    scratch.font=font(o.tableSize)
+    const widths=Array.from({length:count},(_,col)=>Math.max(col===0?80:48,...table.rows.map(row=>Math.min(160,scratch.measureText(row[col]??'').width+pad*2+4))))
+    scratch.font=font(o.tableSize,true)
+    const occupied=new Set<number>()
+    table.headers.forEach((row,index)=>{let col=0;for(const c of row){while(index>0&&occupied.has(col))col++;const span=c.span??1,needed=Math.max(...c.text.split('\n').map(text=>scratch.measureText(text).width))+pad*2+4;for(let i=0;i<span;i++){widths[col+i]=Math.max(widths[col+i],needed/span);if((c.rowSpan??1)>1)occupied.add(col+i)}col+=span}})
+    return widths
+  }
   const tablePaint=(table:ReportTable,width:number):Paint=>{
-    const count=Math.max(...table.rows.map(row=>row.length),table.headers[0].reduce((n,c)=>n+(c.span??1),0),1)
-    const cellWidth=width/count,size=o.tableSize,pad=compact?4:o.padding,line=size*1.3
-    const headerHeight=Math.max(32,...table.headers.flat().map(c=>wrap(c.text,cellWidth*(c.span??1)-pad*2,size).length*line+pad*2))
-    const rowHeights=table.rows.map(row=>Math.max(size+pad*2,...row.map(c=>wrap(c,cellWidth-pad*2,size).length*line+pad*2)))
+    const size=o.tableSize,pad=compact?4:o.padding,line=size*1.3
+    const natural=columnWidths(table)
+    const total=natural.reduce((a,b)=>a+b,0),widths=natural.map(w=>w*width/total)
+    const spanWidth=(col:number,span:number)=>widths.slice(col,col+span).reduce((a,b)=>a+b,0)
+    const headerOccupied=new Set<number>()
+    const headerHeight=Math.max(32,...table.headers.flatMap((row,index)=>{let col=0;return row.map(c=>{while(index>0&&headerOccupied.has(col))col++;const span=c.span??1,h=wrap(c.text,spanWidth(col,span)-pad*2,size).length*line+pad*2;if((c.rowSpan??1)>1)for(let i=0;i<span;i++)headerOccupied.add(col+i);col+=span;return h})}))
+    const rowHeights=table.rows.map(row=>Math.max(size+pad*2,...row.map((c,col)=>wrap(c,widths[col]-pad*2,size).length*line+pad*2)))
     const height=table.headers.length*headerHeight+rowHeights.reduce((a,b)=>a+b,0)
     return {height,draw:(ctx,x,y)=>{
       const occupied=new Set<number>()
       const cell=(text:string,col:number,top:number,h:number,span:number,header:boolean,striped:boolean)=>{
-        const w=cellWidth*span,left=x+col*cellWidth
+        const w=spanWidth(col,span),left=x+spanWidth(0,col)
         ctx.fillStyle=header?o.headerBackground:striped?o.stripeColor:r.template.background;ctx.fillRect(left,top,w,h)
         if(o.borders){ctx.strokeStyle=o.borderColor;ctx.lineWidth=o.borderWeight==='strong'?1.5:.7;ctx.strokeRect(left,top,w,h)}
         const lines=wrap(text,w-pad*2,size);ctx.font=font(size,header);ctx.fillStyle=header?o.headerText:ink;ctx.textAlign=personal&&!header?'left':'center'
@@ -47,9 +59,9 @@ export function renderClassicImages(r:FrozenReport):string[] {
     return {height,draw:(ctx,x,y)=>{for(const b of entries){ctx.font=font(size,true);ctx.fillStyle=r.template.color;ctx.fillText(b.title,x,y+size);y+=size*1.5;ctx.font=font(size);ctx.fillStyle=ink;for(const text of b.lines){ctx.fillText(text,x,y+size);y+=line}y+=18}}}
   }
   const tables=r.tables??[],main=personal?tables:tables.filter(t=>t.kind==='classroom'),appendices=personal?[]:tables.filter(t=>t.kind!=='classroom')
-  const maxColumns=Math.max(1,...main.flatMap(t=>t.rows.map(row=>row.length)))
+  const naturalTableWidth=Math.max(1,...main.map(table=>columnWidths(table).reduce((a,b)=>a+b,0)))
   const sidebar=!personal&&o.notesPosition==='right'&&notes.length>0
-  const width=personal?1000:Math.max(1200,Math.min(3200,maxColumns*(o.gradeText?120:76)+(sidebar?320:0)+margin*2))
+  const width=personal?1000:Math.ceil(Math.max(540,Math.min(3200,naturalTableWidth+(sidebar?324:0)+margin*2)))
   const notesWidth=sidebar?300:width-margin*2,tableWidth=width-margin*2-(sidebar?notesWidth+gap:0)
   const sections=main.map(table=>({table,paint:tablePaint(table,tableWidth)})),note=notesPaint(notesWidth)
   const tableHeight=sections.reduce((sum,s)=>sum+s.paint.height+(main.length>1||personal?34:0)+16,0)
