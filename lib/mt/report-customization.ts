@@ -1,4 +1,4 @@
-export type ElementStyle = { color?: string; background?: string; size?: number; weight?: number; align?: 'left'|'center'|'right'; padding?: number; width?: number; lineHeight?: number; borderColor?: string; borderWidth?: number }
+export type ElementStyle = { color?: string; background?: string; size?: number; weight?: number; align?: 'left'|'center'|'right'; padding?: number; width?: number; lineHeight?: number; borderColor?: string; borderWidth?: number; minHeight?: number }
 export type CellFact = { field: string; status?: string; revision?: string; grade?: string; score?: number; maximum?: number; key?: string }
 export type FormatRule = { id: string; name: string; enabled: boolean; field: string; statuses?: string[]; revision?: string; grades?: string[]; minimum?: number; maximum?: number; style: ElementStyle }
 export type ReportCustomization = { elements?: Record<string,ElementStyle>; rules?: FormatRule[] }
@@ -9,7 +9,7 @@ export function colorValue(value:string):string|undefined {
  if(m&&m.slice(1).every(n=>Number(n)<=255))return '#'+m.slice(1).map(n=>Number(n).toString(16).padStart(2,'0')).join('')
 }
 export function validElement(s:ElementStyle):boolean {
- const ranges:Record<string,[number,number]>={size:[10,36],weight:[400,700],padding:[0,24],width:[30,600],lineHeight:[1,2],borderWidth:[0,4]}
+ const ranges:Record<string,[number,number]>={size:[10,36],weight:[400,700],padding:[0,24],width:[30,600],lineHeight:[1,2],borderWidth:[0,4],minHeight:[0,240]}
  return Object.entries(s).every(([k,v])=>v===undefined?true:['color','background','borderColor'].includes(k)?typeof v==='string'&&!!colorValue(v):k==='align'?['left','center','right'].includes(String(v)):!!ranges[k]&&typeof v==='number'&&Number.isFinite(v)&&v>=ranges[k][0]&&v<=ranges[k][1])
 }
 export function validCustomization(c?:ReportCustomization):boolean {
@@ -25,7 +25,7 @@ export function ruleMatches(rule:FormatRule,fact?:CellFact):boolean {
  return !!(rule.statuses?.length||rule.grades?.length||rule.minimum!==undefined||rule.maximum!==undefined)
 }
 export function resolveElement(c:ReportCustomization|undefined,target:string,base:ElementStyle,fact?:CellFact):ElementStyle {
- const result={...base,...c?.elements?.[target]}
+ const result={...base,...Object.fromEntries(Object.entries(c?.elements?.[target]??{}).filter(([,value])=>value!==undefined))}
  for(const rule of c?.rules??[])if(ruleMatches(rule,fact))Object.assign(result,Object.fromEntries(Object.entries(rule.style).filter(([,value])=>value!==undefined)))
  return result
 }

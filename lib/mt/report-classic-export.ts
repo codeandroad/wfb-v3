@@ -36,7 +36,7 @@ export function renderClassicImages(r:FrozenReport):string[] {
     const spanWidth=(col:number,span:number)=>widths.slice(col,col+span).reduce((a,b)=>a+b,0)
     const headerOccupied=new Set<number>()
     const headerHeight=Math.max(32,...table.headers.flatMap((row,index)=>{let col=0;return row.map(c=>{while(index>0&&headerOccupied.has(col))col++;const span=c.span??1,hs=resolveElement(r.template.customization,`${table.kind}.${index===0&&table.headers.length>1&&col>0?'date':table.fields?.[col]??(col===0?'name':'body')}.header`,{size,padding:pad,lineHeight:1.3}),h=wrap(c.text,spanWidth(col,span)-hs.padding!*2,hs.size!).length*hs.size!*hs.lineHeight!+hs.padding!*2;if((c.rowSpan??1)>1)for(let i=0;i<span;i++)headerOccupied.add(col+i);col+=span;return h})}))
-    const rowHeights=table.rows.map((row,index)=>Math.max(size+pad*2,...row.map((c,col)=>{const s=resolveElement(r.template.customization,`${table.kind}.${table.fields?.[col]??(col===0?'name':'body')}.body`,{size,padding:pad,lineHeight:1.3},table.facts?.[index]?.[col]);return wrap(c,widths[col]-s.padding!*2,s.size!).length*s.size!*s.lineHeight!+s.padding!*2})))
+    const rowHeights=table.rows.map((row,index)=>Math.max(size+pad*2,...row.map((c,col)=>{const s=resolveElement(r.template.customization,`${table.kind}.${table.fields?.[col]??(col===0?'name':'body')}.body`,{size,padding:pad,lineHeight:1.3},table.facts?.[index]?.[col]);return Math.max(s.minHeight??0,wrap(c,widths[col]-s.padding!*2,s.size!).length*s.size!*s.lineHeight!+s.padding!*2)})))
     const height=table.headers.length*headerHeight+rowHeights.reduce((a,b)=>a+b,0)
     return {height,draw:(ctx,x,y)=>{
       const occupied=new Set<number>()

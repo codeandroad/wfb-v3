@@ -2,6 +2,7 @@
 
 | 修订 | 目录 | 状态 |
 | --- | --- | --- |
+| 班级与个人报告精细定制 r2 | [2026-10-05-report-customization-r2/IMPLEMENTATION_REPORT.md](2026-10-05-report-customization-r2/IMPLEMENTATION_REPORT.md) | **PARTIAL，未全项验收**：共享语义样式、个人分表参数、本批与单人字段覆盖已接入；含完整原规格、CP01–CP61结果、班级与个人PNG和真实ZIP。单格定位、混合状态片段着色等缺口详见实施说明。 |
 | 发布系统现行设计与实现总览 | [FEEDBACK_PUBLISHING_CURRENT_DESIGN.md](FEEDBACK_PUBLISHING_CURRENT_DESIGN.md) | **当前实现汇总，待 Owner 核验**：覆盖发布范围、紧凑双栏与实时预览、样式/主题分离、颜色校验修正、校内重复版移除、快照修订、导出及模拟交付；区分已实现、历史方案和未完成项，不倒写历史验收结果。 |
 | 发布工作台第一版 r1 | `2026-10-04-feedback-publishing-v1/` | **已实现原型，待 Owner 核验，未全项通过**：同源分类总结、双报告、模板、PNG/ZIP、合成交付及本浏览器受限阅读。当前类型检查、15项逻辑测试、构建通过；逐项 PARTIAL/NOT_RUN 及真实文件证据见 `IMPLEMENTATION_REPORT.md`，不代表生产授权或真实发送就绪。 |
 | 方案／样式／课表二期 r5 | `2026-10-03-teaching-schemes-styles-timetable-phase-2-r5/` | **现行修订，待 Owner 核验，核验未全部完成**：课堂一次采用持续生效、退出专门切换档案和任务下期计划；样式逐属性最后成功保存生效；完整课表锁定／调休／拖拽个人配色及按实际日期投影。替代二期 r2–r4 的永久层级优先、二次统一本班及未来采用计划；保留旧报告原结论。实际执行结果见本目录报告。 |
