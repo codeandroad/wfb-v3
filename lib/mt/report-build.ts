@@ -50,6 +50,8 @@ export function prepareReports(b: MtBiz, tws: TaskWeek[], p: Preparation, person
     result.push(classReport)
   }
   for (const report of result) {
+    const override=report.studentId?p.personalOverrides?.[report.studentId]:undefined
+    if(override){const base=report.template.customization??{},elements={...base.elements};for(const [key,style] of Object.entries(override.elements??{}))elements[key]={...elements[key],...style};report.template={...report.template,customization:{elements,rules:[...(base.rules??[]),...(override.rules??[])]}}}
     report.template = {...report.template,options:reportOptions(report.template)}
     const schedule = scheduleReadOfWeek(tws[0].week)
     if (schedule.status === 'ok' && schedule.exclusions?.length) report.blocks.push({key:'next',title:'校历安排',lines:schedule.exclusions.map(x=>`${x.date}：${x.reason}，不计缺勤或课堂评价。`)})

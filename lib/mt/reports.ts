@@ -1,11 +1,12 @@
 import { normalizeHex, reportOptions, validOptions, type ReportOptions } from './report-options'
+import { validCustomization, type ReportCustomization, type CellFact } from './report-customization'
 import type { MtBiz } from './store'
 import type { Publication } from './model'
 
 export type ReportKind = 'personal' | 'class'
 export type ModuleKey = 'teaching' | 'learning' | 'classroom' | 'homework' | 'highlights' | 'comment' | 'next' | 'legend'
 export const MODULES: Record<ModuleKey, string> = { teaching: '教学介绍', learning: '学情介绍', classroom: '课堂记录', homework: '作业表现', highlights: '亮点／表扬', comment: '教师评语', next: '作业与后续安排', legend: '评价说明' }
-export type ReportTemplate = { archived?: boolean; options?: Partial<ReportOptions>; preset?: string; id: string; owner: string | null; kind: ReportKind; name: string; layout: 'brief' | 'letter' | 'timeline' | 'table'; color: string; background: string; font: 'sans' | 'serif'; bold: boolean; modules: ModuleKey[]; titles: Partial<Record<ModuleKey, string>>; opening: string; closing: string }
+export type ReportTemplate = { customization?: ReportCustomization; archived?: boolean; options?: Partial<ReportOptions>; preset?: string; id: string; owner: string | null; kind: ReportKind; name: string; layout: 'brief' | 'letter' | 'timeline' | 'table'; color: string; background: string; font: 'sans' | 'serif'; bold: boolean; modules: ModuleKey[]; titles: Partial<Record<ModuleKey, string>>; opening: string; closing: string }
 const keys = Object.keys(MODULES) as ModuleKey[]
 export const SYSTEM_TEMPLATES: ReportTemplate[] = [
   ['P01', 'personal', '个人·标准跟进单'], ['P02', 'personal', '个人·表格详报'], ['P03', 'personal', '个人·家长沟通版'],
@@ -17,9 +18,9 @@ export function classicTemplate(t: ReportTemplate): ReportTemplate {
   return {...t,preset:preset.id,options:{...preset.options,...t.options,classic:true}}
 }
 export type ReportBlock = { key: ModuleKey; title: string; lines: string[] }
-export type ReportTable = { title: string; kind?: 'classroom' | 'homework' | 'lessons' | 'focus'; identityColumns?: number; groupSize?: number; headers: { text: string; span?: number; rowSpan?: number }[][]; rows: string[][] }
+export type ReportTable = { fields?: string[]; facts?: (CellFact|undefined)[][]; title: string; kind?: 'classroom' | 'homework' | 'lessons' | 'focus'; identityColumns?: number; groupSize?: number; headers: { text: string; span?: number; rowSpan?: number }[][]; rows: string[][] }
 export type FrozenReport = { tables?: ReportTable[]; stage?: boolean; key: string; kind: ReportKind; audience: 'parent' | 'internal'; studentId?: string; name: string; scope: string; period: string; teacher: string; cutoff: string; template: ReportTemplate; blocks: ReportBlock[]; eligibleStudents: string[] }
-export type Preparation = { classicVersion?: number; homeworkDates?: Record<string,string>; personalStyle?: ReportTemplate; classStyle?: ReportTemplate; observations?: { key: string; text: string }[]; comments?: string[]; focus?: { studentId: string; taskId: string; source: string; suggestion: string }[]; taskIds: string[]; personal: boolean; classReport: boolean; selected: string[]; personalTemplate: string; classTemplate: string; stage: boolean; omitUnverified: boolean; account: boolean; link: boolean }
+export type Preparation = { personalOverrides?: Record<string,ReportCustomization>; classicVersion?: number; homeworkDates?: Record<string,string>; personalStyle?: ReportTemplate; classStyle?: ReportTemplate; observations?: { key: string; text: string }[]; comments?: string[]; focus?: { studentId: string; taskId: string; source: string; suggestion: string }[]; taskIds: string[]; personal: boolean; classReport: boolean; selected: string[]; personalTemplate: string; classTemplate: string; stage: boolean; omitUnverified: boolean; account: boolean; link: boolean }
 export type Delivery = { reportKey: string; guardian: string; status: 'sent' | 'failed'; readAt?: string }
 export type ReportLink = { token: string; reportKey: string; expires: string; disabled: boolean }
 export type ReportingState = { themes?: import('./report-themes').ReportTheme[]; readEvents?: Record<string, string>; artifacts?: Record<string, { status: 'generating' | 'ready' | 'failed'; attempts: number; pages?: number; error?: string }>; templates: ReportTemplate[]; defaults: Record<string, Partial<Record<ReportKind, string>>>; preparations: Record<string, Preparation>; deliveries: Record<string, Delivery[]>; links: Record<string, ReportLink[]> }
@@ -41,7 +42,7 @@ export function templateContrastWarnings(t: ReportTemplate): string[] {
   ].flatMap(([background, text, minimum, label]) => contrast(String(background), String(text)) < Number(minimum) ? [String(label)] : [])
 }
 export function validTemplate(t: ReportTemplate): boolean {
-  return validOptions(t.options) && Object.keys(t).every(k => ['archived', 'options', 'preset', 'id', 'owner', 'kind', 'name', 'layout', 'color', 'background', 'font', 'bold', 'modules', 'titles', 'opening', 'closing'].includes(k)) && ['personal', 'class'].includes(t.kind) && ['brief', 'letter', 'timeline', 'table'].includes(t.layout) && /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(t.color) && /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(t.background) && ['sans', 'serif'].includes(t.font) && t.modules.every(k => keys.includes(k) && (t.kind === 'personal' || k !== 'comment')) && new Set(t.modules).size === t.modules.length && Object.keys(t.titles).every(k => keys.includes(k as ModuleKey) && k !== 'teaching' && k !== 'learning')
+  return validCustomization(t.customization) && validOptions(t.options) && Object.keys(t).every(k => ['customization', 'archived', 'options', 'preset', 'id', 'owner', 'kind', 'name', 'layout', 'color', 'background', 'font', 'bold', 'modules', 'titles', 'opening', 'closing'].includes(k)) && ['personal', 'class'].includes(t.kind) && ['brief', 'letter', 'timeline', 'table'].includes(t.layout) && /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(t.color) && /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(t.background) && ['sans', 'serif'].includes(t.font) && t.modules.every(k => keys.includes(k) && (t.kind === 'personal' || k !== 'comment')) && new Set(t.modules).size === t.modules.length && Object.keys(t.titles).every(k => keys.includes(k as ModuleKey) && k !== 'teaching' && k !== 'learning')
 }
 export function sourceVersion(b: MtBiz): string {
   const value = JSON.stringify([b.observations, b.records, b.assignments, b.summaries, b.comments, b.highlights, b.memberships, b.revoked, b.schemes])
