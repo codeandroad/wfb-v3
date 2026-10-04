@@ -391,7 +391,6 @@ interface BatchMsg {
   reasons: [string, number][]
 }
 
-import { RegradeControl } from "./regrade-control"
 
 export function HwReview({
   a,
@@ -514,7 +513,6 @@ export function HwReview({
 
   return (
     <Card className="overflow-hidden">
-      <RegradeControl key={`regrade:${a.id}`} target={{ kind: "HOMEWORK", taskId: a.taskId, assignmentId: a.id }} currentRev={a.schemeRevId ?? null} label={a.title} />
       <div className="flex flex-col gap-2 border-b border-border px-4 py-3">
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div className="min-w-0">
@@ -573,27 +571,11 @@ export function HwReview({
             ) : (
               <span className="text-[#8a5a12]">评价标准待核对，只能登记提交</span>
             )}
-            <span className="text-muted-foreground">
-              {subset
-                ? `作用于已勾选 ${subset.length} 人${pickedHidden ? `（其中 ${pickedHidden} 人不在当前结果中）` : ""}`
-                : "作用于本作业全部符合条件的学生（不受搜索、筛选和分页影响）"}
-            </span>
-          </div>
-          <div className="flex flex-wrap items-center gap-1.5">
-            <Btn size="sm" disabled={!plans.SUBMIT.writes.length} onClick={() => run("SUBMIT")}>
-              登记“{SUB_LABEL[subOpt]}” · {plans.SUBMIT.writes.length} 人
-            </Btn>
-            <Btn size="sm" disabled={!plans.GRADE?.writes.length} title={disabledWhy || undefined} onClick={() => run("GRADE")}>
-              评价{lvl ? `为 ${levelText(lvl)}` : ""} · {plans.GRADE?.writes.length ?? 0} 人
-            </Btn>
-            <Btn size="sm" variant="primary" disabled={!plans.ROUTINE?.writes.length} title={disabledWhy || undefined} onClick={() => run("ROUTINE")}>
-              按常规登记{lvl ? `：按时提交 · ${levelText(lvl)}` : ""} · {plans.ROUTINE?.writes.length ?? 0} 人
+            <Btn size="sm" variant="primary" disabled={!plans.ROUTINE?.writes.length} title={disabledWhy || (subset ? `作用于已勾选 ${subset.length} 人` : "作用于全部符合条件的学生，不受搜索、筛选和分页影响；只补齐未登记部分，保留已有结果。点击后可撤销。")} onClick={() => run("ROUTINE")}>
+              快速登记{lvl ? `：按时提交 · ${levelText(lvl)}` : ""} · {plans.ROUTINE?.writes.length ?? 0} 人
             </Btn>
             {disabledWhy && rev ? <span className="text-xs text-muted-foreground">{disabledWhy}</span> : null}
           </div>
-          <p className="text-[11px] leading-relaxed text-muted-foreground">
-            点击即写入，结果可安全撤销。只补齐未登记的部分：已知迟交、未交、免做、未参与、手填等级或分数、明确不评价或已清空的等级都会保留。
-          </p>
           {msg ? (
             <div role="status" className="flex flex-col gap-1 rounded-md bg-card px-2.5 py-1.5 text-xs">
               <span className="flex flex-wrap items-center gap-2">

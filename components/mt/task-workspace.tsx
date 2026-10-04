@@ -207,9 +207,9 @@ export function TaskWorkspacePage({ id }: { id: string }) {
           </button>
         ))}
       </nav>
-      <div className="flex min-w-0 max-w-full items-center pb-2 sm:ml-auto">
+      {tab === "feedback" || tab === "homework" ? <div className="flex min-w-0 max-w-full items-center pb-2 sm:ml-auto">
         <TaskSchemes task={task} week={week} />
-      </div>
+      </div> : null}
       </div>
 
       {tab === "feedback" ? (
