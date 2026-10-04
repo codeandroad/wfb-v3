@@ -1,0 +1,329 @@
+{
+  "status": "PASS",
+  "size": 28,
+  "mode": "七套实际报告",
+  "reports": 7,
+  "decodedPNGs": 63,
+  "manifestCount": 7,
+  "first": "大班学生001",
+  "middle": "合成28人教学班",
+  "last": "合成28人教学班",
+  "privacySentinel": "absent",
+  "dimensions": [
+    {
+      "name": "个人-第5周-大班学生001-P01-personal-DEMO_BIG_001-V1-1.png",
+      "width": 1000,
+      "height": 1163
+    },
+    {
+      "name": "个人-第5周-大班学生001-P01-personal-DEMO_BIG_001-V1-2.png",
+      "width": 1000,
+      "height": 575
+    },
+    {
+      "name": "个人-第5周-大班学生001-P01-personal-DEMO_BIG_001-V1-3.png",
+      "width": 1000,
+      "height": 607
+    },
+    {
+      "name": "个人-第5周-大班学生001-P01-personal-DEMO_BIG_001-V1-4.png",
+      "width": 1000,
+      "height": 323
+    },
+    {
+      "name": "个人-第5周-大班学生001-P01-personal-DEMO_BIG_001-V1-5.png",
+      "width": 1000,
+      "height": 407
+    },
+    {
+      "name": "个人-第5周-大班学生001-P02-personal-DEMO_BIG_001-V1-1.png",
+      "width": 1000,
+      "height": 1163
+    },
+    {
+      "name": "个人-第5周-大班学生001-P02-personal-DEMO_BIG_001-V1-2.png",
+      "width": 1000,
+      "height": 575
+    },
+    {
+      "name": "个人-第5周-大班学生001-P02-personal-DEMO_BIG_001-V1-3.png",
+      "width": 1000,
+      "height": 619
+    },
+    {
+      "name": "个人-第5周-大班学生001-P02-personal-DEMO_BIG_001-V1-4.png",
+      "width": 1000,
+      "height": 607
+    },
+    {
+      "name": "个人-第5周-大班学生001-P02-personal-DEMO_BIG_001-V1-5.png",
+      "width": 1000,
+      "height": 407
+    },
+    {
+      "name": "个人-第5周-大班学生001-P03-personal-DEMO_BIG_001-V1-1.png",
+      "width": 1000,
+      "height": 423
+    },
+    {
+      "name": "个人-第5周-大班学生001-P03-personal-DEMO_BIG_001-V1-2.png",
+      "width": 1000,
+      "height": 323
+    },
+    {
+      "name": "个人-第5周-大班学生001-P03-personal-DEMO_BIG_001-V1-3.png",
+      "width": 1000,
+      "height": 607
+    },
+    {
+      "name": "个人-第5周-大班学生001-P03-personal-DEMO_BIG_001-V1-4.png",
+      "width": 1000,
+      "height": 575
+    },
+    {
+      "name": "个人-第5周-大班学生001-P03-personal-DEMO_BIG_001-V1-5.png",
+      "width": 1000,
+      "height": 1163
+    },
+    {
+      "name": "个人-第5周-大班学生001-P03-personal-DEMO_BIG_001-V1-6.png",
+      "width": 1000,
+      "height": 407
+    },
+    {
+      "name": "班级-第5周-合成28人教学班-C01-class-parent-V1-1.png",
+      "width": 1440,
+      "height": 1163
+    },
+    {
+      "name": "班级-第5周-合成28人教学班-C01-class-parent-V1-2.png",
+      "width": 1440,
+      "height": 323
+    },
+    {
+      "name": "班级-第5周-合成28人教学班-C01-class-parent-V1-3.png",
+      "width": 1440,
+      "height": 1959
+    },
+    {
+      "name": "班级-第5周-合成28人教学班-C01-class-parent-V1-4.png",
+      "width": 1440,
+      "height": 2027
+    },
+    {
+      "name": "班级-第5周-合成28人教学班-C01-class-parent-V1-5.png",
+      "width": 1440,
+      "height": 2027
+    },
+    {
+      "name": "班级-第5周-合成28人教学班-C01-class-parent-V1-6.png",
+      "width": 1440,
+      "height": 1391
+    },
+    {
+      "name": "班级-第5周-合成28人教学班-C01-class-parent-V1-7.png",
+      "width": 1440,
+      "height": 2015
+    },
+    {
+      "name": "班级-第5周-合成28人教学班-C01-class-parent-V1-8.png",
+      "width": 1440,
+      "height": 2059
+    },
+    {
+      "name": "班级-第5周-合成28人教学班-C01-class-parent-V1-9.png",
+      "width": 1440,
+      "height": 1055
+    },
+    {
+      "name": "班级-第5周-合成28人教学班-C01-class-parent-V1-10.png",
+      "width": 1440,
+      "height": 407
+    },
+    {
+      "name": "班级-第5周-合成28人教学班-C02-class-parent-V1-1.png",
+      "width": 1440,
+      "height": 1163
+    },
+    {
+      "name": "班级-第5周-合成28人教学班-C02-class-parent-V1-2.png",
+      "width": 1440,
+      "height": 323
+    },
+    {
+      "name": "班级-第5周-合成28人教学班-C02-class-parent-V1-3.png",
+      "width": 1440,
+      "height": 1975
+    },
+    {
+      "name": "班级-第5周-合成28人教学班-C02-class-parent-V1-4.png",
+      "width": 1440,
+      "height": 1999
+    },
+    {
+      "name": "班级-第5周-合成28人教学班-C02-class-parent-V1-5.png",
+      "width": 1440,
+      "height": 1431
+    },
+    {
+      "name": "班级-第5周-合成28人教学班-C02-class-parent-V1-6.png",
+      "width": 1440,
+      "height": 551
+    },
+    {
+      "name": "班级-第5周-合成28人教学班-C02-class-parent-V1-7.png",
+      "width": 1440,
+      "height": 1963
+    },
+    {
+      "name": "班级-第5周-合成28人教学班-C02-class-parent-V1-8.png",
+      "width": 1440,
+      "height": 1963
+    },
+    {
+      "name": "班级-第5周-合成28人教学班-C02-class-parent-V1-9.png",
+      "width": 1440,
+      "height": 1963
+    },
+    {
+      "name": "班级-第5周-合成28人教学班-C02-class-parent-V1-10.png",
+      "width": 1440,
+      "height": 1147
+    },
+    {
+      "name": "班级-第5周-合成28人教学班-C02-class-parent-V1-11.png",
+      "width": 1440,
+      "height": 407
+    },
+    {
+      "name": "班级-第5周-合成28人教学班-C03-class-parent-V1-1.png",
+      "width": 1440,
+      "height": 1163
+    },
+    {
+      "name": "班级-第5周-合成28人教学班-C03-class-parent-V1-2.png",
+      "width": 1440,
+      "height": 323
+    },
+    {
+      "name": "班级-第5周-合成28人教学班-C03-class-parent-V1-3.png",
+      "width": 1440,
+      "height": 2065
+    },
+    {
+      "name": "班级-第5周-合成28人教学班-C03-class-parent-V1-4.png",
+      "width": 1440,
+      "height": 1593
+    },
+    {
+      "name": "班级-第5周-合成28人教学班-C03-class-parent-V1-5.png",
+      "width": 1440,
+      "height": 1713
+    },
+    {
+      "name": "班级-第5周-合成28人教学班-C03-class-parent-V1-6.png",
+      "width": 1440,
+      "height": 553
+    },
+    {
+      "name": "班级-第5周-合成28人教学班-C03-class-parent-V1-7.png",
+      "width": 1440,
+      "height": 1713
+    },
+    {
+      "name": "班级-第5周-合成28人教学班-C03-class-parent-V1-8.png",
+      "width": 1440,
+      "height": 1713
+    },
+    {
+      "name": "班级-第5周-合成28人教学班-C03-class-parent-V1-9.png",
+      "width": 1440,
+      "height": 1713
+    },
+    {
+      "name": "班级-第5周-合成28人教学班-C03-class-parent-V1-10.png",
+      "width": 1440,
+      "height": 1017
+    },
+    {
+      "name": "班级-第5周-合成28人教学班-C03-class-parent-V1-11.png",
+      "width": 1440,
+      "height": 407
+    },
+    {
+      "name": "班级-第5周-合成28人教学班-C03-class-parent-V1-12.png",
+      "width": 1440,
+      "height": 323
+    },
+    {
+      "name": "班级-第5周-合成28人教学班-C04-class-parent-V1-1.png",
+      "width": 1440,
+      "height": 1163
+    },
+    {
+      "name": "班级-第5周-合成28人教学班-C04-class-parent-V1-2.png",
+      "width": 1440,
+      "height": 323
+    },
+    {
+      "name": "班级-第5周-合成28人教学班-C04-class-parent-V1-3.png",
+      "width": 1440,
+      "height": 1963
+    },
+    {
+      "name": "班级-第5周-合成28人教学班-C04-class-parent-V1-4.png",
+      "width": 1440,
+      "height": 2011
+    },
+    {
+      "name": "班级-第5周-合成28人教学班-C04-class-parent-V1-5.png",
+      "width": 1440,
+      "height": 891
+    },
+    {
+      "name": "班级-第5周-合成28人教学班-C04-class-parent-V1-6.png",
+      "width": 1440,
+      "height": 1963
+    },
+    {
+      "name": "班级-第5周-合成28人教学班-C04-class-parent-V1-7.png",
+      "width": 1440,
+      "height": 603
+    },
+    {
+      "name": "班级-第5周-合成28人教学班-C04-class-parent-V1-8.png",
+      "width": 1440,
+      "height": 1527
+    },
+    {
+      "name": "班级-第5周-合成28人教学班-C04-class-parent-V1-9.png",
+      "width": 1440,
+      "height": 575
+    },
+    {
+      "name": "班级-第5周-合成28人教学班-C04-class-parent-V1-10.png",
+      "width": 1440,
+      "height": 1963
+    },
+    {
+      "name": "班级-第5周-合成28人教学班-C04-class-parent-V1-11.png",
+      "width": 1440,
+      "height": 1963
+    },
+    {
+      "name": "班级-第5周-合成28人教学班-C04-class-parent-V1-12.png",
+      "width": 1440,
+      "height": 1963
+    },
+    {
+      "name": "班级-第5周-合成28人教学班-C04-class-parent-V1-13.png",
+      "width": 1440,
+      "height": 1147
+    },
+    {
+      "name": "班级-第5周-合成28人教学班-C04-class-parent-V1-14.png",
+      "width": 1440,
+      "height": 407
+    }
+  ]
+}
