@@ -1,0 +1,35 @@
+{
+  "status": "PASS",
+  "previewExportParity": "byte-identical",
+  "size": 28,
+  "mode": "r2班级与三人精调",
+  "reports": 4,
+  "decodedPNGs": 4,
+  "manifestCount": 4,
+  "first": "大班演示38人 • 数学",
+  "middle": "大班学生002",
+  "last": "大班学生003",
+  "privacySentinel": "absent",
+  "dimensions": [
+    {
+      "name": "班级-第5周-大班演示38人 • 数学-class-parent-V1-1.png",
+      "width": 1517,
+      "height": 2009
+    },
+    {
+      "name": "个人-第5周-大班学生001-personal-DEMO_BIG_001-V1-1.png",
+      "width": 1000,
+      "height": 1876
+    },
+    {
+      "name": "个人-第5周-大班学生002-personal-DEMO_BIG_002-V1-1.png",
+      "width": 1000,
+      "height": 1813
+    },
+    {
+      "name": "个人-第5周-大班学生003-personal-DEMO_BIG_003-V1-1.png",
+      "width": 1000,
+      "height": 1813
+    }
+  ]
+}
