@@ -35,6 +35,7 @@ export function classicMatrix(b:MtBiz,tw:TaskWeek,t:ReportTemplate,p?:Preparatio
     return r.note?.trim()||empty
   }
   const split=o.mode==='B'
-  const top=[{text:'姓名',rowSpan:split?2:1},...events.map(e=>e.assignment?{text:`${e.date.slice(5).replace('-','')} 作业${assignments.filter(a=>homeworkCheckDate(a,p)===e.date).length>1?`\n${e.assignment.title}`:''}`,rowSpan:split?2:1}:{text:classicDate(e.date),span:split?2:1})]
-  return {kind:'classroom',title:tw.task.label,identityColumns:1,headers:split?[top,events.filter(e=>!e.assignment).flatMap(()=>[{text:'出勤'},{text:'课堂'}])]:[top],rows:tw.students.map(id=>[studentById(id)?.name??id,...events.flatMap(e=>{if(e.assignment)return [homework(e.assignment,id)];const day=tw.byStudent[id]?.find(d=>d.date===e.date);return split?[attendance(day),grade(day)]:[`${attendance(day)} / ${grade(day)}`]})])}
+  const homeworkLabel=(e:typeof events[number])=>`作业${assignments.filter(a=>homeworkCheckDate(a,p)===e.date).length>1?`\n${e.assignment?.title}`:''}`
+  const top=[{text:'姓名',rowSpan:split?2:1},...events.map(e=>e.assignment?{text:split?classicDate(e.date):`${classicDate(e.date)}\n${homeworkLabel(e)}`}:{text:classicDate(e.date),span:split?2:1})]
+  return {kind:'classroom',title:tw.task.label,identityColumns:1,headers:split?[top,events.flatMap(e=>e.assignment?[{text:homeworkLabel(e)}]:[{text:'出勤'},{text:'课堂'}])]:[top],rows:tw.students.map(id=>[studentById(id)?.name??id,...events.flatMap(e=>{if(e.assignment)return [homework(e.assignment,id)];const day=tw.byStudent[id]?.find(d=>d.date===e.date);return split?[attendance(day),grade(day)]:[`${attendance(day)} / ${grade(day)}`]})])}
 }
