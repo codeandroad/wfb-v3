@@ -1,4 +1,4 @@
-import { normalizeHex, validOptions, type ReportOptions } from './report-options'
+import { normalizeHex, reportOptions, validOptions, type ReportOptions } from './report-options'
 import type { MtBiz } from './store'
 import type { Publication } from './model'
 
@@ -30,8 +30,18 @@ function contrast(a: string, b: string): number {
   const x = luminance(normalizeHex(a)), y = luminance(normalizeHex(b))
   return (Math.max(x, y) + .05) / (Math.min(x, y) + .05)
 }
+export function templateContrastWarnings(t: ReportTemplate): string[] {
+  if (!validTemplate(t)) return []
+  const o = reportOptions(t)
+  return [
+    [o.headerBackground, o.headerText, 4.5, '表头文字与背景'],
+    [o.stripeColor, '#263a33', 4.5, '隔行背景与正文'],
+    [t.background, '#263a33', 4.5, '报告背景与正文'],
+    [t.background, t.color, 3, '主色与报告背景'],
+  ].flatMap(([background, text, minimum, label]) => contrast(String(background), String(text)) < Number(minimum) ? [String(label)] : [])
+}
 export function validTemplate(t: ReportTemplate): boolean {
-  return validOptions(t.options) && (!t.options?.headerBackground || contrast(t.options.headerBackground,t.options.headerText ?? '#245f50') >= 4.5) && (!t.options?.stripeColor || contrast(t.options.stripeColor,'#263a33') >= 4.5) && Object.keys(t).every(k => ['archived', 'options', 'preset', 'id', 'owner', 'kind', 'name', 'layout', 'color', 'background', 'font', 'bold', 'modules', 'titles', 'opening', 'closing'].includes(k)) && contrast(t.background, '#263a33') >= 4.5 && contrast(t.background, t.color) >= 3 && ['personal', 'class'].includes(t.kind) && ['brief', 'letter', 'timeline', 'table'].includes(t.layout) && /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(t.color) && /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(t.background) && ['sans', 'serif'].includes(t.font) && t.modules.every(k => keys.includes(k) && (t.kind === 'personal' || k !== 'comment')) && new Set(t.modules).size === t.modules.length && Object.keys(t.titles).every(k => keys.includes(k as ModuleKey) && k !== 'teaching' && k !== 'learning')
+  return validOptions(t.options) && Object.keys(t).every(k => ['archived', 'options', 'preset', 'id', 'owner', 'kind', 'name', 'layout', 'color', 'background', 'font', 'bold', 'modules', 'titles', 'opening', 'closing'].includes(k)) && ['personal', 'class'].includes(t.kind) && ['brief', 'letter', 'timeline', 'table'].includes(t.layout) && /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(t.color) && /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(t.background) && ['sans', 'serif'].includes(t.font) && t.modules.every(k => keys.includes(k) && (t.kind === 'personal' || k !== 'comment')) && new Set(t.modules).size === t.modules.length && Object.keys(t.titles).every(k => keys.includes(k as ModuleKey) && k !== 'teaching' && k !== 'learning')
 }
 export function sourceVersion(b: MtBiz): string {
   const value = JSON.stringify([b.observations, b.records, b.assignments, b.summaries, b.comments, b.highlights, b.memberships, b.revoked, b.schemes])
