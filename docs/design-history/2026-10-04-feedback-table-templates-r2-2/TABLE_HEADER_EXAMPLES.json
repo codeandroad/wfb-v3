@@ -1,0 +1,440 @@
+{
+  "documentType": "REPORT_TABLE_SEMANTIC_EXAMPLES",
+  "createdOn": "2026-10-04",
+  "version": "r2.2",
+  "notProjectSchema": true,
+  "notVisualLayout": true,
+  "notes": [
+    "报告周期与日历时间表头分开；时间表头中不混指标。",
+    "结构字段是演示协议，不要求在项目中新建相同类型或存储。",
+    "个人课次明细没有正式逐课次课堂等级字段。"
+  ],
+  "classModes": [
+    {
+      "id": "CLASS_DAY_CELL",
+      "mode": "day_cell",
+      "periodLabel": "第5周 · 9/28–10/4",
+      "headerRows": [
+        [
+          {
+            "label": "姓名",
+            "role": "student_identity",
+            "key": "student",
+            "rowSpan": 1,
+            "colSpan": 1
+          },
+          {
+            "label": "周一 9/28",
+            "role": "time",
+            "key": "2026-09-28",
+            "rowSpan": 1,
+            "colSpan": 1
+          },
+          {
+            "label": "周三 9/30",
+            "role": "time",
+            "key": "2026-09-30",
+            "rowSpan": 1,
+            "colSpan": 1
+          },
+          {
+            "label": "亮点",
+            "role": "highlight",
+            "key": "highlights",
+            "rowSpan": 1,
+            "colSpan": 1
+          },
+          {
+            "label": "作业",
+            "role": "homework",
+            "key": "homework",
+            "rowSpan": 1,
+            "colSpan": 1
+          }
+        ]
+      ],
+      "leafColumnCount": 5,
+      "dailyCellParts": [
+        "attendanceSummary",
+        "dailyClassroomEvaluation"
+      ],
+      "dailyEvaluationIdentity": [
+        "studentId",
+        "taskId",
+        "actualDate"
+      ],
+      "sampleDailyCell": {
+        "attendanceSummary": [
+          {
+            "slot": 1,
+            "text": "正常"
+          },
+          {
+            "slot": 3,
+            "text": "请假"
+          }
+        ],
+        "dailyClassroomEvaluation": {
+          "code": "B+",
+          "label": "良好以上",
+          "occurrences": 1
+        }
+      }
+    },
+    {
+      "id": "CLASS_DAY_SUBHEADERS",
+      "mode": "day_subcolumns",
+      "periodLabel": "第5周 · 9/28–10/4",
+      "headerRows": [
+        [
+          {
+            "label": "姓名",
+            "role": "student_identity",
+            "key": "student",
+            "rowSpan": 2,
+            "colSpan": 1
+          },
+          {
+            "label": "周一 9/28",
+            "role": "time",
+            "key": "2026-09-28",
+            "rowSpan": 1,
+            "colSpan": 2
+          },
+          {
+            "label": "周三 9/30",
+            "role": "time",
+            "key": "2026-09-30",
+            "rowSpan": 1,
+            "colSpan": 2
+          },
+          {
+            "label": "亮点",
+            "role": "highlight",
+            "key": "highlights",
+            "rowSpan": 2,
+            "colSpan": 1
+          },
+          {
+            "label": "作业",
+            "role": "homework",
+            "key": "homework",
+            "rowSpan": 2,
+            "colSpan": 1
+          }
+        ],
+        [
+          {
+            "label": "出勤",
+            "role": "metric",
+            "key": "2026-09-28.attendance",
+            "rowSpan": 1,
+            "colSpan": 1,
+            "parentTime": "2026-09-28"
+          },
+          {
+            "label": "课堂表现",
+            "role": "metric",
+            "key": "2026-09-28.evaluation",
+            "rowSpan": 1,
+            "colSpan": 1,
+            "parentTime": "2026-09-28"
+          },
+          {
+            "label": "出勤",
+            "role": "metric",
+            "key": "2026-09-30.attendance",
+            "rowSpan": 1,
+            "colSpan": 1,
+            "parentTime": "2026-09-30"
+          },
+          {
+            "label": "课堂表现",
+            "role": "metric",
+            "key": "2026-09-30.evaluation",
+            "rowSpan": 1,
+            "colSpan": 1,
+            "parentTime": "2026-09-30"
+          }
+        ]
+      ],
+      "leafColumnCount": 7,
+      "dailyEvaluationIdentity": [
+        "studentId",
+        "taskId",
+        "actualDate"
+      ]
+    },
+    {
+      "id": "CLASS_HOMEWORK_SUBHEADERS",
+      "mode": "homework_subcolumns",
+      "headerRows": [
+        [
+          {
+            "label": "姓名",
+            "role": "student_identity",
+            "key": "student",
+            "rowSpan": 2,
+            "colSpan": 1
+          },
+          {
+            "label": "H1 函数练习",
+            "role": "homework_group",
+            "key": "H1",
+            "rowSpan": 1,
+            "colSpan": 2
+          },
+          {
+            "label": "H2 选择题练习",
+            "role": "homework_group",
+            "key": "H2",
+            "rowSpan": 1,
+            "colSpan": 2
+          }
+        ],
+        [
+          {
+            "label": "提交",
+            "role": "metric",
+            "key": "H1.submission",
+            "rowSpan": 1,
+            "colSpan": 1
+          },
+          {
+            "label": "质量",
+            "role": "metric",
+            "key": "H1.quality",
+            "rowSpan": 1,
+            "colSpan": 1
+          },
+          {
+            "label": "提交",
+            "role": "metric",
+            "key": "H2.submission",
+            "rowSpan": 1,
+            "colSpan": 1
+          },
+          {
+            "label": "分数",
+            "role": "metric",
+            "key": "H2.score",
+            "rowSpan": 1,
+            "colSpan": 1
+          }
+        ]
+      ],
+      "leafColumnCount": 5,
+      "notTeachingDateBinding": true
+    }
+  ],
+  "personalTables": [
+    {
+      "id": "PERSONAL_WEEK_DAILY",
+      "requiredByTemplates": [
+        "P01",
+        "P02",
+        "P03"
+      ],
+      "rowIdentity": [
+        "studentId",
+        "taskId",
+        "actualDate"
+      ],
+      "columns": [
+        {
+          "key": "actualDate",
+          "label": "日期"
+        },
+        {
+          "key": "lessonSummary",
+          "label": "涉及课次"
+        },
+        {
+          "key": "attendanceSummary",
+          "label": "出勤"
+        },
+        {
+          "key": "dailyClassroomEvaluation",
+          "label": "本日课堂表现"
+        }
+      ],
+      "coverage": "ALL_APPLICABLE_DAYS_IN_SELECTED_TEACHING_WEEK",
+      "formalGradeOnlyOncePerRow": true
+    },
+    {
+      "id": "PERSONAL_LESSON_DETAIL",
+      "availableToTemplates": [
+        "P01",
+        "P02",
+        "P03"
+      ],
+      "expandedByDefaultIn": [
+        "P02"
+      ],
+      "rowIdentity": [
+        "studentId",
+        "lessonId"
+      ],
+      "columns": [
+        {
+          "key": "actualDate",
+          "label": "日期"
+        },
+        {
+          "key": "slot",
+          "label": "节次"
+        },
+        {
+          "key": "timeRange",
+          "label": "时间"
+        },
+        {
+          "key": "attendance",
+          "label": "出勤"
+        },
+        {
+          "key": "selectedObservation",
+          "label": "选入的课堂观察"
+        }
+      ],
+      "coverage": "ALL_APPLICABLE_LESSONS_IN_SELECTED_TEACHING_WEEK",
+      "formalGradeFieldAllowed": false
+    },
+    {
+      "id": "PERSONAL_HOMEWORK_DETAIL",
+      "requiredByTemplates": [
+        "P01",
+        "P02",
+        "P03"
+      ],
+      "rowIdentity": [
+        "studentId",
+        "homeworkId"
+      ],
+      "columns": [
+        {
+          "key": "homeworkTitle",
+          "label": "作业"
+        },
+        {
+          "key": "effectiveDueAt",
+          "label": "有效截止"
+        },
+        {
+          "key": "requirement",
+          "label": "适用要求"
+        },
+        {
+          "key": "submission",
+          "label": "提交情况"
+        },
+        {
+          "key": "quality",
+          "label": "质量评价"
+        },
+        {
+          "key": "score",
+          "label": "分数／满分"
+        },
+        {
+          "key": "parentFeedback",
+          "label": "教师反馈"
+        }
+      ],
+      "coverage": "ALL_RELEVANT_APPLICABLE_HOMEWORK_IN_SELECTED_PERIOD",
+      "upcomingRequirementsSeparate": true
+    }
+  ],
+  "templates": [
+    {
+      "id": "C01",
+      "name": "班级·标准矩阵",
+      "defaultMode": "day_cell",
+      "supportsModes": [
+        "day_cell",
+        "day_subcolumns"
+      ],
+      "requiredContent": [
+        "student_matrix",
+        "homework_results",
+        "selected_common_content"
+      ]
+    },
+    {
+      "id": "C02",
+      "name": "班级·清晰分列",
+      "defaultMode": "day_subcolumns",
+      "supportsModes": [
+        "day_subcolumns",
+        "day_cell"
+      ],
+      "requiredContent": [
+        "student_matrix",
+        "homework_results",
+        "selected_common_content"
+      ]
+    },
+    {
+      "id": "C03",
+      "name": "班级·紧凑对照",
+      "defaultMode": "day_cell",
+      "supportsModes": [
+        "day_cell",
+        "day_subcolumns"
+      ],
+      "requiredContent": [
+        "student_matrix",
+        "homework_results",
+        "complete_continuations"
+      ]
+    },
+    {
+      "id": "C04",
+      "name": "班级·教学周报",
+      "defaultMode": "day_cell",
+      "supportsModes": [
+        "day_cell",
+        "day_subcolumns"
+      ],
+      "requiredContent": [
+        "student_matrix",
+        "independent_homework_table",
+        "selected_common_content"
+      ]
+    },
+    {
+      "id": "P01",
+      "name": "个人·周学习记录",
+      "requiredTables": [
+        "PERSONAL_WEEK_DAILY",
+        "PERSONAL_HOMEWORK_DETAIL"
+      ],
+      "optionalTables": [
+        "PERSONAL_LESSON_DETAIL"
+      ]
+    },
+    {
+      "id": "P02",
+      "name": "个人·课堂与作业详报",
+      "requiredTables": [
+        "PERSONAL_WEEK_DAILY",
+        "PERSONAL_LESSON_DETAIL",
+        "PERSONAL_HOMEWORK_DETAIL"
+      ]
+    },
+    {
+      "id": "P03",
+      "name": "个人·学习跟进报告",
+      "requiredTables": [
+        "PERSONAL_WEEK_DAILY",
+        "PERSONAL_HOMEWORK_DETAIL"
+      ],
+      "optionalTables": [
+        "PERSONAL_LESSON_DETAIL"
+      ],
+      "optionalContent": [
+        "selected_focus_and_teacher_suggestions"
+      ]
+    }
+  ]
+}

@@ -22,7 +22,7 @@ export function ReportWorkspace({ tw, teacherId, onOpenStudent }: { tw: TaskWeek
   const key = `${teacherId}|${tw.task.id}|${tw.periodId}`
   const state = reporting(mt.biz)
   const defaults = state.defaults[teacherId]
-  const [prep, setPrep] = useState<Preparation>(() => state.preparations[key] ?? { taskIds: [tw.task.id], personal: true, classReport: false, selected: [...tw.students], personalTemplate: defaults?.personal ?? SYSTEM_TEMPLATES[0].id, classTemplate: defaults?.class ?? SYSTEM_TEMPLATES[4].id, stage: false, omitUnverified: false, account: false, link: false })
+  const [prep, setPrep] = useState<Preparation>(() => state.preparations[key] ?? { taskIds: [tw.task.id], personal: false, classReport: true, selected: [], personalTemplate: defaults?.personal ?? 'P01', classTemplate: defaults?.class ?? 'C01', stage: false, omitUnverified: false, account: false, link: false })
   const [saveError, setSaveError] = useState('')
   const [msg, setMsg] = useState('')
   const [search, setSearch] = useState('')
@@ -49,7 +49,7 @@ export function ReportWorkspace({ tw, teacherId, onOpenStudent }: { tw: TaskWeek
   const tws = prep.taskIds.map(id => siblings.find(t => t.id === id)).filter(t => !!t).map(t => t.id === tw.task.id ? tw : taskWeek(mt.biz, t, tw.week))
   const templates = [...SYSTEM_TEMPLATES, ...state.templates.filter(t => t.owner === teacherId)]
   const personal = templates.find(t => t.id === prep.personalTemplate && t.kind === 'personal') ?? SYSTEM_TEMPLATES[0]
-  const classTemplate = templates.find(t => t.id === prep.classTemplate && t.kind === 'class') ?? SYSTEM_TEMPLATES[4]
+  const classTemplate = templates.find(t => t.id === prep.classTemplate && t.kind === 'class') ?? SYSTEM_TEMPLATES[3]
   const data = prepareReports(mt.biz, tws.length ? tws : [tw], prep, personal, classTemplate)
   const currentVersion = sourceVersion(mt.biz)
   const config = JSON.stringify([prep, personal, classTemplate, data.students, data.reports.map(r => r.blocks)])
@@ -79,7 +79,7 @@ export function ReportWorkspace({ tw, teacherId, onOpenStudent }: { tw: TaskWeek
   if (pending.length && !prep.stage) errors.push(`${uniq(pending.map(d => d.studentId)).length} 人存在未完成课堂记录。请处理，或明确选择本周阶段反馈。`)
   const unresolved = data.excluded.filter(x => prep.personal && prep.selected.includes(x.studentId))
   if (unresolved.length && !prep.omitUnverified) errors.push(`${unresolved.length} 项作业到期待核对，请处理或明确本次暂不纳入。`)
-  if (data.reports.filter(r => r.audience === 'parent').some(r => !r.blocks.some(b => b.key !== 'legend' && b.lines.some(x => x.trim())) || !visibleBlocks(r).some(b => b.key !== 'legend'))) errors.push('有报告无有效可见内容，不能只发布标题或评价说明。')
+  if (data.reports.filter(r => r.audience === 'parent').some(r => !r.tables?.some(t => t.rows.length) && (!r.blocks.some(b => b.key !== 'legend' && b.lines.some(x => x.trim())) || !visibleBlocks(r).some(b => b.key !== 'legend')))) errors.push('有报告无有效可见内容，不能只发布标题或评价说明。')
   const common = tws.map(t => mt.biz.summaries[entryKey(t.task.id, tw.week)]).flatMap(s => [s?.teaching ?? '', s?.learning ?? '']).join('\n')
   const names = STUDENTS.filter(s => s.name.length > 1 && common.includes(s.name))
   const openPreview = () => { setPreview({ reports: structuredClone(data.reports), source: currentVersion, config, at: mt.biz.clock }); setConfirmed(false); setReportIndex(0) }

@@ -14,7 +14,7 @@ const report = { key: 'personal-a', kind: 'personal', audience: 'parent', studen
 const guardian = { id: 'g', name: '合成家长', studentIds: ['a', 'b'], active: true, verified: true }
 const pub = { id: 'p', reports: [report], week: 5, revision: 1 }
 const biz = { clock: '2026-10-04T12:00:00Z', publications: [pub], reporting: { deliveries: { p: [{ reportKey: report.key, guardian: 'g', status: 'sent' }] }, links: { p: [{ token: 't', reportKey: report.key, expires: '2026-10-05T12:00:00Z', disabled: false }] } } }
-test('8 templates with 4 distinct layouts per kind', () => { assert.equal(SYSTEM_TEMPLATES.length, 8); for (const kind of ['personal', 'class']) assert.equal(new Set(SYSTEM_TEMPLATES.filter(t => t.kind === kind).map(t => t.layout)).size, 4); SYSTEM_TEMPLATES.forEach(t => assert.ok(validTemplate(t))) })
+test('r2.2 exposes exactly four class and three personal presets', () => { assert.deepEqual(SYSTEM_TEMPLATES.map(t=>t.id), ['P01','P02','P03','C01','C02','C03','C04']); assert.equal(SYSTEM_TEMPLATES.filter(t=>t.kind==='class').length,4); assert.equal(SYSTEM_TEMPLATES.filter(t=>t.kind==='personal').length,3); SYSTEM_TEMPLATES.forEach(t => assert.ok(validTemplate(t))) })
 test('malicious fields rejected', () => { assert.equal(validTemplate({ ...template, modules: ['internalMemo'] }), false); assert.equal(validTemplate({ ...template, color: 'url(javascript:alert(1))' }), false) })
 test('class template cannot read personal comment', () => assert.equal(validTemplate({ ...SYSTEM_TEMPLATES[4], modules: ['comment'] }), false))
 test('known verified guardian can read own child', () => assert.ok(canRead(report, guardian)))

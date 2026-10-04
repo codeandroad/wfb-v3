@@ -1,3 +1,4 @@
+import { reportTables } from './report-tables'
 import { buildLegends, buildStudents, type Draft } from './publish'
 import { type MtBiz, entryKey } from './store'
 import type { TaskWeek } from './derive'
@@ -47,6 +48,10 @@ export function prepareReports(b: MtBiz, tws: TaskWeek[], p: Preparation, person
     const classReport: FrozenReport = { ...base, key: 'class-parent', kind: 'class', audience: 'parent', name: classOf(tws[0].task).name, eligibleStudents: roster, template: structuredClone(classTemplate), blocks: blocks({ teaching: common('teaching'), learning: common('learning'), classroom: tws.flatMap(t => uniq(t.days.filter(d => d.elapsed.length).map(d => d.date)).map(date => `${date} · ${t.task.label} · 已发生教学日（不表示全班出席）`)), next: assignments.filter(a => a.deadline && Date.parse(a.deadline) > now && roster.every(s => !a.recipients.includes(s) || requirementOf(a, s) === a.defaultRequirement)).map(a => `${a.title} · ${a.defaultRequirement === 'OPTIONAL' ? '选做' : '必做'} · 截止 ${a.deadline}${a.instructions ? `\n${a.instructions}` : ''}`) }) }
     result.push(classReport)
     result.push({ ...classReport, key: 'class-internal', audience: 'internal', eligibleStudents: [], blocks: [...classReport.blocks, ...blocks({ homework: students.map(s => `${s.name}\n${s.days.map(d => `${d.date} ${d.grade ?? ({ UNRECORDED: '未记录', NOT_APPLICABLE: '不适用', EXPLICIT_EMPTY: '明确不评价', RECORDED: '已记录' }[d.status])} ${d.attendance.map(a => `${a.lesson} ${a.v}`).join('；')}`).join('\n')}\n${s.homework.map(h => `${h.title} ${h.status}`).join('\n')}`) })] })
+  }
+  for (const report of result) {
+    report.tables = reportTables(b, tws, report.studentId, report.template.preset ?? report.template.id, draft.excludedHomework)
+    report.blocks = report.blocks.filter(block => !['classroom', 'homework', 'comment'].includes(block.key))
   }
   return { reports: result, students: students.filter(s => p.personal && p.selected.includes(s.studentId)), roster, draft, excluded, legends }
 }

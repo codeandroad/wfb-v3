@@ -4,16 +4,15 @@ import type { Publication } from './model'
 export type ReportKind = 'personal' | 'class'
 export type ModuleKey = 'teaching' | 'learning' | 'classroom' | 'homework' | 'highlights' | 'comment' | 'next' | 'legend'
 export const MODULES: Record<ModuleKey, string> = { teaching: '教学介绍', learning: '学情总结', classroom: '课堂记录', homework: '作业表现', highlights: '亮点／表扬', comment: '教师评语', next: '作业与后续安排', legend: '评价说明' }
-export type ReportTemplate = { id: string; owner: string | null; kind: ReportKind; name: string; layout: 'brief' | 'letter' | 'timeline' | 'table'; color: string; background: string; font: 'sans' | 'serif'; bold: boolean; modules: ModuleKey[]; titles: Partial<Record<ModuleKey, string>>; opening: string; closing: string }
+export type ReportTemplate = { preset?: string; id: string; owner: string | null; kind: ReportKind; name: string; layout: 'brief' | 'letter' | 'timeline' | 'table'; color: string; background: string; font: 'sans' | 'serif'; bold: boolean; modules: ModuleKey[]; titles: Partial<Record<ModuleKey, string>>; opening: string; closing: string }
 const keys = Object.keys(MODULES) as ModuleKey[]
-export const SYSTEM_TEMPLATES: ReportTemplate[] = (['personal', 'class'] as const).flatMap(kind => (['brief', 'letter', 'timeline', 'table'] as const).map((layout, i) => ({
-  id: `system-${kind}-${layout}`, owner: null, kind,
-  name: (kind === 'personal' ? ['个人·学习简报', '个人·成长来信', '个人·日期纪要', '个人·清晰表格'] : ['班级·每周简报', '班级·观察与建议', '班级·教学纪要', '班级·结构总览'])[i],
-  layout, color: '#245f50', background: '#ffffff', font: 'sans' as const, bold: true,
-  modules: (layout === 'letter' ? ['comment', 'highlights', 'learning', 'teaching', 'next', 'classroom', 'homework', 'legend'] : layout === 'timeline' ? ['teaching', 'classroom', 'learning', 'homework', 'next', 'highlights', 'comment', 'legend'] : keys).filter(k => kind === 'personal' || k !== 'comment') as ModuleKey[], titles: {}, opening: '', closing: '',
-})))
+export const SYSTEM_TEMPLATES: ReportTemplate[] = [
+  ['P01', 'personal', '个人·周学习记录'], ['P02', 'personal', '个人·课堂与作业详报'], ['P03', 'personal', '个人·学习跟进报告'],
+  ['C01', 'class', '班级·标准矩阵'], ['C02', 'class', '班级·清晰分列'], ['C03', 'class', '班级·紧凑对照'], ['C04', 'class', '班级·教学周报'],
+].map(([id, kind, name]) => ({ id, preset: id, owner: null, kind: kind as ReportKind, name, layout: 'table', color: '#245f50', background: '#ffffff', font: 'sans', bold: true, modules: keys.filter(k => kind === 'personal' || k !== 'comment'), titles: {}, opening: '', closing: '' }))
 export type ReportBlock = { key: ModuleKey; title: string; lines: string[] }
-export type FrozenReport = { stage?: boolean; key: string; kind: ReportKind; audience: 'parent' | 'internal'; studentId?: string; name: string; scope: string; period: string; teacher: string; cutoff: string; template: ReportTemplate; blocks: ReportBlock[]; eligibleStudents: string[] }
+export type ReportTable = { title: string; headers: { text: string; span?: number }[][]; rows: string[][] }
+export type FrozenReport = { tables?: ReportTable[]; stage?: boolean; key: string; kind: ReportKind; audience: 'parent' | 'internal'; studentId?: string; name: string; scope: string; period: string; teacher: string; cutoff: string; template: ReportTemplate; blocks: ReportBlock[]; eligibleStudents: string[] }
 export type Preparation = { taskIds: string[]; personal: boolean; classReport: boolean; selected: string[]; personalTemplate: string; classTemplate: string; stage: boolean; omitUnverified: boolean; account: boolean; link: boolean }
 export type Delivery = { reportKey: string; guardian: string; status: 'sent' | 'failed'; readAt?: string }
 export type ReportLink = { token: string; reportKey: string; expires: string; disabled: boolean }
@@ -26,7 +25,7 @@ function contrast(a: string, b: string): number {
   return (Math.max(x, y) + .05) / (Math.min(x, y) + .05)
 }
 export function validTemplate(t: ReportTemplate): boolean {
-  return Object.keys(t).every(k => ['id', 'owner', 'kind', 'name', 'layout', 'color', 'background', 'font', 'bold', 'modules', 'titles', 'opening', 'closing'].includes(k)) && contrast(t.background, '#263a33') >= 4.5 && contrast(t.background, t.color) >= 3 && ['personal', 'class'].includes(t.kind) && ['brief', 'letter', 'timeline', 'table'].includes(t.layout) && /^#[0-9a-f]{6}$/i.test(t.color) && /^#[0-9a-f]{6}$/i.test(t.background) && ['sans', 'serif'].includes(t.font) && t.modules.every(k => keys.includes(k) && (t.kind === 'personal' || k !== 'comment')) && new Set(t.modules).size === t.modules.length && Object.keys(t.titles).every(k => keys.includes(k as ModuleKey) && k !== 'teaching' && k !== 'learning')
+  return Object.keys(t).every(k => ['preset', 'id', 'owner', 'kind', 'name', 'layout', 'color', 'background', 'font', 'bold', 'modules', 'titles', 'opening', 'closing'].includes(k)) && contrast(t.background, '#263a33') >= 4.5 && contrast(t.background, t.color) >= 3 && ['personal', 'class'].includes(t.kind) && ['brief', 'letter', 'timeline', 'table'].includes(t.layout) && /^#[0-9a-f]{6}$/i.test(t.color) && /^#[0-9a-f]{6}$/i.test(t.background) && ['sans', 'serif'].includes(t.font) && t.modules.every(k => keys.includes(k) && (t.kind === 'personal' || k !== 'comment')) && new Set(t.modules).size === t.modules.length && Object.keys(t.titles).every(k => keys.includes(k as ModuleKey) && k !== 'teaching' && k !== 'learning')
 }
 export function sourceVersion(b: MtBiz): string {
   const value = JSON.stringify([b.records, b.assignments, b.summaries, b.comments, b.highlights, b.memberships, b.revoked, b.schemes])
@@ -65,6 +64,7 @@ export function reportDiff(previous: FrozenReport[] | undefined, next: FrozenRep
   for (const r of next) {
     const old = previous.find(p => p.key === r.key)
     if (!old) { changes.push(`${r.name}：新增${r.audience === 'internal' ? '校内核对' : r.kind === 'personal' ? '个人' : '班级'}报告`); continue }
+    if (JSON.stringify(old.tables) !== JSON.stringify(r.tables)) changes.push(`${r.name}：课堂或作业明细变化`)
     if (JSON.stringify(old.template) !== JSON.stringify(r.template)) changes.push(`${r.name}：模板呈现修订`)
     if (JSON.stringify(old.eligibleStudents) !== JSON.stringify(r.eligibleStudents) || old.scope !== r.scope || old.stage !== r.stage) changes.push(`${r.name}：范围与受众变化`)
     for (const k of keys) if (JSON.stringify(old.blocks.find(b => b.key === k)?.lines) !== JSON.stringify(r.blocks.find(b => b.key === k)?.lines)) changes.push(`${r.name}：${MODULES[k]}变化`)

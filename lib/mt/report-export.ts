@@ -1,3 +1,4 @@
+import { renderTableImages } from './report-table-export'
 import { zipSync, strToU8 } from 'fflate'
 import type { Publication } from './model'
 import { reportFilename, visibleBlocks, type FrozenReport } from './reports'
@@ -58,7 +59,7 @@ export async function renderReportImages(report: FrozenReport, version: string):
     const data = canvas.toDataURL('image/png')
     if (!data.startsWith('data:image/png;base64,') || data.length < 1000) throw new Error('图片生成失败，未得到有效PNG')
     return data
-  })
+  }).concat(renderTableImages(report, version))
 }
 export function downloadFile(data: Blob | string, filename: string) {
   const url = typeof data === 'string' ? data : URL.createObjectURL(data)
