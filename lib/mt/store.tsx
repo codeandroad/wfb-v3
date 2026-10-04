@@ -294,7 +294,7 @@ const NO_FAULTS: Faults = {
   slowNextMs: 0,
 }
 
-function freshBiz(variant: VariantId): MtBiz {
+export function freshBiz(variant: VariantId): MtBiz {
   const clock = variantInitialClock(variant)
   const memberships: Record<string, Membership[]> = {}
   for (const t of TASKS) memberships[t.id] = seedMemberships(t)
@@ -703,7 +703,7 @@ export function MtProvider({ children }: { children: ReactNode }) {
           try { persisted = JSON.parse(window.localStorage.getItem(bizKey(cur.variant)) ?? 'null') } catch { return { ok: false, error: '无法核对存储版本，请重载后重试' } }
           if (input.sourceVersion !== sourceVersion(cur) || (persisted && sourceVersion(persisted) !== input.sourceVersion)) return { ok: false, error: '源内容已变化，请重新加载并核对预览' }
           if (!input.authorId || input.taskIds.some(id => !TASKS.some(t => t.id === id && (t.teacher_id === input.authorId || (cur.bigDemo && input.authorId === 'TEACHER_LYNN' && t.teacher_id === 'TEACHER_BIG_DEMO'))))) return { ok: false, error: '无权发布该教学范围' }
-          if (input.reports.some(r => !validTemplate(r.template) || !r.blocks.some(b => b.key !== 'legend' && b.lines.length))) return { ok: false, error: '报告内容为空或模板非法' }
+          if (input.reports.some(r => !validTemplate(r.template) || (!r.tables?.some(t => t.rows.length) && !r.blocks.some(b => b.key !== 'legend' && b.lines.length)))) return { ok: false, error: '报告内容为空或模板非法' }
         }
         if (input.taskIds.some((t) => cur.revoked.includes(t))) return { ok: false, error: "已失去任务权限，不能��布" }
         const prev = cur.publications.filter(
@@ -1301,7 +1301,7 @@ export function useTextWriters() {
           },
         })
       },
-      /** 待核对的旧亮点：教师关联到确认参加的日期后才重新计入 */
+      /** 待核对的旧亮点：教师关���到确认参加的日期后才重新计入 */
       linkHighlight(taskId: string, week: number, sid: string, id: string, date: string) {
         const k = entryKey(taskId, week, sid)
         mt.save({
@@ -1468,7 +1468,7 @@ export function useHomeworkWriters() {
             const nowTs = Date.parse(s.clock)
             const plan = planBatch(x, kind, opts, subset, nowTs)
             const sids = plan.writes.map((w) => w.sid).sort()
-            if (sids.join() !== [...previewSids].sort().join()) return { error: "确认后范围已变化（有人修改或时间已推进），请重新核对后再执行" }
+            if (sids.join() !== [...previewSids].sort().join()) return { error: "确认后范围���变化（有人修改或时间已推进），请重新核对后再执行" }
             if (!plan.writes.length) return { error: "没有符合条件的对象，未写入任何结果" }
             const results = { ...x.results }
             const entries: HwBatchEntry[] = []
@@ -1506,7 +1506,7 @@ export function useHomeworkWriters() {
           patchA(s, aId, (x) => {
             const b = (x.batches ?? []).find((y) => y.id === batchId)
             if (!b) return { error: "找不到该批量操作" }
-            if ((b.generation ?? 0) !== generationOf(s, { kind: "HOMEWORK", taskId: x.taskId, assignmentId: x.id })) return { error: "该批量属于旧评价代次，不能撤销影响新结果" }
+            if ((b.generation ?? 0) !== generationOf(s, { kind: "HOMEWORK", taskId: x.taskId, assignmentId: x.id })) return { error: "该���量属于旧评价代次，不能撤销影响新结果" }
             if (b.undone) {
               res = b.undone
               return x
