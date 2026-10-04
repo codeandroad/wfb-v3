@@ -4,17 +4,22 @@ import type { Publication } from './model'
 
 export type ReportKind = 'personal' | 'class'
 export type ModuleKey = 'teaching' | 'learning' | 'classroom' | 'homework' | 'highlights' | 'comment' | 'next' | 'legend'
-export const MODULES: Record<ModuleKey, string> = { teaching: '教学介绍', learning: '学情总结', classroom: '课堂记录', homework: '作业表现', highlights: '亮点／表扬', comment: '教师评语', next: '作业与后续安排', legend: '评价说明' }
+export const MODULES: Record<ModuleKey, string> = { teaching: '教学介绍', learning: '学情介绍', classroom: '课堂记录', homework: '作业表现', highlights: '亮点／表扬', comment: '教师评语', next: '作业与后续安排', legend: '评价说明' }
 export type ReportTemplate = { archived?: boolean; options?: Partial<ReportOptions>; preset?: string; id: string; owner: string | null; kind: ReportKind; name: string; layout: 'brief' | 'letter' | 'timeline' | 'table'; color: string; background: string; font: 'sans' | 'serif'; bold: boolean; modules: ModuleKey[]; titles: Partial<Record<ModuleKey, string>>; opening: string; closing: string }
 const keys = Object.keys(MODULES) as ModuleKey[]
 export const SYSTEM_TEMPLATES: ReportTemplate[] = [
-  ['P01', 'personal', '个人·周学习记录'], ['P02', 'personal', '个人·课堂与作业详报'], ['P03', 'personal', '个人·学习跟进报告'],
-  ['C01', 'class', '班级·标准矩阵'], ['C02', 'class', '班级·清晰分列'], ['C03', 'class', '班级·紧凑对照'], ['C04', 'class', '班级·教学周报'],
-].map(([id, kind, name]) => ({ id, preset: id, owner: null, kind: kind as ReportKind, name, layout: 'table', color: '#245f50', background: '#ffffff', font: 'sans', bold: true, modules: (id === 'P03' ? ['comment','homework','classroom','highlights','teaching','next','legend'] as ModuleKey[] : keys).filter(k => kind === 'personal' || k !== 'comment'), titles: {}, opening: '', closing: '' }))
+  ['P01', 'personal', '个人·标准跟进单'], ['P02', 'personal', '个人·表格详报'], ['P03', 'personal', '个人·家长沟通版'],
+  ['C01', 'class', '经典边栏型'], ['C02', 'class', '上下分区型'], ['C03', 'class', '紧凑纯矩阵型'],
+].map(([id, kind, name]) => ({ id, preset: id, options: {classic:true,mode:'B',notesPosition:id==='C01'?'right':'bottom',highlightPlacement:'merged',homeworkAppendix:false,gradeText:false,numbering:false,highlights:false,lessons:id==='P02',padding:id==='C03'?4:7,bodySize:id==='C03'?14:16,density:id==='C03'?'compact':'comfortable',homework:'inline',emptyValue:'dash'}, owner: null, kind: kind as ReportKind, name, layout: 'table', color: '#245f50', background: '#ffffff', font: 'sans', bold: true, modules: (id === 'P03' ? ['comment','homework','classroom','highlights','teaching','next','legend'] as ModuleKey[] : keys).filter(k => kind === 'personal' || k !== 'comment'), titles: {}, opening: '', closing: '' }))
+export function classicTemplate(t: ReportTemplate): ReportTemplate {
+  if (t.options?.classic) return t
+  const preset=SYSTEM_TEMPLATES.find(s=>s.id===t.preset)||SYSTEM_TEMPLATES.find(s=>s.kind===t.kind)!
+  return {...t,preset:preset.id,options:{...preset.options,...t.options,classic:true}}
+}
 export type ReportBlock = { key: ModuleKey; title: string; lines: string[] }
 export type ReportTable = { title: string; kind?: 'classroom' | 'homework' | 'lessons' | 'focus'; identityColumns?: number; groupSize?: number; headers: { text: string; span?: number; rowSpan?: number }[][]; rows: string[][] }
 export type FrozenReport = { tables?: ReportTable[]; stage?: boolean; key: string; kind: ReportKind; audience: 'parent' | 'internal'; studentId?: string; name: string; scope: string; period: string; teacher: string; cutoff: string; template: ReportTemplate; blocks: ReportBlock[]; eligibleStudents: string[] }
-export type Preparation = { personalStyle?: ReportTemplate; classStyle?: ReportTemplate; observations?: { key: string; text: string }[]; comments?: string[]; focus?: { studentId: string; taskId: string; source: string; suggestion: string }[]; taskIds: string[]; personal: boolean; classReport: boolean; selected: string[]; personalTemplate: string; classTemplate: string; stage: boolean; omitUnverified: boolean; account: boolean; link: boolean }
+export type Preparation = { classicVersion?: number; homeworkDates?: Record<string,string>; personalStyle?: ReportTemplate; classStyle?: ReportTemplate; observations?: { key: string; text: string }[]; comments?: string[]; focus?: { studentId: string; taskId: string; source: string; suggestion: string }[]; taskIds: string[]; personal: boolean; classReport: boolean; selected: string[]; personalTemplate: string; classTemplate: string; stage: boolean; omitUnverified: boolean; account: boolean; link: boolean }
 export type Delivery = { reportKey: string; guardian: string; status: 'sent' | 'failed'; readAt?: string }
 export type ReportLink = { token: string; reportKey: string; expires: string; disabled: boolean }
 export type ReportingState = { readEvents?: Record<string, string>; artifacts?: Record<string, { status: 'generating' | 'ready' | 'failed'; attempts: number; pages?: number; error?: string }>; templates: ReportTemplate[]; defaults: Record<string, Partial<Record<ReportKind, string>>>; preparations: Record<string, Preparation>; deliveries: Record<string, Delivery[]>; links: Record<string, ReportLink[]> }

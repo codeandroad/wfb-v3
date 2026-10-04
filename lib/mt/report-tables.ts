@@ -1,3 +1,4 @@
+import { classicMatrix, homeworkCheckDate } from './report-classic-data'
 import type { MtBiz } from './store'
 import type { TaskWeek } from './derive'
 import { ATT_LABEL, feedbackPeriodId, lessonTimeLabel, studentById, HOMEROOMS, requirementOf, SUBMISSION_LABEL, type StudentDay, type Assignment, type LessonView } from './model'
@@ -48,6 +49,8 @@ export function reportTables(b: MtBiz, tws: TaskWeek[], sid: string | undefined,
         })
         if(facts.length) tables.unshift({kind:'focus',title:`${tw.task.label} · 本次关注与建议`,headers:[header(['来源','已记录事实','教师建议'])],rows:facts})
       }
+    } else if(o.classic) {
+      tables.push(classicMatrix(b,tw,template,prep,excluded))
     } else {
       const split=o.mode==='B', extras=[...(o.highlights?['亮点']:[]),...(o.homework==='inline'?['具体作业结果']:[])]
       const stable=[...identityTitles,...extras].map(text=>({text,rowSpan:split?2:1}))
@@ -58,7 +61,8 @@ export function reportTables(b: MtBiz, tws: TaskWeek[], sid: string | undefined,
     if(!sid && preset==='C04') {
       tables.push({kind:'homework',identityColumns:identityTitles.length,groupSize:o.scores?3:2,title:`${tw.task.label} · 作业结果矩阵`,headers:[[...identityTitles.map(text=>({text,rowSpan:2})),...assignments.map(a=>({text:a.title,span:o.scores?3:2}))],header(assignments.flatMap(()=>['提交','质量',...(o.scores?['分数']:[])]))],rows:ids.map((id,i)=>[...identity(id,i),...assignments.flatMap(a=>result(a,id).slice(0,o.scores?3:2))])})
     }
-    if(sid || o.homework==='separate') tables.push({kind:'homework',title:`${tw.task.label} · 作业明细`,headers:[header([...(sid?[]:['姓名']),'作业','有效截止',...(o.combinedHomework?['提交与质量']:['提交情况','质量评价']),...(o.scores?['已有分数']:[]),...(o.feedback?['教师反馈']:[])])],rows:ids.flatMap(id=>assignments.filter(a=>a.recipients.includes(id)&&!excluded.some(x=>x.assignmentId===a.id&&x.studentId===id)).map(a=>{const r=result(a,id);return [...(sid?[]:[studentById(id)?.name??'未知姓名']),a.title,a.results[id]?.extDeadline??a.deadline??'未设置',...(o.combinedHomework?[r.slice(0,2).join(' · ')]:r.slice(0,2)),...(o.scores?[r[2]]:[]),...(o.feedback?[r[3]]:[])]}))})
+    if(sid || (o.classic ? o.homeworkAppendix : o.homework==='separate')) tables.push({kind:'homework',title:`${tw.task.label} · 作业明细`,headers:[header([...(sid?[]:['姓名']),'作业',o.classic?'检查 / 截止日期':'有效截止',...(o.combinedHomework?['提交与质量']:['提交情况','质量评价']),...(o.scores?['已有分数']:[]),...(o.feedback?['教师反馈']:[])])],rows:ids.flatMap(id=>assignments.filter(a=>a.recipients.includes(id)&&!excluded.some(x=>x.assignmentId===a.id&&x.studentId===id)).map(a=>{const r=result(a,id);return [...(sid?[]:[studentById(id)?.name??'未知姓名']),a.title,(o.classic?homeworkCheckDate(a,prep):a.results[id]?.extDeadline??a.deadline)||'未设置',...(o.combinedHomework?[r.slice(0,2).join(' · ')]:r.slice(0,2)),...(o.scores?[r[2]]:[]),...(o.feedback?[r[3]]:[])]}))})
   }
+  if(o.classic) for(const table of tables) table.rows=table.rows.map(row=>row.map(cell=>/^(无需评价|不适用|未记录|待评价|明确不评价|未提供|未设置)$/.test(cell)?(o.emptyValue==='blank'?'':'–'):cell))
   return tables
 }
