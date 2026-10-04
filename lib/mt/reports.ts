@@ -1,19 +1,20 @@
+import { normalizeHex, validOptions, type ReportOptions } from './report-options'
 import type { MtBiz } from './store'
 import type { Publication } from './model'
 
 export type ReportKind = 'personal' | 'class'
 export type ModuleKey = 'teaching' | 'learning' | 'classroom' | 'homework' | 'highlights' | 'comment' | 'next' | 'legend'
 export const MODULES: Record<ModuleKey, string> = { teaching: '教学介绍', learning: '学情总结', classroom: '课堂记录', homework: '作业表现', highlights: '亮点／表扬', comment: '教师评语', next: '作业与后续安排', legend: '评价说明' }
-export type ReportTemplate = { preset?: string; id: string; owner: string | null; kind: ReportKind; name: string; layout: 'brief' | 'letter' | 'timeline' | 'table'; color: string; background: string; font: 'sans' | 'serif'; bold: boolean; modules: ModuleKey[]; titles: Partial<Record<ModuleKey, string>>; opening: string; closing: string }
+export type ReportTemplate = { archived?: boolean; options?: Partial<ReportOptions>; preset?: string; id: string; owner: string | null; kind: ReportKind; name: string; layout: 'brief' | 'letter' | 'timeline' | 'table'; color: string; background: string; font: 'sans' | 'serif'; bold: boolean; modules: ModuleKey[]; titles: Partial<Record<ModuleKey, string>>; opening: string; closing: string }
 const keys = Object.keys(MODULES) as ModuleKey[]
 export const SYSTEM_TEMPLATES: ReportTemplate[] = [
   ['P01', 'personal', '个人·周学习记录'], ['P02', 'personal', '个人·课堂与作业详报'], ['P03', 'personal', '个人·学习跟进报告'],
   ['C01', 'class', '班级·标准矩阵'], ['C02', 'class', '班级·清晰分列'], ['C03', 'class', '班级·紧凑对照'], ['C04', 'class', '班级·教学周报'],
-].map(([id, kind, name]) => ({ id, preset: id, owner: null, kind: kind as ReportKind, name, layout: 'table', color: '#245f50', background: '#ffffff', font: 'sans', bold: true, modules: keys.filter(k => kind === 'personal' || k !== 'comment'), titles: {}, opening: '', closing: '' }))
+].map(([id, kind, name]) => ({ id, preset: id, owner: null, kind: kind as ReportKind, name, layout: 'table', color: '#245f50', background: '#ffffff', font: 'sans', bold: true, modules: (id === 'P03' ? ['comment','homework','classroom','highlights','teaching','next','legend'] as ModuleKey[] : keys).filter(k => kind === 'personal' || k !== 'comment'), titles: {}, opening: '', closing: '' }))
 export type ReportBlock = { key: ModuleKey; title: string; lines: string[] }
-export type ReportTable = { title: string; headers: { text: string; span?: number }[][]; rows: string[][] }
+export type ReportTable = { title: string; kind?: 'classroom' | 'homework' | 'lessons' | 'focus'; identityColumns?: number; groupSize?: number; headers: { text: string; span?: number; rowSpan?: number }[][]; rows: string[][] }
 export type FrozenReport = { tables?: ReportTable[]; stage?: boolean; key: string; kind: ReportKind; audience: 'parent' | 'internal'; studentId?: string; name: string; scope: string; period: string; teacher: string; cutoff: string; template: ReportTemplate; blocks: ReportBlock[]; eligibleStudents: string[] }
-export type Preparation = { taskIds: string[]; personal: boolean; classReport: boolean; selected: string[]; personalTemplate: string; classTemplate: string; stage: boolean; omitUnverified: boolean; account: boolean; link: boolean }
+export type Preparation = { personalStyle?: ReportTemplate; classStyle?: ReportTemplate; observations?: { key: string; text: string }[]; comments?: string[]; focus?: { studentId: string; taskId: string; source: string; suggestion: string }[]; taskIds: string[]; personal: boolean; classReport: boolean; selected: string[]; personalTemplate: string; classTemplate: string; stage: boolean; omitUnverified: boolean; account: boolean; link: boolean }
 export type Delivery = { reportKey: string; guardian: string; status: 'sent' | 'failed'; readAt?: string }
 export type ReportLink = { token: string; reportKey: string; expires: string; disabled: boolean }
 export type ReportingState = { readEvents?: Record<string, string>; artifacts?: Record<string, { status: 'generating' | 'ready' | 'failed'; attempts: number; pages?: number; error?: string }>; templates: ReportTemplate[]; defaults: Record<string, Partial<Record<ReportKind, string>>>; preparations: Record<string, Preparation>; deliveries: Record<string, Delivery[]>; links: Record<string, ReportLink[]> }
@@ -21,14 +22,14 @@ export const EMPTY_REPORTING: ReportingState = { templates: [], defaults: {}, pr
 export function reporting(b: MtBiz): ReportingState { return b.reporting ?? EMPTY_REPORTING }
 function contrast(a: string, b: string): number {
   const luminance = (hex: string) => [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255).map(c => c <= .04045 ? c / 12.92 : ((c + .055) / 1.055) ** 2.4).reduce((sum, c, i) => sum + c * [.2126, .7152, .0722][i], 0)
-  const x = luminance(a), y = luminance(b)
+  const x = luminance(normalizeHex(a)), y = luminance(normalizeHex(b))
   return (Math.max(x, y) + .05) / (Math.min(x, y) + .05)
 }
 export function validTemplate(t: ReportTemplate): boolean {
-  return Object.keys(t).every(k => ['preset', 'id', 'owner', 'kind', 'name', 'layout', 'color', 'background', 'font', 'bold', 'modules', 'titles', 'opening', 'closing'].includes(k)) && contrast(t.background, '#263a33') >= 4.5 && contrast(t.background, t.color) >= 3 && ['personal', 'class'].includes(t.kind) && ['brief', 'letter', 'timeline', 'table'].includes(t.layout) && /^#[0-9a-f]{6}$/i.test(t.color) && /^#[0-9a-f]{6}$/i.test(t.background) && ['sans', 'serif'].includes(t.font) && t.modules.every(k => keys.includes(k) && (t.kind === 'personal' || k !== 'comment')) && new Set(t.modules).size === t.modules.length && Object.keys(t.titles).every(k => keys.includes(k as ModuleKey) && k !== 'teaching' && k !== 'learning')
+  return validOptions(t.options) && (!t.options?.headerBackground || contrast(t.options.headerBackground,t.options.headerText ?? '#245f50') >= 4.5) && (!t.options?.stripeColor || contrast(t.options.stripeColor,'#263a33') >= 4.5) && Object.keys(t).every(k => ['archived', 'options', 'preset', 'id', 'owner', 'kind', 'name', 'layout', 'color', 'background', 'font', 'bold', 'modules', 'titles', 'opening', 'closing'].includes(k)) && contrast(t.background, '#263a33') >= 4.5 && contrast(t.background, t.color) >= 3 && ['personal', 'class'].includes(t.kind) && ['brief', 'letter', 'timeline', 'table'].includes(t.layout) && /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(t.color) && /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(t.background) && ['sans', 'serif'].includes(t.font) && t.modules.every(k => keys.includes(k) && (t.kind === 'personal' || k !== 'comment')) && new Set(t.modules).size === t.modules.length && Object.keys(t.titles).every(k => keys.includes(k as ModuleKey) && k !== 'teaching' && k !== 'learning')
 }
 export function sourceVersion(b: MtBiz): string {
-  const value = JSON.stringify([b.records, b.assignments, b.summaries, b.comments, b.highlights, b.memberships, b.revoked, b.schemes])
+  const value = JSON.stringify([b.observations, b.records, b.assignments, b.summaries, b.comments, b.highlights, b.memberships, b.revoked, b.schemes])
   let a = 2166136261, c = 5381
   for (let i = 0; i < value.length; i++) { a = Math.imul(a ^ value.charCodeAt(i), 16777619); c = Math.imul(c, 33) ^ value.charCodeAt(i) }
   return `${value.length}:${a >>> 0}:${c >>> 0}`

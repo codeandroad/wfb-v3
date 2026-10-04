@@ -1,0 +1,22 @@
+'use client'
+import type { ReportTemplate } from '@/lib/mt/reports'
+import { reportOptions, type ReportOptions } from '@/lib/mt/report-options'
+import { inputCls } from './ui'
+
+export function ReportOptionsEditor({value,onChange}:{value:ReportTemplate;onChange:(next:ReportTemplate)=>void}) {
+  const o=reportOptions(value)
+  const patch=(key:keyof ReportOptions,v:unknown)=>onChange({...value,options:{...o,[key]:v}})
+  const choices: [keyof ReportOptions,string,string[][]][] = [
+    ['mode','表头模式',[['A','一日一格'],['B','日期组＋字段子表头']]],['density','密度',[['comfortable','舒适'],['compact','紧凑']]],['orientation','输出方向',[['portrait','纵向'],['landscape','横向']]],['output','输出组织',[['pages','完整行分段'],['long','长图（超安全尺寸自动续页）']]],['align','对齐',[['left','左对齐'],['center','居中']]],['dateFormat','日期格式',[['short','月／日'],['full','完整日期']]],['homework','作业组织',[['inline','课堂矩阵内完整结果'],['separate','独立作业表']]],
+  ]
+  const numbers:[keyof ReportOptions,string,number,number,number?][]=[['titleSize','标题字号',20,40],['bodySize','正文字号',14,24],['tableSize','表格字号',14,24],['lineHeight','行距',1.4,2,.1],['padding','单元格留白',4,20],['rowsPerPage','每段最多学生行',1,60],['groupsPerPage','每段日期／作业组',1,7]]
+  const flags:[keyof ReportOptions,string][]=[['numbering','连续序号'],['studentCode','学号（源未提供时明确标注）'],['homeroom','来源行政班'],['highlights','有效公开亮点'],['lessons','完整逐课次明细'],['location','课次地点'],['feedback','原有作业反馈'],['scores','已有原始分数'],['gradeText','等级＋短释义'],['normalShort','正常出勤简写√'],['combinedHomework','提交与质量合并显示'],['borders','表格边线'],['striped','交替行底色']]
+  return <fieldset className="flex flex-col gap-4"><legend className="mb-3 font-semibold">结构与正式输出设置</legend><div className="flex flex-wrap gap-2">{[['松绿','#245f50','#edf2ef'],['海蓝','#234b68','#edf2f6'],['石墨','#374047','#edf0f2']].map(([name,color,background])=><button type="button" key={name} className="rounded border border-border px-3 py-1 text-sm" onClick={()=>onChange({...value,color,options:{...o,headerText:color,headerBackground:background,stripeColor:background,emphasis:color}})}>{name}色板</button>)}</div><div className="grid gap-3 sm:grid-cols-3">
+    {(['title','school','signature'] as const).map((key,i)=><label className="text-sm" key={key}>{['报告标题','校名','教师署名（为空沿用源教师）'][i]}<input className={inputCls} maxLength={100} value={o[key]} onChange={e=>patch(key,e.target.value)}/></label>)}
+    {choices.filter(([key])=>value.kind==='class'||!['mode','homework'].includes(key)).map(([key,label,items])=><label className="text-sm" key={key}>{label}<select className={inputCls} value={String(o[key])} onChange={e=>patch(key,e.target.value)}>{items.map(([v,l])=><option key={v} value={v}>{l}</option>)}</select></label>)}
+    {numbers.map(([key,label,min,max,step])=><label className="text-sm" key={key}>{label}<input type="number" className={inputCls} min={min} max={max} step={step??1} value={Number(o[key])} onChange={e=>patch(key,Number(e.target.value))}/></label>)}
+    {(['headerBackground','headerText','borderColor','stripeColor','emphasis'] as const).map((key,i)=><label className="text-sm" key={key}>{['表头底色','表头文字','边线颜色','交替行颜色','强调色'][i]}<div className="flex gap-2"><input type="color" aria-label={`${key}取色`} value={/^#[0-9a-f]{6}$/i.test(o[key])?o[key]:'#245f50'} onChange={e=>patch(key,e.target.value)}/><input className={inputCls} value={o[key]} onChange={e=>patch(key,e.target.value)} placeholder="#ABC 或 #AABBCC"/></div></label>)}
+    <label className="text-sm">字体<select className={inputCls} value={value.font} onChange={e=>onChange({...value,font:e.target.value as 'sans'|'serif'})}><option value="sans">无衬线／中文回退</option><option value="serif">衬线／中文回退</option></select></label>
+    <label className="text-sm">主题 HEX<input className={inputCls} value={value.color} onChange={e=>onChange({...value,color:e.target.value})}/></label><label className="text-sm">报告背景 HEX<input className={inputCls} value={value.background} onChange={e=>onChange({...value,background:e.target.value})}/></label>
+  </div><div className="flex flex-wrap gap-4">{flags.filter(([key])=>value.kind==='personal'||!['lessons','location'].includes(key)).map(([key,label])=><label key={key} className="flex items-center gap-2 text-sm"><input type="checkbox" checked={Boolean(o[key])} onChange={e=>patch(key,e.target.checked)}/>{label}</label>)}<label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={value.bold} onChange={e=>onChange({...value,bold:e.target.checked})}/>表头加粗</label></div></fieldset>
+}

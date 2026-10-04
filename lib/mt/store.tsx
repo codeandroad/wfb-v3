@@ -294,7 +294,7 @@ const NO_FAULTS: Faults = {
   slowNextMs: 0,
 }
 
-function freshBiz(variant: VariantId): MtBiz {
+export function freshBiz(variant: VariantId): MtBiz {
   const clock = variantInitialClock(variant)
   const memberships: Record<string, Membership[]> = {}
   for (const t of TASKS) memberships[t.id] = seedMemberships(t)
@@ -1301,7 +1301,7 @@ export function useTextWriters() {
           },
         })
       },
-      /** 待核对的旧亮点：教师关联到确认参加的日期后才重新计入 */
+      /** 待核对的旧亮点：教师关���到确认参加的日期后才重新计入 */
       linkHighlight(taskId: string, week: number, sid: string, id: string, date: string) {
         const k = entryKey(taskId, week, sid)
         mt.save({
@@ -1506,7 +1506,7 @@ export function useHomeworkWriters() {
           patchA(s, aId, (x) => {
             const b = (x.batches ?? []).find((y) => y.id === batchId)
             if (!b) return { error: "找不到该批量操作" }
-            if ((b.generation ?? 0) !== generationOf(s, { kind: "HOMEWORK", taskId: x.taskId, assignmentId: x.id })) return { error: "该批量属于旧评价代次，不能撤销影响新结果" }
+            if ((b.generation ?? 0) !== generationOf(s, { kind: "HOMEWORK", taskId: x.taskId, assignmentId: x.id })) return { error: "该���量属于旧评价代次，不能撤销影响新结果" }
             if (b.undone) {
               res = b.undone
               return x
