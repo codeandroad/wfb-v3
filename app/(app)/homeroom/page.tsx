@@ -123,9 +123,9 @@ export default function HomeroomPage() {
   // 主班列表视图
   if (!room) {
     return (
-      <div>
-        <PageHeader title="我的主班" desc={`班主任视角 · ${WEEK_LABEL}`} />
-        <div className="grid gap-4 sm:grid-cols-2">
+      <div className="flex flex-col gap-3">
+        <header className="flex flex-wrap items-center gap-x-3 gap-y-1"><h1 className="text-xl font-semibold">我的主班</h1><p className="text-sm text-muted-foreground">班级管理与周反馈</p></header>
+        <div className="grid gap-3 sm:grid-cols-2">
           {MY_HOMEROOMS.map((r) => {
             const students = studentProfilesByClass(r)
             const onLeave = students.filter((s) => leavesFor(s.id).length).length
@@ -133,30 +133,21 @@ export default function HomeroomPage() {
               <button
                 key={r}
                 onClick={() => setRoom(r)}
-                className="group flex flex-col gap-3 rounded-xl border border-border bg-card p-5 text-left transition-colors hover:border-primary/50 hover:bg-accent/40"
+                className="group flex flex-wrap items-center gap-3 rounded-lg border border-border bg-card p-3 text-left transition-colors hover:border-primary/50 hover:bg-accent/40"
               >
-                <div className="flex items-center justify-between">
-                  <span className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                    <Users className="size-5" />
-                  </span>
-                  <Badge tone={onLeave ? "warning" : "success"}>
-                    {onLeave ? `${onLeave} 人请假中` : "全员在校"}
-                  </Badge>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold">{r} · {students.length} 名学生</p>
+                  <p className="text-sm text-muted-foreground">班主任 {mainHeadTeacherOf(r) ?? "暂缺"}</p>
                 </div>
-                <div>
-                  <p className="text-[15px] font-semibold">{r}</p>
-                  <p className="mt-0.5 text-[13px] text-muted-foreground">
-                    班主任 {mainHeadTeacherOf(r) ?? "暂缺"} · {students.length} 名学生
-                  </p>
-                </div>
-                <span className="text-[13px] font-medium text-primary">进入管理 →</span>
+                <Badge tone={onLeave ? "warning" : "success"}>{onLeave ? `${onLeave} 人请假中` : "全员在校"}</Badge>
+                <span className="text-sm font-medium text-primary">管理 →</span>
               </button>
             )
           })}
         </div>
 
-        <div className="mt-5 flex flex-col gap-5">{MY_HOMEROOMS.map(r => <HomeroomPublications key={r} room={r} />)}</div>
-        <div className="mt-4 rounded-lg border border-border bg-muted/40 p-3 text-[13px] text-muted-foreground">
+        <div className="flex flex-col gap-3">{MY_HOMEROOMS.map(r => <HomeroomPublications key={r} room={r} />)}</div>
+        <div className="text-sm text-muted-foreground">
           <span className="inline-flex items-center gap-1.5 font-medium text-foreground">
             <Lock className="size-3.5" />
             班主任视角
