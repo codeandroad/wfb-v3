@@ -17,6 +17,18 @@ export type MatrixStats = {
 
 const EMPTY: MatrixStats = { students: 0, attNormal: 0, attTotal: 0, clsA: 0, clsTotal: 0, hwDone: 0, hwTotal: 0, highlights: 0 }
 
+/** 从单元格显示文本判断是否为 A 系等级。
+ * 注意：fact.grade 存的是原始 gradeEff（需经 scheme 映射），不能直接比对；
+ * 显示文本才是家长看到的等级代码（如 A / A+ / 优秀）。 */
+export const isAGradeText = (text: string) => {
+  const t = (text ?? '').trim()
+  return /^a[+\-*/]?$/i.test(t) || t === '优秀'
+}
+export const isEmptyCell = (text: string) => {
+  const t = (text ?? '').trim()
+  return !t || t === '–' || t === '-'
+}
+
 /**
  * 从报告的数据表（classicMatrix）的结构化 facts 计算仪表盘指标。
  * facts 语义（见 report-classic-data.ts）：
@@ -30,16 +42,19 @@ export function computeStats(r: FrozenReport): MatrixStats {
   const stats: MatrixStats = { ...EMPTY }
   if (matrix?.facts) {
     stats.students = matrix.rows.length
-    for (const row of matrix.facts) {
+    matrix.facts.forEach((row, ri) => {
       for (let c = 1; c < row.length; c++) {
         const f = row[c]
         if (!f) continue
         if (f.field === 'attendance' && f.status) {
           stats.attTotal++
           if (f.status === 'NORMAL') stats.attNormal++
-        } else if (f.field === 'classroom' && f.grade) {
-          stats.clsTotal++
-          if (String(f.grade).replace('*', '').startsWith('A')) stats.clsA++
+        } else if (f.field === 'classroom') {
+          const text = matrix.rows[ri]?.[c] ?? ''
+          if (!isEmptyCell(text)) {
+            stats.clsTotal++
+            if (isAGradeText(text)) stats.clsA++
+          }
         } else if (f.field === 'quality') {
           stats.hwTotal++
           stats.hwDone++
@@ -47,7 +62,7 @@ export function computeStats(r: FrozenReport): MatrixStats {
           stats.hwTotal++
         }
       }
-    }
+    })
   } else if (tables.length) {
     stats.students = tables[0].rows.length
   }
@@ -59,6 +74,112 @@ export function computeStats(r: FrozenReport): MatrixStats {
 
 export const pct = (n: number, d: number): string | null =>
   d > 0 ? `${Math.round((n / d) * 100)}%` : null
+
+/** 课堂等级分布（显示文本 → 人次），供仪表盘条形图 */
+export function gradeDistribution(r: FrozenReport): { grade: string; count: number }[] {
+  const table = (r.tables ?? []).find(t => t.kind === 'classroom' && t.facts?.length)
+  const counts = new Map<string, number>()
+  if (table?.facts) {
+    table.facts.forEach((row, ri) => {
+      row.forEach((f, ci) => {
+        if (f?.field !== 'classroom') return
+        const text = (table.rows[ri]?.[ci] ?? '').trim()
+        if (isEmptyCell(text)) return
+        counts.set(text, (counts.get(text) ?? 0) + 1)
+      })
+    })
+  }
+  const order = ['A+', 'A', 'A-', 'B+', 'B', 'B-', 'C', '优秀', '良好']
+  return [...counts.entries()]
+    .map(([grade, count]) => ({ grade, count }))
+    .sort((a, b) => {
+      const ai = order.indexOf(a.grade), bi = order.indexOf(b.grade)
+      return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi)
+    })
+}
+
+export type StudentSummary = { name: string; attendance: string; classroom: string; homework: string }
+/** 按学生汇总：出勤 / 课堂 / 作业（一人一行，供三卡片折叠表与仪表盘） */
+export function studentSummaries(r: FrozenReport): StudentSummary[] {
+  const table = (r.tables ?? []).find(t => t.kind === 'classroom')
+  if (!table) return []
+  const fields = table.fields ?? []
+  const colDate = new Map<number, string>()
+  dayGroups(table).forEach(g => {
+    const m = g.label.match(/(\d+\/\d+)/)
+    g.columns.forEach(c => colDate.set(c, m ? m[1] : g.label))
+  })
+  return table.rows.map(row => {
+    const att: string[] = [], cls: string[] = [], hw: string[] = []
+    row.forEach((cell, ci) => {
+      const f = fields[ci]
+      const text = (cell ?? '').trim()
+      if (isEmptyCell(text)) return
+      if (f === 'attendance') {
+        if (text !== '正常') att.push(`${text}${colDate.get(ci) ? `(${colDate.get(ci)})` : ''}`)
+      } else if (f === 'classroom') cls.push(text)
+      else if (f === 'quality' || f === 'submission') hw.push(text)
+    })
+    return {
+      name: row[0],
+      attendance: att.length ? att.join('、') : '正常',
+      classroom: cls.length ? cls.join(' / ') : '–',
+      homework: hw.length ? hw.join(' / ') : '–',
+    }
+  })
+}
+
+export type Highlight = { name: string; reason: string }
+/** "姓名：事由" → 结构化，供高光之星与徽章墙 */
+export function parseHighlights(r: FrozenReport): Highlight[] {
+  const lines = visibleBlocks(r).filter(b => b.key === 'highlights').flatMap(b => b.lines).map(s => s.trim()).filter(Boolean)
+  return lines.map(line => {
+    const m = line.match(/^(.{2,8}?)[：:](.+)$/)
+    return m ? { name: m[1].trim(), reason: m[2].trim() } : { name: '', reason: line }
+  }).filter(h => h.reason)
+}
+
+/** 从教学介绍提取 "第 X 章 · 主题" */
+export function extractChapter(r: FrozenReport): string | null {
+  const text = visibleBlocks(r).filter(b => b.key === 'teaching').flatMap(b => b.lines).join(' ')
+  const m = text.match(/第\s*([0-9一二三四五六七八九十百]+)\s*章\s*([^，。；,;（(]{2,14})/)
+  return m ? `第 ${m[1]} 章 · ${m[2].trim()}` : null
+}
+
+/** 尽力提取知识点 chips；提不到就返回空数组（调用方隐藏 chips 行） */
+export function extractChips(r: FrozenReport): string[] {
+  const text = visibleBlocks(r).filter(b => b.key === 'teaching').flatMap(b => b.lines).join(' ')
+  const m = text.match(/(?:包括|包含)[:：]?(.+?)[。；;]/)
+  if (!m) return []
+  const chips = m[1].split(/[，、]/).map(s =>
+    s.replace(/（[^）]*）/g, '').replace(/\([^)]*\)/g, '').replace(/向量(的)?/g, '').trim()
+  ).filter(s => s.length >= 2 && s.length <= 8)
+  return [...new Set(chips)].slice(0, 5)
+}
+
+export type FollowUps = { homework: string[]; leave: string[] }
+/** 待跟进：作业未交（姓名+日期）/ 出勤异常（姓名+日期+状态） */
+export function followUps(r: FrozenReport): FollowUps {
+  const table = (r.tables ?? []).find(t => t.kind === 'classroom' && t.facts?.length)
+  const homework: string[] = [], leave: string[] = []
+  if (!table?.facts) return { homework, leave }
+  const names = table.rows.map(row => row[0])
+  const colDate = new Map<number, string>()
+  dayGroups(table).forEach(g => {
+    const m = g.label.match(/(\d+\/\d+)/)
+    g.columns.forEach(c => colDate.set(c, m ? m[1] : ''))
+  })
+  const ATT: Record<string, string> = { LEAVE: '请假', LATE: '迟到', EARLY_LEAVE: '早退', ABSENT: '缺勤', ELSEWHERE: '在他班' }
+  table.facts.forEach((row, ri) => {
+    row.forEach((f, ci) => {
+      if (!f) return
+      const date = colDate.get(ci) ?? ''
+      if (f.field === 'submission' && f.status === 'MISSING_CONFIRMED') homework.push(`${names[ri]}${date ? `(${date})` : ''}`)
+      if (f.field === 'attendance' && f.status && f.status !== 'NORMAL' && ATT[f.status]) leave.push(`${names[ri]}${ATT[f.status]}${date ? `(${date})` : ''}`)
+    })
+  })
+  return { homework: [...new Set(homework)], leave: [...new Set(leave)] }
+}
 
 /** 供时间轴使用：从课堂矩阵表头还原按日期分组的列事件 */
 export type DayGroup = { label: string; kind: 'day' | 'homework'; columns: number[] }
