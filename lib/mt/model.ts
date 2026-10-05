@@ -570,7 +570,7 @@ export interface Rec {
   stamp: number
   /** r4：因出勤更正而失效的旧评价（只作变更历史，不再是当前有效结果） */
   gradeVoided?: GradeVoid[]
-  /** r4：已确认覆盖包含后来更正为未出席的课次，需教师核对覆盖（评价仍保留供核对） */
+  /** 兼容旧存储标记；参加日读取和写入时自动清除，不再要求教师核对。 */
   coverageReview?: boolean
 }
 export interface GradeVoid {
@@ -718,8 +718,8 @@ const sameSet = (a: string[], b: string[]) => a.length === b.length && a.every((
 /**
  * 出勤改变后的评价联动（纯函数，同一原子写入中调用）：
  * - 全部已发生课次均未出席：当前等级失效为系统“不适用（未出席）”，旧值转入 gradeVoided 历史；
- * - 仍有真实参加但已确认覆盖包含被更正课次：移出该课次，标记需核对覆盖，不机械删除合法评价；
- * - 从不适用恢复为有参加：只恢复为待处理，绝不自动复活���等级。
+ * - 仍有真实参加：评价仅覆盖参加课次，自动移出缺勤课次，不要求重复核对；
+ * - 从不适用恢复为有参加：只恢复为待处理，绝不自动复活旧等级。
  */
 export function reconcileGrade(r: Rec, e: DayElig, at: string, why: string): Rec {
   const had = r.grade !== null || r.gradeHandling === "CONFIRMED" || r.gradeHandling === "EXPLICIT_EMPTY"
@@ -740,8 +740,8 @@ export function reconcileGrade(r: Rec, e: DayElig, at: string, why: string): Rec
     return { ...r, grade: null, gradeHandling: "PENDING", gradeOrigin: "UNSET", gradeCovered: [], coverageReview: false }
   }
   const stale = r.gradeCovered.filter((id) => e.absent.includes(id))
-  if (stale.length && (r.gradeHandling === "CONFIRMED" || r.gradeHandling === "EXPLICIT_EMPTY")) {
-    return { ...r, gradeCovered: r.gradeCovered.filter((id) => !stale.includes(id)), coverageReview: true }
+  if (e.kind === "ELIGIBLE" && (stale.length || r.coverageReview) && (r.gradeHandling === "CONFIRMED" || r.gradeHandling === "EXPLICIT_EMPTY")) {
+    return { ...r, gradeCovered: r.gradeCovered.filter((id) => !stale.includes(id)), coverageReview: false }
   }
   return r
 }
@@ -767,7 +767,7 @@ export interface StudentDay {
   /** r4：当前有效等级 / 处理状态投影。所有视图、统计、预览与发布只读这两个值，不直接读 rec.grade */
   gradeEff: string | null
   handlingEff: GradeHandling
-  /** 已确认覆盖含已更正为未出席的课次，需核对 */
+  /** 兼容旧视图结构；部分缺勤不再产生覆盖冲突。 */
   coverageReview: boolean
 }
 
@@ -794,11 +794,12 @@ export function buildStudentDay(args: {
   leaves: SLeave[]
 }): StudentDay {
   const { taskId, date, studentId, lessons, nowTs, applicable } = args
-  const rec = args.rec ?? blankRec(taskId, date, studentId)
+  const storedRec = args.rec ?? blankRec(taskId, date, studentId)
   const elapsed = lessons.filter((l) => l.endTs <= nowTs)
   const leaves = leavesFor(args.leaves, studentId, date, lessons)
-  const attMissing = elapsed.filter((l) => !rec.att[l.id]).map((l) => l.id)
-  const elig = dayEligibility(rec, lessons, nowTs)
+  const attMissing = elapsed.filter((l) => !storedRec.att[l.id]).map((l) => l.id)
+  const elig = dayEligibility(storedRec, lessons, nowTs)
+  const rec = elig.kind === 'ELIGIBLE' ? reconcileGrade(storedRec, elig, '', '') : storedRec
   // 读取投影：即使存储中残留“未出席 + 等级”，也绝不作为有效评价呈现或输出
   let gradeEff: string | null = rec.grade
   let handlingEff: GradeHandling = rec.gradeHandling
@@ -810,9 +811,9 @@ export function buildStudentDay(args: {
     handlingEff = rec.gradeHandling === "EXPLICIT_EMPTY" && elig.kind === "ELIGIBLE" ? "EXPLICIT_EMPTY" : "PENDING"
   }
   const confirmed = handlingEff === "CONFIRMED" || handlingEff === "EXPLICIT_EMPTY"
-  const coverageReview = confirmed && (!!rec.coverageReview || rec.gradeCovered.some((id) => elig.absent.includes(id)))
+  const coverageReview = false
   const gradeHandled =
-    elig.kind === "ABSENT" || (elig.kind === "ELIGIBLE" && confirmed && !coverageReview && elig.attended.every((id) => rec.gradeCovered.includes(id)))
+    elig.kind === "ABSENT" || (elig.kind === "ELIGIBLE" && confirmed && elig.attended.every((id) => rec.gradeCovered.includes(id)))
   const exception = Object.values(rec.att).some((a) => a.v !== "NORMAL")
   let state: DayState
   if (!applicable) state = "NOT_APPLICABLE"
@@ -896,10 +897,6 @@ export function planRoutine(days: StudentDay[], standard: RoutineStandard): Rout
     }
     if (d.state === "PROCESSED") {
       plan.alreadyDone++
-      continue
-    }
-    if (d.coverageReview) {
-      skip("评价覆盖含已更正为未出席的课次，需教师核对")
       continue
     }
     if (r.conflict) {
@@ -1045,10 +1042,7 @@ export function planCarryForward(days: StudentDay[]): RoutinePlan {
       plan.alreadyDone++
       continue
     }
-    if (d.coverageReview) {
-      plan.skipped.push({ key: r.key, studentId: d.studentId, date: d.date, reason: "评价覆盖需核对（含已更正为未出席的课次）" })
-      continue
-    }
+
     const handled = d.handlingEff === "CONFIRMED" || d.handlingEff === "EXPLICIT_EMPTY"
     // 只沿用到新发生且确认参加的课次；缺席课次不能通过“本日综合”获得评价资格
     const newLessons = d.elig.attended.filter((id) => !r.gradeCovered.includes(id))

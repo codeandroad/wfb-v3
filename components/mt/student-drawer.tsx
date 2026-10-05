@@ -267,14 +267,7 @@ function DayBlock({ d, week }: { d: StudentDay; week: number }) {
             {d.elig.kind === "ELIGIBLE" ? (
               <>
                 <GradeSelect rev={std.rev} label={`${d.date} 课堂评价`} value={d.gradeEff} handling={d.handlingEff} onChange={(v) => rw.setGrade(d, week, v, std.revId)} />
-                {d.coverageReview ? (
-                  <span className="flex items-center gap-1 text-[#8a5a12]" data-testid="coverage-review">
-                    出勤已更正，评价覆盖待核对
-                    <button type="button" className="underline" onClick={() => rw.confirmCoverage(d, week)}>
-                      确认保留
-                    </button>
-                  </span>
-                ) : d.handlingEff === "CONFIRMED" && d.elig.attended.some((id) => !d.rec.gradeCovered.includes(id)) ? (
+                {d.handlingEff === "CONFIRMED" && d.elig.attended.some((id) => !d.rec.gradeCovered.includes(id)) ? (
                   <span className="text-[#8a5a12]">评价只覆盖先前已发生的出席课次</span>
                 ) : null}
               </>

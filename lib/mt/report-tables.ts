@@ -304,6 +304,7 @@ export function reportTables(
         if (facts.length)
           tables.unshift({
             kind: "focus",
+            fields: ["source", "fact", "suggestion"],
             title: `${tw.task.label} · 本次关注与建议`,
             headers: [header(["来源", "已记录事实", "教师建议"])],
             rows: facts,
