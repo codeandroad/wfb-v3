@@ -8,7 +8,7 @@ import { ReportView } from './report-view'
 import { ReportOptionsEditor } from './report-options-editor'
 import { ReportThemeEditor } from './report-theme-editor'
 
-const descriptions:Record<string,string>={C01:'矩阵在左 · 说明在右',C02:'矩阵在上 · 说明在下',C03:'高密度 · 紧凑矩阵',C04:'三卡片 · 总评速览',C05:'仪表盘 · 数据一览',C06:'时间轴 · 一周历程',C07:'快问快答 · 要点速读',C08:'一图流 · 长图分享',P01:'课堂与作业 · 标准跟进',P02:'完整课次 · 表格详报',P03:'数据与建议 · 家长沟通',P04:'成长档案 · 个人轨迹',P05:'每周一信 · 娓娓道来'}
+const descriptions:Record<string,string>={C01:'矩阵在左 · 说明在右',C02:'矩阵在上 · 说明在下',C03:'高密度 · 紧凑矩阵',C11:'三卡片 · 总评速览',C12:'仪表盘 · 数据一览',C13:'时间轴 · 一周历程',C14:'快问快答 · 要点速读',C15:'一图流 · 长图分享',P01:'课堂与作业 · 标准跟进',P02:'完整课次 · 表格详报',P03:'数据与建议 · 家长沟通',P11:'成长档案 · 个人轨迹',P12:'每周一信 · 娓娓道来'}
 export function ReportTemplates({teacherId,buildSamples,onApply}:{teacherId:string;buildSamples:(t:ReportTemplate)=>FrozenReport[];onApply:(t:ReportTemplate)=>void}) {
   const mt=useMt(),state=reporting(mt.biz)
   const [kind,setKind]=useState<ReportKind>('class'),[view,setView]=useState<ReportTemplate|null>(null),[edit,setEdit]=useState<ReportTemplate|null>(null),[object,setObject]=useState(0),[msg,setMsg]=useState('')
