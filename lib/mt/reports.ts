@@ -8,10 +8,28 @@ export type ModuleKey = 'teaching' | 'learning' | 'classroom' | 'homework' | 'hi
 export const MODULES: Record<ModuleKey, string> = { teaching: '教学介绍', learning: '学情介绍', classroom: '课堂记录', homework: '作业表现', highlights: '亮点／表扬', comment: '教师评语', next: '作业与后续安排', legend: '评价说明' }
 export type ReportTemplate = { customization?: ReportCustomization; archived?: boolean; options?: Partial<ReportOptions>; preset?: string; id: string; owner: string | null; kind: ReportKind; name: string; layout: 'brief' | 'letter' | 'timeline' | 'table'; color: string; background: string; font: 'sans' | 'serif'; bold: boolean; modules: ModuleKey[]; titles: Partial<Record<ModuleKey, string>>; opening: string; closing: string }
 const keys = Object.keys(MODULES) as ModuleKey[]
-export const SYSTEM_TEMPLATES: ReportTemplate[] = [
+const CLASSIC_PRESETS: [string, ReportKind, string][] = [
   ['P01', 'personal', '个人·标准跟进单'], ['P02', 'personal', '个人·表格详报'], ['P03', 'personal', '个人·家长沟通版'],
   ['C01', 'class', '经典边栏型'], ['C02', 'class', '上下分区型'], ['C03', 'class', '紧凑纯矩阵型'],
-].map(([id, kind, name]) => ({ id, preset: id, options: {classic:true,mode:id==='C03'?'A':'B',notesPosition:id==='C01'?'right':'bottom',highlightPlacement:'merged',homeworkAppendix:false,gradeText:false,numbering:false,highlights:false,lessons:id==='P02',padding:id==='C03'?4:7,bodySize:id==='C03'?14:16,density:id==='C03'?'compact':'comfortable',homework:'inline',emptyValue:'dash'}, owner: null, kind: kind as ReportKind, name, layout: 'table', color: '#245f50', background: '#ffffff', font: 'sans', bold: true, modules: (id === 'P03' ? ['comment','homework','classroom','highlights','teaching','next','legend'] as ModuleKey[] : keys).filter(k => kind === 'personal' || k !== 'comment'), titles: {}, opening: '', closing: '' }))
+]
+// 自定义样式模板：layout 声明目标呈现布局（brief 卡片 / timeline 时间轴 / letter 信件）；
+// 在新布局的 canvas 渲染器落地前，先以 classic 表格渲染占位，保证模板中心可选、可预览、可发布。
+const STYLE_PRESETS: { id: string; kind: ReportKind; name: string; layout: ReportTemplate['layout']; modules: ModuleKey[] }[] = [
+  { id: 'C04', kind: 'class', name: '班级·三卡片速览', layout: 'brief', modules: ['teaching', 'classroom', 'homework', 'highlights', 'next'] },
+  { id: 'C05', kind: 'class', name: '班级·仪表盘', layout: 'brief', modules: ['learning', 'classroom', 'homework', 'highlights', 'next'] },
+  { id: 'C06', kind: 'class', name: '班级·时间轴周报', layout: 'timeline', modules: ['teaching', 'classroom', 'homework', 'highlights', 'next'] },
+  { id: 'C07', kind: 'class', name: '班级·快问快答', layout: 'brief', modules: ['teaching', 'learning', 'classroom', 'homework', 'next'] },
+  { id: 'C08', kind: 'class', name: '班级·一图流长图', layout: 'brief', modules: ['teaching', 'learning', 'classroom', 'homework', 'highlights', 'next'] },
+  { id: 'P04', kind: 'personal', name: '个人·成长档案', layout: 'timeline', modules: ['classroom', 'homework', 'highlights', 'comment', 'next'] },
+  { id: 'P05', kind: 'personal', name: '个人·每周一信', layout: 'letter', modules: ['comment', 'classroom', 'homework', 'highlights', 'next'] },
+]
+const classicOptions = (id: string) => ({ classic: true, mode: id === 'C03' ? 'A' : 'B', notesPosition: id === 'C01' ? 'right' : 'bottom', highlightPlacement: 'merged', homeworkAppendix: false, gradeText: false, numbering: false, highlights: false, lessons: id === 'P02', padding: id === 'C03' ? 4 : 7, bodySize: id === 'C03' ? 14 : 16, density: id === 'C03' ? 'compact' : 'comfortable', homework: 'inline', emptyValue: 'dash' }) as const
+const styleOptions = { classic: true, mode: 'B', notesPosition: 'bottom', highlightPlacement: 'merged', homeworkAppendix: false, gradeText: false, numbering: false, highlights: false, lessons: false, padding: 7, bodySize: 16, density: 'comfortable', homework: 'inline', emptyValue: 'dash' } as const
+const baseTemplate = (id: string, kind: ReportKind, name: string, layout: ReportTemplate['layout'], modules: ModuleKey[], options: Record<string, unknown>): ReportTemplate => ({ id, preset: id, options: options as ReportTemplate['options'], owner: null, kind, name, layout, color: '#245f50', background: '#ffffff', font: 'sans', bold: true, modules, titles: {}, opening: '', closing: '' })
+export const SYSTEM_TEMPLATES: ReportTemplate[] = [
+  ...CLASSIC_PRESETS.map(([id, kind, name]) => baseTemplate(id, kind, name, 'table', (id === 'P03' ? ['comment', 'homework', 'classroom', 'highlights', 'teaching', 'next', 'legend'] as ModuleKey[] : keys).filter(k => kind === 'personal' || k !== 'comment'), classicOptions(id) as unknown as Record<string, unknown>)),
+  ...STYLE_PRESETS.map(s => baseTemplate(s.id, s.kind, s.name, s.layout, s.modules, styleOptions as unknown as Record<string, unknown>)),
+]
 export function classicTemplate(t: ReportTemplate): ReportTemplate {
   if (t.options?.classic) return t
   const preset=SYSTEM_TEMPLATES.find(s=>s.id===t.preset)||SYSTEM_TEMPLATES.find(s=>s.kind===t.kind)!
