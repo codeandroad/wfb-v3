@@ -1419,6 +1419,20 @@ export function useHomeworkWriters() {
             }),
         })
       },
+      updateDetails(a: Assignment, details: Pick<Assignment, "title" | "instructions" | "deadline" | "category">) {
+        mt.save({
+          field: `hw:${a.id}:details`, scope: scopes(a), label: "修改作业信息", value: details, taskId: a.taskId,
+          run: (s) => patchA(s, a.id, (x) => {
+            if (lifecycleOf(x) === "WITHDRAWN") return { error: "已撤回的作业不能修改" }
+            if (x.revision !== a.revision) return { error: "作业已被更新，请重新打开编辑面板后再试" }
+            const title = details.title.trim()
+            if (!title || title.length > 120 || details.instructions.length > 5000) return { error: "标题需为 1–120 字，说明不能超过 5000 字" }
+            if (details.deadline && !Number.isFinite(Date.parse(details.deadline))) return { error: "截止时间无效" }
+            if (details.category && !["课后作业", "课堂练习", "模考", "论文"].includes(details.category)) return { error: "作业类型无效" }
+            return { ...x, ...details, title, log: logA(x, s.clock, "修改作业标题、说明、类型或截止时间") }
+          }),
+        })
+      },
       setDeadline(a: Assignment, deadline: string | null) {
         mt.save({
           field: `hw:${a.id}:deadline`,

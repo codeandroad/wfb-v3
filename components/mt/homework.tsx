@@ -33,6 +33,8 @@ import {
   addDays,
   clockLabel,
   dateOfClock,
+  formalTaskName,
+  taskById,
   fmtMD,
   homeroomName,
   membersOn,
@@ -70,7 +72,7 @@ function deadlineText(iso: string | null) {
  * 单条结果：侧栏、周反馈、学生抽屉共用同一控件与写入命令
  * ========================================================== */
 
-export function HwResultControls({ a, sid, showName }: { a: Assignment; sid: string; showName?: boolean }) {
+export function HwResultControls({ a, sid, showName, cockpit = false }: { a: Assignment; sid: string; showName?: boolean; cockpit?: boolean }) {
   const mt = useMt()
   const w = useHomeworkWriters()
   const [more, setMore] = useState(false)
@@ -110,7 +112,7 @@ export function HwResultControls({ a, sid, showName }: { a: Assignment; sid: str
             ) : null}
             <select
               aria-label={`${nameOf(sid)} 提交情况`}
-              className={sel}
+              className={`${sel} ${cockpit ? r?.submission === 'MISSING' ? 'hw-missing' : r?.submission === 'LATE' ? 'hw-late' : submitted ? 'hw-submitted' : '' : ''}`}
               disabled={!!block}
               value={subValue}
               onChange={(e) => {
@@ -137,7 +139,7 @@ export function HwResultControls({ a, sid, showName }: { a: Assignment; sid: str
             </select>
             <select
               aria-label={`${nameOf(sid)} 作业评价`}
-              className={sel}
+              className={`${sel} ${cockpit && r?.quality ? 'hw-submitted' : ''}`}
               disabled={!!block || !submitted || !rev}
               title={!submitted ? "登记提交后才能评价" : !rev ? "评价标准待核对" : undefined}
               value={qValue}
@@ -522,17 +524,19 @@ export function HwReview({
   const disabledWhy = !rev ? "这份作业的评价标准待核对，只能登记提交" : !lvl ? "请先选择等级" : ""
 
   return (
-    <Card className={cockpit ? "overflow-hidden rounded-2xl [&_select]:min-h-8 [&_select]:rounded-full [&_select]:px-3 [&_select]:text-sm [&_button]:text-sm" : "overflow-hidden"}>
-      <div className={cockpit ? "flex flex-col gap-3 border-b border-border p-5 [&_h3]:text-xl [&_p]:text-sm" : "flex flex-col gap-2 border-b border-border px-4 py-3"}>
-        <div className="flex flex-wrap items-start justify-between gap-2">
+    <Card className={cockpit ? "hw-review overflow-hidden rounded-2xl [&_select]:min-h-8 [&_select]:rounded-full [&_select]:px-3 [&_select]:text-sm [&_button]:text-sm" : "overflow-hidden"}>
+      <div className={cockpit ? "flex flex-col gap-3 border-b border-border p-5 [&_h3]:text-base [&_p]:text-sm" : "flex flex-col gap-2 border-b border-border px-4 py-3"}>
+        <div className={cockpit ? 'grid items-center gap-5 xl:grid-cols-[minmax(0,1fr)_240px]' : 'flex flex-wrap items-start justify-between gap-2'}>
           <div className="min-w-0">
+            {cockpit && <p className="text-muted-foreground">{taskById(a.taskId) ? formalTaskName(taskById(a.taskId)!) : '教学任务'} · {a.category ?? '未分类'}</p>}
             <h3 className="text-pretty font-semibold">{a.title}</h3>
             <p className="text-xs text-muted-foreground">
               默认{a.defaultRequirement === "REQUIRED" ? "必做" : "选做"} · 截止 {deadlineText(a.deadline)}
               {a.offline ? ` · 线下补录（原布置 ${fmtMD(dateOfClock(a.issuedAt))}）` : ` · 布置于 ${clockLabel(a.issuedAt)}`}
             </p>
+            {cockpit && a.instructions && <p className="mt-3 rounded-lg border border-border bg-muted/30 px-3 py-2 text-pretty leading-relaxed">{a.instructions}</p>}
           </div>
-          <div className="flex flex-wrap items-center gap-1.5">
+          <div className={cockpit ? 'flex flex-col gap-2 [&>button]:w-full' : 'flex flex-wrap items-center gap-1.5'}>
             {life !== "ACTIVE" ? <Badge tone="neutral">{LIFECYCLE_LABEL[life]}</Badge> : null}
             {manageHref ? (
               <Link href={manageHref} className="inline-flex h-7 items-center gap-1 rounded-lg border border-input bg-card px-2.5 text-xs hover:bg-muted">
@@ -546,14 +550,16 @@ export function HwReview({
             )}
           </div>
         </div>
-        <HwProgressLine a={a} />
-        {a.instructions ? <p className="rounded-lg bg-muted/40 p-3 text-pretty text-sm leading-relaxed">{a.instructions}</p> : null}
+        {!cockpit && <HwProgressLine a={a} />}
+        {!cockpit && a.instructions ? <p className="rounded-lg bg-muted/40 p-3 text-pretty text-sm leading-relaxed">{a.instructions}</p> : null}
         {cockpit && <HomeworkMetrics a={a} nowTs={nowTs} />}
       </div>
-      {cockpit && <div className="flex gap-1 border-b border-border px-4" role="group" aria-label="作业详情视图">{([{key:"roster",label:"学生名单"},{key:"stats",label:"统计分析"},{key:"info",label:"作业信息"}] as const).map(t => <button key={t.key} type="button" aria-pressed={view === t.key} onClick={() => setView(t.key)} className={`border-b-2 px-4 py-3 text-sm ${view === t.key ? "border-primary font-semibold text-primary" : "border-transparent text-muted-foreground"}`}>{t.label}</button>)}</div>}
-      {(manage || (cockpit && view === "info")) && !manageHref ? <ManagePanel a={a} onCopy={onCopy} /> : null}
+      {cockpit && manage && !manageHref && <ManagePanel editor a={a} onCopy={onCopy} onCancel={()=>setManage(false)} />}
+      {cockpit && <div className="flex gap-1 border-b border-border px-4" role="group" aria-label="作业详情视图">{([{key:"roster",label:"批改名单"},{key:"stats",label:"数据统计"},{key:"info",label:"作业设置"}] as const).map(t => <button key={t.key} type="button" aria-pressed={view === t.key} onClick={() => setView(t.key)} className={`border-b-2 px-4 py-3 text-sm ${view === t.key ? "border-primary font-semibold text-primary" : "border-transparent text-muted-foreground"}`}>{t.label}</button>)}</div>}
+      {!cockpit && manage && !manageHref ? <ManagePanel a={a} onCopy={onCopy} /> : null}
+      {cockpit && view === "info" && <ManagePanel a={a} onCopy={onCopy} />}
       {cockpit && view === "stats" && <HomeworkStatistics a={a} nowTs={nowTs} />}
-      <div hidden={cockpit && view !== "roster"}>
+      <div className={cockpit ? 'hw-roster' : undefined} hidden={cockpit && view !== "roster"}>
       {life === "WITHDRAWN" ? (
         <p className="border-b border-border px-4 py-2.5 text-xs text-muted-foreground">作业已撤回：结果保留可查，不能再登记或批量处理。</p>
       ) : (
@@ -667,7 +673,7 @@ export function HwReview({
           {picked.size ? (
             <>
               <span className="text-muted-foreground">
-                已选 {picked.size} 人{pickedHidden ? `（${pickedHidden} 人不在当前结果中）` : ""}
+                已选 {picked.size} 人{pickedHidden ? `���${pickedHidden} 人不在当前结果中）` : ""}
               </span>
               <Btn size="sm" variant="ghost" onClick={() => setPicked(new Set())}>
                 清空选择
@@ -702,7 +708,7 @@ export function HwReview({
                   {cockpit && <span aria-hidden className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 font-semibold text-primary">{nameOf(sid)?.slice(0,1)}</span>}
                   <span>{nameOf(sid)}<span className="block text-sm text-muted-foreground">{homeroomName(studentById(sid)?.homeroom_id ?? "")}</span></span>
                 </span>
-                <HwResultControls a={a} sid={sid} />
+                <HwResultControls a={a} sid={sid} cockpit={cockpit} />
               </div>
             </li>
           ))}
@@ -714,11 +720,14 @@ export function HwReview({
   )
 }
 
-function ManagePanel({ a, onCopy }: { a: Assignment; onCopy?: (a: Assignment) => void }) {
+function ManagePanel({ a, onCopy, editor = false, onCancel }: { a: Assignment; onCopy?: (a: Assignment) => void; editor?: boolean; onCancel?: () => void }) {
   const mt = useMt()
   const w = useHomeworkWriters()
   const [msg, setMsg] = useState("")
   const [dl, setDl] = useState(toLocalInput(a.deadline))
+  const [title, setTitle] = useState(a.title)
+  const [instructions, setInstructions] = useState(a.instructions)
+  const [category, setCategory] = useState<NonNullable<Assignment['category']>>(a.category ?? '课后作业')
   const [addSel, setAddSel] = useState<Set<string>>(new Set())
   const [addDl, setAddDl] = useState("")
   const life = lifecycleOf(a)
@@ -729,7 +738,18 @@ function ManagePanel({ a, onCopy }: { a: Assignment; onCopy?: (a: Assignment) =>
   const say = (r: { ok: boolean; error?: string }, ok: string) => setMsg(r.ok ? ok : (r as { error: string }).error)
 
   return (
-    <div className="flex flex-col gap-3 border-b border-border bg-muted/30 px-4 py-3 text-xs">
+    <div className={editor ? "hw-manage flex flex-col gap-3 text-sm" : "flex flex-col gap-3 border-b border-border bg-muted/30 px-4 py-3 text-xs"}>
+      {editor && <form className="flex flex-col gap-3" onSubmit={e => { e.preventDefault(); w.updateDetails(a, {title, instructions, category, deadline: dl ? fromLocalInput(dl) : null}) }}>
+        <h4 className="font-semibold">管理这份作业</h4>
+        <div className="grid gap-3 sm:grid-cols-3">
+          <label className="flex flex-col gap-1 text-muted-foreground">作业标题<input required maxLength={120} value={title} onChange={e=>setTitle(e.target.value)} disabled={life==='WITHDRAWN'} /></label>
+          <label className="flex flex-col gap-1 text-muted-foreground">截止时间<input type="datetime-local" value={dl} onChange={e=>setDl(e.target.value)} disabled={life==='WITHDRAWN'} /></label>
+          <label className="flex flex-col gap-1 text-muted-foreground">作业类型<select value={category} onChange={e=>setCategory(e.target.value as NonNullable<Assignment['category']>)} disabled={life==='WITHDRAWN'}>{(['课后作业','课堂练习','模考','论文'] as const).map(v=><option key={v}>{v}</option>)}</select></label>
+        </div>
+        <label className="flex flex-col gap-1 text-muted-foreground">作业说明<textarea rows={2} maxLength={5000} value={instructions} onChange={e=>setInstructions(e.target.value)} disabled={life==='WITHDRAWN'} /></label>
+        <div className="flex flex-wrap items-center gap-2"><button type="submit" disabled={life==='WITHDRAWN'} className="rounded-lg bg-primary px-3 py-2 font-semibold text-primary-foreground disabled:opacity-50">保存修改</button><Btn size="sm" onClick={onCancel}>取消</Btn><Btn size="sm" variant="danger" disabled={life==='WITHDRAWN'} onClick={()=>{if(confirm('撤回这份作业？已有结果保留，但不能再登记。')) say(w.setLifecycle(a,'WITHDRAWN','撤回作业'),'已撤回')}}>撤回作业</Btn><SaveState scope={`hw:${a.id}`} compact /></div>
+      </form>}
+      <details open={!editor}><summary className={editor ? 'cursor-pointer text-muted-foreground' : 'hidden'}>更多设置与操作记录</summary>
       <div className="flex flex-wrap items-center gap-2">
         <label className="flex items-center gap-1.5">
           全班截止
@@ -848,6 +868,7 @@ function ManagePanel({ a, onCopy }: { a: Assignment; onCopy?: (a: Assignment) =>
           </ul>
         </details>
       ) : null}
+      </details>
     </div>
   )
 }
@@ -878,7 +899,7 @@ export function HomeworkPanel({ tw, focusId }: { tw: TaskWeek; focusId?: string 
       <EmptyState
         icon={<ClipboardList className="size-7" />}
         title="本期没有需要评价的作业"
-        desc="本期应完成、往期未结与后续安排都为空。可在日卡或作业管理中布置。"
+        desc="本���应完成、往期未结与后续安排都为空。可在日卡或作业管理中布置。"
         action={
           <Link href={manageBase} className="text-sm text-primary underline-offset-2 hover:underline">
             前往作业管理
