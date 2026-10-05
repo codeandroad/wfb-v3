@@ -1,7 +1,7 @@
 import type { ReportTemplate } from './reports'
 
 export type ReportOptions = {
-  homeworkDateMode: 'check'|'deadline'|'both'; lessonTimes: boolean;
+  showHomeworkName: boolean; homeworkDateMode: 'check'|'deadline'|'both'; lessonTimes: boolean;
   classic: boolean; notesPosition: 'right' | 'bottom'; highlightPlacement: 'off' | 'merged' | 'separate'; homeworkAppendix: boolean; emptyValue: 'dash' | 'blank'; teachingTitle: string; learningTitle: string; borderWeight: 'thin' | 'strong';
   mode: 'A' | 'B'; density: 'comfortable' | 'compact'; orientation: 'portrait' | 'landscape'; output: 'pages' | 'long';
   title: string; school: string; signature: string; dateFormat: 'short' | 'full';
@@ -12,7 +12,7 @@ export type ReportOptions = {
   gradeText: boolean; normalShort: boolean; combinedHomework: boolean; rowsPerPage: number; groupsPerPage: number;
 }
 export const BASE_OPTIONS: ReportOptions = {
-  homeworkDateMode:'both',lessonTimes:true,
+  showHomeworkName:false,homeworkDateMode:'both',lessonTimes:true,
   classic: false, notesPosition: 'bottom', highlightPlacement: 'merged', homeworkAppendix: false, emptyValue: 'dash', teachingTitle: '教学介绍', learningTitle: '学情介绍', borderWeight: 'thin',
   mode: 'A', density: 'comfortable', orientation: 'landscape', output: 'pages', title: '', school: '', signature: '', dateFormat: 'short',
   titleSize: 26, bodySize: 16, tableSize: 16, lineHeight: 1.5, align: 'left', headerBackground: '#edf2ef', headerText: '#245f50', borderColor: '#cbd5ce', stripeColor: '#edf2ef', emphasis: '#245f50',
@@ -21,7 +21,7 @@ export const BASE_OPTIONS: ReportOptions = {
 }
 export function reportOptions(t: ReportTemplate): ReportOptions {
   const preset = t.preset ?? t.id
-  return { ...BASE_OPTIONS, mode: preset === 'C02' ? 'B' : 'A', orientation: t.kind === 'personal' ? 'portrait' : 'landscape', homework: preset === 'C01' ? 'inline' : 'separate', density: preset === 'C03' ? 'compact' : 'comfortable', padding: preset === 'C03' ? 5 : 10, normalShort: preset === 'C03', lessons: preset === 'P02', ...t.options }
+  return { ...BASE_OPTIONS, showHomeworkName:t.kind==='personal', mode: preset === 'C02' ? 'B' : 'A', orientation: t.kind === 'personal' ? 'portrait' : 'landscape', homework: preset === 'C01' ? 'inline' : 'separate', density: preset === 'C03' ? 'compact' : 'comfortable', padding: preset === 'C03' ? 5 : 10, normalShort: preset === 'C03', lessons: preset === 'P02', ...t.options }
 }
 export function normalizeHex(value: string) { return /^#[0-9a-f]{3}$/i.test(value) ? '#' + value.slice(1).split('').map(x => x+x).join('') : value }
 export function validOptions(value: Partial<ReportOptions> | undefined): boolean {

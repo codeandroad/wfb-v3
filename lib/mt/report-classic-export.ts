@@ -1,9 +1,9 @@
 import { visibleBlocks, type FrozenReport, type ReportTable } from './reports'
 import { reportOptions } from './report-options'
-import { resolveElement, colorValue, type ElementStyle, type CellFact } from './report-customization'
+import { DEFAULT_METADATA, resolveElement, colorValue, type ElementStyle, type CellFact } from './report-customization'
 
 type Paint = { height:number; draw:(ctx:CanvasRenderingContext2D,x:number,y:number)=>void }
-export function classicMetadata(r:FrozenReport) { const scope=r.scope.replace(/\s*[（(]整科[）)]/g,'');return [r.period, r.kind==='class'?scope:`${r.name} · ${scope}`,r.teacher] }
+export function classicMetadata(r:FrozenReport) { const scope=r.scope.replace(/\s*[（(]整科[）)]/g,'');const values={period:r.period,scope:r.kind==='class'?scope:`${r.name} · ${scope}`,teacher:r.teacher};return (r.template.customization?.metadata??DEFAULT_METADATA).map(row=>row.source==='custom'?`${row.label}${row.label&&row.text?'：':''}${row.text??''}`:values[row.source]) }
 export function classicNotes(r:FrozenReport) {
   const o=reportOptions(r.template)
   const blocks=visibleBlocks(r).filter(b=>['teaching','learning',...(r.kind==='personal'?['comment','next']:[])].includes(b.key)).map(b=>({...b,title:b.key==='teaching'?o.teachingTitle:b.key==='learning'?o.learningTitle:b.title,lines:[...b.lines]}))
@@ -38,17 +38,19 @@ export function renderClassicImages(r:FrozenReport):string[] {
     const fitHeader=(text:string,width:number,requested:number)=>{if(!compact||table.headers.length!==1)return requested;scratch.font=font(requested,true);return Math.max(Math.min(14,requested),Math.min(requested,requested*width/Math.max(1,scratch.measureText(text).width)))}
     const headerOccupied=new Set<number>()
     const headerHeight=Math.max(32,...table.headers.flatMap((row,index)=>{let col=0;return row.map(c=>{while(index>0&&headerOccupied.has(col))col++;const span=c.span??1,hs=resolveElement(r.template.customization,`${table.kind}.${index===0&&table.headers.length>1&&col>0?'date':table.fields?.[col]??(col===0?'name':'body')}.header`,{size:headerSize,padding:pad,lineHeight:1.3}),fs=fitHeader(c.text,spanWidth(col,span)-hs.padding!*2,hs.size!),h=wrap(c.text,spanWidth(col,span)-hs.padding!*2,fs).length*fs*hs.lineHeight!+hs.padding!*2;if((c.rowSpan??1)>1)for(let i=0;i<span;i++)headerOccupied.add(col+i);col+=span;return h})}))
-    const rowHeights=table.rows.map((row,index)=>Math.max(size+pad*2,...row.map((c,col)=>{const s=resolveElement(r.template.customization,`${table.kind}.${table.fields?.[col]??(col===0?'name':'body')}.body`,{size,padding:pad,lineHeight:1.3},table.facts?.[index]?.[col]);return Math.max(s.minHeight??0,wrap(c,widths[col]-s.padding!*2,s.size!).length*s.size!*s.lineHeight!+s.padding!*2)})))
+    const richLayout=(fact:CellFact,width:number,base:ElementStyle)=>{const lines:{glyphs:{text:string;width:number;style:ElementStyle}[];width:number;height:number}[]=[{glyphs:[],width:0,height:0}];for(const part of fact.parts??[]){const style=resolveElement(r.template.customization,`${table.kind}.${part.fact?.field??'body'}.body`,base,part.fact);scratch.font=font(style.size!,style.weight!>=600);for(const text of part.text){const w=scratch.measureText(text).width;let line=lines[lines.length-1];if(text==='\n'||line.width+w>width&&line.glyphs.length){line={glyphs:[],width:0,height:0};lines.push(line)}if(text==='\n')continue;line.glyphs.push({text,width:w,style});line.width+=w;line.height=Math.max(line.height,style.size!*style.lineHeight!)}}return lines}
+    const rowHeights=table.rows.map((row,index)=>Math.max(size+pad*2,...row.map((c,col)=>{const s=resolveElement(r.template.customization,`${table.kind}.${table.fields?.[col]??(col===0?'name':'body')}.body`,{size,padding:pad,lineHeight:1.3},table.facts?.[index]?.[col]);const fact=table.facts?.[index]?.[col];return Math.max(s.minHeight??0,(fact?.parts?richLayout(fact,widths[col]-s.padding!*2,{size,padding:pad,lineHeight:1.3,weight:400}).reduce((n,l)=>n+l.height,0):wrap(c,widths[col]-s.padding!*2,s.size!).length*s.size!*s.lineHeight!)+s.padding!*2)})))
     const height=table.headers.length*headerHeight+rowHeights.reduce((a,b)=>a+b,0)
     return {height,draw:(ctx,x,y)=>{
       const occupied=new Set<number>()
       const cell=(text:string,col:number,top:number,h:number,span:number,header:boolean,striped:boolean,fact?:CellFact,dateHeader=false)=>{
         const w=spanWidth(col,span),left=x+spanWidth(0,col)
         const field=dateHeader?'date':table.fields?.[col]??(col===0?'name':'body')
-        const s=resolveElement(r.template.customization,`${table.kind}.${field}.${header?'header':'body'}`,{size:header?headerSize:size,padding:pad,weight:header?600:400,color:header?o.headerText:ink,background:header?o.headerBackground:striped?o.stripeColor:r.template.background,align:personal&&!header?'left':'center',lineHeight:1.3,borderColor:o.borderColor,borderWidth:o.borders?(o.borderWeight==='strong'?1.5:.7):0},fact)
+        const s=resolveElement(r.template.customization,`${table.kind}.${field}.${header?'header':'body'}`,{size:header?headerSize:size,padding:pad,weight:header?600:400,color:header?o.headerText:ink,background:header?o.headerBackground:striped?o.stripeColor:r.template.background,align:personal&&!header?'left':'center',lineHeight:1.3,borderColor:o.borderColor,borderWidth:o.borders?(o.borderWeight==='strong'?1.5:.7):0},fact?.parts?undefined:fact)
         const p=s.padding!,fs=header?fitHeader(text,w-p*2,s.size!):s.size!,lh=fs*s.lineHeight!
         ctx.fillStyle=colorValue(s.background!)!;ctx.fillRect(left,top,w,h)
         if(s.borderWidth){ctx.strokeStyle=colorValue(s.borderColor!)!;ctx.lineWidth=s.borderWidth;ctx.strokeRect(left,top,w,h)}
+        if(!header&&fact?.parts){const lines=richLayout(fact,w-p*2,{size,padding:pad,weight:400,lineHeight:1.3,color:ink,background:striped?o.stripeColor:r.template.background});let topY=top+(h-lines.reduce((n,l)=>n+l.height,0))/2;ctx.textAlign='left';for(const line of lines){let cursor=s.align==='left'?left+p:s.align==='right'?left+w-p-line.width:left+(w-line.width)/2;for(const glyph of line.glyphs){const gs=glyph.style;if(gs.background){ctx.fillStyle=colorValue(gs.background)!;ctx.fillRect(cursor,topY,glyph.width,line.height)}ctx.font=font(gs.size!,gs.weight!>=600);ctx.fillStyle=colorValue(gs.color!)!;ctx.fillText(glyph.text,cursor,topY+(line.height-gs.size!*1.3)/2+gs.size!);cursor+=glyph.width}topY+=line.height}return}
         const lines=wrap(text,w-p*2,fs);ctx.font=font(fs,s.weight!>=600);ctx.fillStyle=colorValue(s.color!)!;ctx.textAlign=s.align!
         lines.forEach((text,i)=>ctx.fillText(text,s.align==='left'?left+p:s.align==='right'?left+w-p:left+w/2,top+(h-lines.length*lh)/2+fs+i*lh));ctx.textAlign='left'
       }
@@ -72,12 +74,14 @@ export function renderClassicImages(r:FrozenReport):string[] {
   const sections=main.map(table=>{const titleStyle=resolveElement(r.template.customization,`${table.kind}.title`,{size:18,weight:600,color:r.template.color,padding:6,lineHeight:1.3});const titleLines=wrap(table.title,tableWidth-titleStyle.padding!*2,titleStyle.size!);return {table,paint:tablePaint(table,tableWidth),titleStyle,titleLines,titleHeight:titleLines.length*titleStyle.size!*titleStyle.lineHeight!+titleStyle.padding!*2}}),note=notesPaint(notesWidth)
   const tableHeight=sections.reduce((sum,s)=>sum+s.paint.height+(main.length>1||personal?s.titleHeight:0)+16,0)
   const meta=resolveElement(r.template.customization,'metadata',{size:16,weight:400,lineHeight:1.5,color:ink,padding:12})
-  const metaLines=classicMetadata(r).flatMap(text=>wrap(text,width-margin*2,meta.size!))
-  const headerHeight=margin+metaLines.length*meta.size!*meta.lineHeight!+meta.padding!,bodyHeight=sidebar?Math.max(tableHeight,note.height):tableHeight+(notes.length?note.height+12:0)
+  const metaRows=r.template.customization?.metadata??DEFAULT_METADATA
+  const metaLines=classicMetadata(r).map((text,i)=>{const s=resolveElement(r.template.customization,`metadata.${metaRows[i].id}`,{...meta,padding:0});const lines=wrap(text,width-margin*2-s.padding!*2,s.size!);return {s,lines,height:lines.length*s.size!*s.lineHeight!+s.padding!*2}})
+  const headerHeight=margin+metaLines.reduce((n,row)=>n+row.height,0)+meta.padding!,bodyHeight=sidebar?Math.max(tableHeight,note.height):tableHeight+(notes.length?note.height+12:0)
   const makeCanvas=(height:number)=>{if(height>30000)throw new Error('报告高度超过安全画布范围，请缩小发布范围或调整密度');const canvas=document.createElement('canvas');canvas.width=width;canvas.height=Math.ceil(height);const ctx=canvas.getContext('2d');if(!ctx)throw new Error('无法生成报告');ctx.fillStyle=r.template.background;ctx.fillRect(0,0,width,height);return {canvas,ctx}}
   const {canvas,ctx}=makeCanvas(headerHeight+bodyHeight+margin)
   if(meta.background){ctx.fillStyle=colorValue(meta.background)!;ctx.fillRect(margin,margin,width-margin*2,headerHeight-margin-meta.padding!)}
-  metaLines.forEach((text,i)=>{ctx.font=font(meta.size!,meta.weight!>=600);ctx.fillStyle=colorValue(meta.color!)!;ctx.textAlign='left';ctx.fillText(text,margin,margin+meta.size!+i*meta.size!*meta.lineHeight!)})
+  let metaY=margin
+  metaLines.forEach(({s,lines,height})=>{if(s.background){ctx.fillStyle=colorValue(s.background)!;ctx.fillRect(margin,metaY,width-margin*2,height)}ctx.font=font(s.size!,s.weight!>=600);ctx.fillStyle=colorValue(s.color!)!;ctx.textAlign=s.align??'left';lines.forEach((text,i)=>ctx.fillText(text,s.align==='center'?width/2:s.align==='right'?width-margin-s.padding!:margin+s.padding!,metaY+s.padding!+s.size!+i*s.size!*s.lineHeight!));metaY+=height});ctx.textAlign='left'
   let y=headerHeight
   const notesFirst=personal&&r.template.preset==='P03'&&notes.length>0
   if(notesFirst){note.draw(ctx,margin,y);y+=note.height+12}
