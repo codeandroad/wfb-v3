@@ -226,7 +226,7 @@ export type VariantId = "BASE" | "ADJACENT_LESSONS" | "SEPARATED_LESSONS" | "MID
 
 export const VARIANTS: { id: VariantId; label: string; desc: string }[] = [
   { id: "BASE", label: "基线（第5周 · 9/30 18:00）", desc: "10个本人课次，56条已发生日记录" },
-  { id: "ADJACENT_LESSONS", label: "连堂：计算机周三第1+2节", desc: "课卡11张，日记录不翻倍" },
+  { id: "ADJACENT_LESSONS", label: "连堂：计算机周三第1+2节", desc: "课��11张，日记录不翻倍" },
   { id: "SEPARATED_LESSONS", label: "不连续：P1周一第3、5节", desc: "两张卡、各自时间" },
   { id: "MIDDAY_PARTIAL", label: "部分当天：连堂 + 9/30 08:45", desc: "第一课已结束、第二课未开始" },
 ]
@@ -1193,6 +1193,7 @@ export interface HwBatch {
   undone?: { restored: number; kept: number; at: string }
 }
 export interface Assignment {
+  category?: "课后作业" | "课堂练习" | "模考" | "论文"
   id: string
   taskId: string
   title: string
