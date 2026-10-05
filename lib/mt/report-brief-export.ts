@@ -9,18 +9,19 @@ type BriefCard = { title: string; accent: string; lines: string[]; emptyHint: st
 
 /** 三卡片内容映射：班级报告取总评 / 数据一览 / 下周预告；个人报告取点评 / 课堂作业 / 下周安排 */
 function briefCards(r: FrozenReport): BriefCard[] {
+  const primary = r.template.color ?? '#245f50'
   const blocks = visibleBlocks(r)
   const linesOf = (...keys: string[]) =>
     blocks.filter(b => keys.includes(b.key)).flatMap(b => b.lines).map(s => s.trim()).filter(Boolean)
   if (r.kind === 'personal') {
     return [
-      { title: '个人点评', accent: '#245f50', lines: linesOf('comment'), emptyHint: '本周暂无个人点评' },
+      { title: '个人点评', accent: primary, lines: linesOf('comment'), emptyHint: '本周暂无个人点评' },
       { title: '课堂与作业', accent: '#b5791f', lines: linesOf('classroom', 'homework'), emptyHint: '本周暂无记录' },
       { title: '下周安排', accent: '#2f7d5b', lines: linesOf('next', 'highlights'), emptyHint: '暂无' },
     ]
   }
   return [
-    { title: '本周总评', accent: '#245f50', lines: linesOf('teaching', 'learning'), emptyHint: '本周暂无总评' },
+    { title: '本周总评', accent: primary, lines: linesOf('teaching', 'learning'), emptyHint: '本周暂无总评' },
     { title: '数据一览', accent: '#b5791f', lines: linesOf('classroom', 'homework', 'highlights'), emptyHint: '本周暂无记录' },
     { title: '下周预告', accent: '#2f7d5b', lines: linesOf('next'), emptyHint: '暂无' },
   ]

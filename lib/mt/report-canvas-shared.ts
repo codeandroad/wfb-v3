@@ -44,6 +44,15 @@ export function roundRectPath(ctx: CanvasRenderingContext2D, x: number, y: numbe
 
 export const INK = '#263a33', MUTED = '#5f7168', PAGE_BG = '#f3f6f5', CARD_BG = '#ffffff', PRIMARY = '#245f50'
 
+/** 把十六进制颜色按比例加深（用于头图渐变尾端，随主题走） */
+export function darken(hex: string, factor = 0.72): string {
+  const m = /^#([0-9a-f]{6})$/i.exec(hex) ?? /^#([0-9a-f]{3})$/i.exec(hex)
+  if (!m) return '#1b4a3e'
+  const full = m[1].length === 3 ? m[1].split('').map(c => c + c).join('') : m[1]
+  const v = [0, 2, 4].map(i => Math.round(parseInt(full.slice(i, i + 2), 16) * factor))
+  return `#${v.map(n => n.toString(16).padStart(2, '0')).join('')}`
+}
+
 export function reportTitle(r: FrozenReport) {
   return `${r.name} · ${r.kind === 'personal' ? '个人' : '班级'}周反馈`
 }
@@ -56,8 +65,9 @@ export function paintHeaderBand(r: FrozenReport, version: string, width: number,
   const metaLines = wrap(metaText, width - margin * 2 - 40, 18)
   const height = 64 + titleLines.length * 36 * 1.3 + 12 + metaLines.length * 18 * 1.5 + 56
   const draw = (ctx: CanvasRenderingContext2D, x: number, y: number) => {
+    const primary = colorValue(r.template.color ?? PRIMARY)!
     const g = ctx.createLinearGradient(0, y, width, y + height)
-    g.addColorStop(0, colorValue(r.template.color ?? PRIMARY)!); g.addColorStop(1, '#1b4a3e')
+    g.addColorStop(0, primary); g.addColorStop(1, darken(primary))
     ctx.fillStyle = g
     roundRectPath(ctx, x, y, width - margin * 2, height, 24); ctx.fill()
     ctx.textAlign = 'left'
