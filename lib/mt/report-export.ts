@@ -1,5 +1,6 @@
 import { renderClassicImages } from './report-classic-export'
 import { renderTableImages } from './report-table-export'
+import { renderBriefImages } from './report-brief-export'
 import { zipSync, strToU8 } from 'fflate'
 import type { Publication } from './model'
 import { reportFilename, validTemplate, type FrozenReport } from './reports'
@@ -9,6 +10,7 @@ export async function renderReportImages(report: FrozenReport, version: string):
   const loaded = await document.fonts.load('22px "Noto Report"', '教学反馈')
   if (!loaded.length) throw new Error('中文报告字体加载失败，请重试，未输出空白图片')
   await document.fonts.ready
+  if (report.template.layout === 'brief') return renderBriefImages(report)
   return report.template.options?.classic ? renderClassicImages(report) : renderTableImages(report,version)
 }
 export function downloadFile(data: Blob | string, filename: string) {
