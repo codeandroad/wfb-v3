@@ -155,6 +155,7 @@ export default function HomeroomPage() {
           })}
         </div>
 
+        <div className="mt-5 flex flex-col gap-5">{MY_HOMEROOMS.map(r => <HomeroomPublications key={r} room={r} />)}</div>
         <div className="mt-4 rounded-lg border border-border bg-muted/40 p-3 text-[13px] text-muted-foreground">
           <span className="inline-flex items-center gap-1.5 font-medium text-foreground">
             <Lock className="size-3.5" />

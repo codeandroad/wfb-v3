@@ -186,6 +186,7 @@ export interface RoutineOp {
 }
 
 export interface MtBiz {
+  publicationWaivers?: import('./publication-tracking').PublicationWaiver[]
   publicationChecks?: import('./publication-tracking').PublicationCheck[]
   evaluationGenerations?: Record<string, number>
   regradeRequests?: Record<string, string>
@@ -696,6 +697,7 @@ export function MtProvider({ children }: { children: ReactNode }) {
 
       publish: (input) => {
         const cur = bizRef.current
+        if (input.taskIds.some(id => (cur.publicationWaivers ?? []).filter(w => w.taskId === id && w.periodId === input.periodId).at(-1)?.waived)) return { ok: false, error: '教务已免除此周期发布任务，请先联系教务恢复；课堂登记不受影响。' }
         const dup = cur.publications.find((p) => p.idemKey === input.idemKey)
         if (dup) return { ok: true, pub: dup, reused: true }
         if (faultsRef.current.saveFail) return { ok: false, error: '保存失败（故障注入），输入已保留' }
