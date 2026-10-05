@@ -91,7 +91,7 @@ function DataTableHTML({ report, table, t, showTitle }: { report: FrozenReport; 
     <section>
       {showTitle !== false && table.title ? <h3 className="mb-1 font-semibold" style={titleStyle}>{table.title}</h3> : null}
       <div className="overflow-x-auto rounded border" style={{ borderColor: t.border }}>
-        <table className="border-collapse leading-relaxed" style={{ tableLayout: 'fixed', width: totalW || '100%' }}>
+        <table className="border-collapse leading-relaxed" style={{ tableLayout: 'fixed', width: totalW || '100%', minWidth: '100%' }}>
           {widths.length ? (
             <colgroup>{widths.map((w, i) => <col key={i} style={{ width: w }} />)}</colgroup>
           ) : null}
@@ -99,11 +99,11 @@ function DataTableHTML({ report, table, t, showTitle }: { report: FrozenReport; 
             {table.headers.map((row, ri) => (
               <tr key={ri}>
                 {tableHeaders(table).filter(h => h.row === ri).map(({ header: c, col, field, target }) => {
-                  const s = el(report, target, { size: t.tableSize, weight: 600, color: t.headerText, background: t.headerBg, padding: pad })
-                  const bg = resolveCellBackground(cust, target) ?? s.background
+                  const s = el(report, target, { size: t.tableSize, weight: 600, color: t.headerText, padding: pad })
+                  const bg = resolveCellBackground(cust, target) ?? t.headerBg
                   return (
                     <th key={col} colSpan={c.span} rowSpan={c.rowSpan} className="border font-semibold"
-                      style={{ ...s, background: bg, borderColor: t.border, whiteSpace: 'nowrap' }}>{c.text}</th>
+                      style={{ ...s, background: bg, borderColor: t.border, whiteSpace: 'nowrap' }}><span style={{ background: s.background }}>{c.text}</span></th>
                   )
                 })}
               </tr>
@@ -116,13 +116,13 @@ function DataTableHTML({ report, table, t, showTitle }: { report: FrozenReport; 
                   const fact = table.facts?.[i]?.[j]
                   const target = cellTarget(table, j, 'body')
                   const s = el(report, target, {
-                    size: t.tableSize, weight: 400, color: INK, background: t.pageBg,
+                    size: t.tableSize, weight: 400, color: INK,
                     padding: pad, align: 'center', lineHeight: 1.4,
                   }, fact)
-                  const bg = resolveCellBackground(cust, target, fact) ?? (i % 2 ? t.stripe : s.background)
+                  const bg = resolveCellBackground(cust, target, fact) ?? (i % 2 ? t.stripe : t.pageBg)
                   return (
                     <td key={j} className="border align-top"
-                      style={{ ...s, background: bg, borderColor: t.border, whiteSpace: 'nowrap' }}>{cell}</td>
+                      style={{ ...s, background: bg, borderColor: t.border, whiteSpace: 'nowrap' }}><span style={{ background: s.background }}>{cell}</span></td>
                   )
                 })}
               </tr>
@@ -641,7 +641,7 @@ function NewspaperHTML({ report }: { report: FrozenReport }) {
           <NpSec n="光荣" title="本周光荣榜" s={secS}>
             <ul className="list-disc pl-5" style={bodyS}>
               {stars.length ? stars.slice(0, 6).map((b, i) => (
-                <li key={i} className="mb-1"><b>{b.name}</b>{b.reason ? ` —— ${b.reason}` : ''}</li>
+                <li key={i} className="mb-1"><b>{b.name}</b>{b.reason ? ` ��— ${b.reason}` : ''}</li>
               )) : <li>暂无</li>}
             </ul>
           </NpSec>
