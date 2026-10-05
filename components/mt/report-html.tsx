@@ -656,46 +656,52 @@ function NewspaperHTML({ report }: { report: FrozenReport }) {
   )
 }
 
-/* ================= P11 个人成长档案（对标 preview-2.html 样式三） ================= */
+/* ================= P11 个人成长档案（对标 preview-2.html 样式三 / 图1） ================= */
 function GrowthHTML({ report }: { report: FrozenReport }) {
   const t = themeOf(report)
   const dims = personalDims(report)
   const comment = linesOf(report, 'comment')
   const next = linesOf(report, 'next')
-  const nameS = el(report, 'growth.name', { size: 19, weight: 700, color: INK })
-  const dimS = el(report, 'growth.dim', { size: 13.5, color: INK })
-  const noteS = el(report, 'growth.note', { size: 13.5, color: '#4a463c', lineHeight: 1.8 })
+  const tables = tablesOf(report, 'classroom', 'homework')
+  const nameS = el(report, 'growth.name', { size: 24, weight: 800, color: '#ffffff' })
+  const dimS = el(report, 'growth.dim', { size: 15, color: INK })
+  const noteS = el(report, 'growth.note', { size: 14.5, color: '#4a463c', lineHeight: 1.8 })
   return (
-    <div className="mx-auto w-full" style={{ maxWidth: 560 }}>
-      <div className="rounded-xl border bg-white p-6" style={{ borderColor: t.border }}>
-        <h2 className="mb-1" style={nameS}>{report.name} · 本周成长档案</h2>
-        <p className="mb-5 text-[12.5px]" style={{ color: MUTED }}>{classicMetadata(report).filter(Boolean).join(' ｜ ')}</p>
-        <div className="space-y-4">
+    <div className="mx-auto w-full" style={{ maxWidth: 620 }}>
+      <div className="overflow-hidden rounded-3xl bg-white shadow-xl" style={{ border: '1px solid #eee9db' }}>
+        {/* 深绿横幅头 */}
+        <div className="px-8 py-8 text-white" style={{ background: `linear-gradient(135deg, ${t.primary}, ${darken(t.primary)})` }}>
+          <h2 style={{ ...nameS, letterSpacing: 1 }}>{report.name} · 本周成长档案</h2>
+          <p className="mt-2 text-[13px]" style={{ color: '#dcebe4' }}>{classicMetadata(report).filter(Boolean).join(' ｜ ')}</p>
+        </div>
+        <div className="space-y-6 px-8 py-8">
           {dims.map(d => (
             <div key={d.label} style={dimS}>
-              <div className="mb-1.5 flex items-center justify-between">
+              <div className="mb-2 flex items-baseline justify-between">
                 <span>{d.label}</span><b style={{ color: INK }}>{d.value}</b>
               </div>
-              <div className="h-2.5 overflow-hidden rounded-full" style={{ background: '#f2efe9' }}>
-                <div className="h-full rounded-full" style={{ width: `${d.pct}%`, background: t.primary }} />
+              <div className="h-3.5 overflow-hidden rounded-full" style={{ background: '#f0ebe0' }}>
+                <div className="h-full rounded-full" style={{ width: `${d.pct}%`, background: `linear-gradient(90deg, ${t.primary}b3, ${t.primary})` }} />
               </div>
             </div>
           ))}
-        </div>
-        {comment.length ? (
-          <div className="mt-5 rounded-xl border p-4" style={{ ...noteS, background: '#faf8f2', borderColor: '#eee9db' }}>
-            老师点评：{comment.join(' ')}
-          </div>
-        ) : null}
-        {next.length ? (
-          <div className="mt-3 rounded-xl p-4 text-[13.5px]" style={{ background: '#eef4ec', color: '#3a5a4a', lineHeight: 1.7 }}>
-            下周小目标：{next[0]}
-          </div>
-        ) : null}
-        <div className="mt-4">
-          {tablesOf(report, 'classroom', 'homework').map(tb => <DataTableHTML key={tb.title} report={report} table={tb} t={t} />)}
+          {comment.length ? (
+            <div className="p-5" style={{ ...noteS, background: '#faf8f2', borderLeft: '6px solid #b98a2f', borderRadius: '4px 16px 16px 4px' }}>
+              老师点评：{comment.join(' ')}
+            </div>
+          ) : null}
+          {next.length ? (
+            <div className="rounded-2xl p-5" style={{ background: '#eef4ec', color: '#3a5a4a', fontSize: 14.5, lineHeight: 1.8 }}>
+              下周小目标：{next[0]}
+            </div>
+          ) : null}
         </div>
       </div>
+      {tables.length ? (
+        <div className="mt-4 rounded-3xl bg-white p-6 shadow" style={{ border: '1px solid #eee9db' }}>
+          {tables.map(tb => <DataTableHTML key={tb.title} report={report} table={tb} t={t} />)}
+        </div>
+      ) : null}
       <Foot report={report} />
     </div>
   )

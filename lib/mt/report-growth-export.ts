@@ -18,50 +18,56 @@ export function renderGrowthImages(r: FrozenReport, version = '未发布预览�
   const next = visibleBlocks(r).filter(b => b.key === 'next').flatMap(b => b.lines).map(x => x.trim()).filter(Boolean)
 
   // ---- 维度条 ----
-  const dimH = dims.length * 92
+  const dimH = dims.length * 96
   const dimPanel: Paint | null = dims.length ? {
-    height: dimH + 56,
+    height: dimH + 64,
     draw: (ctx, x, y) => {
-      roundRectPath(ctx, x, y, cardW, dimH + 56, 24)
+      roundRectPath(ctx, x, y, cardW, dimH + 64, 28)
       ctx.fillStyle = '#ffffff'; ctx.fill()
       ctx.strokeStyle = '#eee9db'; ctx.lineWidth = 2; ctx.stroke()
       dims.forEach((d, i) => {
-        const dy = y + 28 + i * 92
-        ctx.font = font(20); ctx.fillStyle = INK; ctx.textAlign = 'left'
-        ctx.fillText(d.label, x + 40, dy + 24)
-        ctx.font = font(20, true)
+        const dy = y + 32 + i * 96
+        ctx.font = font(21); ctx.fillStyle = INK; ctx.textAlign = 'left'
+        ctx.fillText(d.label, x + 48, dy + 26)
+        ctx.font = font(21, true)
         const vw = ctx.measureText(d.value).width
-        ctx.fillText(d.value, x + cardW - 40 - vw, dy + 24)
-        // 轨道
-        const tx = x + 40, tw = cardW - 80
-        ctx.fillStyle = '#f2efe9'
-        roundRectPath(ctx, tx, dy + 44, tw, 18, 9); ctx.fill()
-        ctx.fillStyle = primary
-        roundRectPath(ctx, tx, dy + 44, Math.max(18, (d.pct / 100) * tw), 18, 9); ctx.fill()
+        ctx.fillText(d.value, x + cardW - 48 - vw, dy + 26)
+        // 轨道 + 渐变填充
+        const tx = x + 48, tw = cardW - 96
+        ctx.fillStyle = '#f0ebe0'
+        roundRectPath(ctx, tx, dy + 48, tw, 20, 10); ctx.fill()
+        const bw = Math.max(20, (d.pct / 100) * tw)
+        const g = ctx.createLinearGradient(tx, 0, tx + bw, 0)
+        g.addColorStop(0, primary + 'b3'); g.addColorStop(1, primary)
+        ctx.fillStyle = g
+        roundRectPath(ctx, tx, dy + 48, bw, 20, 10); ctx.fill()
       })
     },
   } : null
 
   // ---- 点评 / 小目标 ----
-  const noteLines = comment.length ? wrap(`老师点评：${comment.join(' ')}`, cardW - 80, 19) : []
+  const noteLines = comment.length ? wrap(`老师点评：${comment.join(' ')}`, cardW - 120, 20) : []
   const notePanel: Paint | null = noteLines.length ? {
-    height: noteLines.length * 34 + 56,
+    height: noteLines.length * 36 + 64,
     draw: (ctx, x, y) => {
-      roundRectPath(ctx, x, y, cardW, noteLines.length * 34 + 56, 24)
+      const h = noteLines.length * 36 + 64
+      roundRectPath(ctx, x, y, cardW, h, 20)
       ctx.fillStyle = '#faf8f2'; ctx.fill()
-      ctx.strokeStyle = '#eee9db'; ctx.lineWidth = 2; ctx.stroke()
-      ctx.font = font(19); ctx.fillStyle = '#4a463c'; ctx.textAlign = 'left'
-      noteLines.forEach((t, i) => ctx.fillText(t, x + 40, y + 40 + i * 34))
+      // 金色左侧竖线
+      ctx.fillStyle = '#b98a2f'
+      ctx.fillRect(x, y + 12, 10, h - 24)
+      ctx.font = font(20); ctx.fillStyle = '#4a463c'; ctx.textAlign = 'left'
+      noteLines.forEach((t, i) => ctx.fillText(t, x + 48, y + 46 + i * 36))
     },
   } : null
-  const goalLines = next.length ? wrap(`下周小目标：${next[0]}`, cardW - 80, 19) : []
+  const goalLines = next.length ? wrap(`下周小目标：${next[0]}`, cardW - 96, 20) : []
   const goalPanel: Paint | null = goalLines.length ? {
-    height: goalLines.length * 34 + 56,
+    height: goalLines.length * 36 + 64,
     draw: (ctx, x, y) => {
-      roundRectPath(ctx, x, y, cardW, goalLines.length * 34 + 56, 24)
+      roundRectPath(ctx, x, y, cardW, goalLines.length * 36 + 64, 20)
       ctx.fillStyle = '#eef4ec'; ctx.fill()
-      ctx.font = font(19); ctx.fillStyle = '#3a5a4a'; ctx.textAlign = 'left'
-      goalLines.forEach((t, i) => ctx.fillText(t, x + 40, y + 40 + i * 34))
+      ctx.font = font(20); ctx.fillStyle = '#3a5a4a'; ctx.textAlign = 'left'
+      goalLines.forEach((t, i) => ctx.fillText(t, x + 48, y + 46 + i * 36))
     },
   } : null
 

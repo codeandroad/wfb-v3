@@ -211,10 +211,12 @@ const modeStr = (arr: string[]) => {
 }
 
 export type PersonalDim = { label: string; value: string; pct: number }
-/** 个人成长档案维度：出勤 / 课堂表现 / 作业（尽力从个人表提取） */
+/** 个人成长档案四维（对标参考设计）：课堂专注度 / 课堂参与度 / 作业质量 / 出勤 */
 export function personalDims(r: FrozenReport): PersonalDim[] {
   const dims: PersonalDim[] = []
   const ct = (r.tables ?? []).find(t => t.kind === 'classroom')
+  let focusGrade = ''
+  let attDim: PersonalDim | null = null
   if (ct) {
     let ab = 0, tot = 0
     const grades: string[] = []
@@ -224,17 +226,25 @@ export function personalDims(r: FrozenReport): PersonalDim[] {
       const g = (row[2] ?? '').trim()
       if (g && !isEmptyCell(g)) grades.push(g)
     })
-    if (tot) dims.push({ label: '出勤', value: ab ? `异常 ${ab} 次` : '全勤', pct: Math.round(((tot - ab) / tot) * 100) })
-    const mg = modeStr(grades)
-    if (mg) dims.push({ label: '课堂表现', value: mg, pct: gradePctOf(mg) })
+    focusGrade = modeStr(grades)
+    if (tot) attDim = { label: '出勤', value: ab ? `异常 ${ab} 次` : '全勤', pct: Math.round(((tot - ab) / tot) * 100) }
   }
-  const hwRows = (r.tables ?? []).filter(t => t.kind === 'homework').flatMap(t => t.rows)
-  if (hwRows.length) {
-    const missing = hwRows.filter(row => row.join(' ').includes('未交')).length
-    dims.push({
-      label: '作业提交', value: missing ? `${missing} 次未交` : '全部提交',
-      pct: Math.round(((hwRows.length - missing) / hwRows.length) * 100),
-    })
+  if (focusGrade) dims.push({ label: '课堂专注度', value: focusGrade, pct: gradePctOf(focusGrade) })
+  // 课堂参与度：本周被表扬过 → 本周突出，否则沿用专注度等级
+  const me = (r.name || '').trim()
+  const starred = !!me && parseHighlights(r).some(h => h.name && (me.includes(h.name) || h.name.includes(me)))
+  if (starred) dims.push({ label: '课堂参与度', value: '本周突出', pct: 100 })
+  else if (focusGrade) dims.push({ label: '课堂参与度', value: focusGrade, pct: gradePctOf(focusGrade) })
+  // 作业质量：取作业表末列等级众数
+  const hwTables = (r.tables ?? []).filter(t => t.kind === 'homework')
+  const quals = hwTables.flatMap(t => t.rows.map(row => (row[row.length - 1] ?? '').trim())).filter(g => /^[A-E][+-]?$/.test(g))
+  const qm = modeStr(quals)
+  if (qm) dims.push({ label: '作业质量', value: qm, pct: gradePctOf(qm) })
+  else {
+    const total = hwTables.reduce((n, t) => n + t.rows.length, 0)
+    const missing = hwTables.flatMap(t => t.rows).filter(row => row.join(' ').includes('未交')).length
+    if (total) dims.push({ label: '作业质量', value: missing ? `${missing} 次未交` : '全部提交', pct: Math.round(((total - missing) / total) * 100) })
   }
+  if (attDim) dims.push(attDim)
   return dims
 }
