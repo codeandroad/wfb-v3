@@ -78,7 +78,15 @@ const { weekDates, membersInWeek } = require('../lib/mt/model.ts')
 const holiday = [{id:'h',kind:'holiday',date:'2026-09-28',endDate:'2026-10-04'}]
 assert.equal(fullHolidayWeek(holiday,weekDates(5)),true)
 assert.equal(fullHolidayWeek([{...holiday[0],endDate:'2026-10-03'}],weekDates(5)),false,'部分假期不能自动整周免发')
-assert.equal(fullHolidayWeek([...holiday,{id:'s',kind:'swap',date:'2026-09-25',targetDate:'2026-10-03'}],weekDates(5)),false,'假期调入补课不能漏判')
+assert.equal(fullHolidayWeek([...holiday,{id:'s',kind:'swap',date:'2026-09-25',targetDate:'2026-10-03'}],weekDates(5)),true,'显式假期覆盖补课目标日')
+const { effectiveWithCalendar } = require('../lib/timetable/calendar-store.ts')
+const screenshotEvents = [{id:'long',kind:'holiday',date:'2026-10-01',endDate:'2026-10-11'},{id:'day',kind:'holiday',date:'2026-10-08'},{id:'swap',kind:'swap',date:'2026-10-08',targetDate:'2026-10-11'}]
+const sourceEntries = [{key:'lesson',date:'2026-10-08',taskId:task.id,periodId:'p1'}]
+assert.equal(fullHolidayWeek(screenshotEvents,weekDates(6)),true)
+assert.equal(effectiveWithCalendar(screenshotEvents,sourceEntries,weekDates(6)).effective.length,0)
+const reopened = screenshotEvents.map(e=>e.id==='long'?{...e,endDate:'2026-10-10'}:e)
+assert.equal(fullHolidayWeek(reopened,weekDates(6)),false)
+assert.equal(effectiveWithCalendar(reopened,sourceEntries,weekDates(6)).effective.length,1,'非假期目标日补课仍有效')
 setScheduleSource(()=>({status:'ok',lessons:[],fullHoliday:true}))
 base.publicationWaivers=[]
 assert.equal(publicationRequirement(base,task.id,5).label,'假期无需发布')
