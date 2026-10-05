@@ -51,6 +51,24 @@ test('FT323 future and ongoing records do not auto-fill attendance',()=>{const o
 test('FT325 FT326 FT327 real assignment identities retain all three outputs',()=>{assert.equal(tableOf(personalReport('P01'),'homework').rows.length,3);assert.equal(new Set(tableOf(personalReport('P01'),'homework').rows.map(r=>r[0])).size,3)})
 test('FT328 FT329 optional appendix retains status distinctions',()=>{const t=reportTables(f.b,[f.tw],undefined,{...SYSTEM_TEMPLATES[4],options:{...SYSTEM_TEMPLATES[4].options,homeworkAppendix:true}}).find(t=>t.kind==='homework');const text=JSON.stringify(t);assert.ok(text.includes('未交'));assert.ok(text.includes('待核对'));assert.ok(text.includes('免做'));assert.equal(t.rows.length,84)})
 test('personal homework omits scores and feedback even in saved templates that enable them',()=>{for(const id of ['P01','P02','P03']){const table=tableOf(personalReport(id),'homework');assert.ok(!table.fields.includes('score'));assert.ok(!table.fields.includes('feedback'));assert.ok(!JSON.stringify(table.headers).includes('已有分数'));assert.ok(!JSON.stringify(table.headers).includes('教师反馈'));assert.ok(table.rows.every(row=>row.length===table.fields.length));assert.ok(table.facts.every(row=>row.length===table.fields.length))}const before=JSON.stringify(f.b);reportTables(f.b,[f.tw],f.tw.students[0],{...SYSTEM_TEMPLATES[0],options:{...SYSTEM_TEMPLATES[0].options,scores:true,feedback:true}});assert.equal(JSON.stringify(f.b),before);assert.equal(f.b.assignments[0].results[f.tw.students[0]].score,0)})
+test('class homework appendix omits scores and feedback regardless of saved options',()=>{
+  const before=JSON.stringify(f.b)
+  for(const template of SYSTEM_TEMPLATES.filter(t=>t.kind==='class')){
+    for(const combinedHomework of [false,true])for(const showHomeworkName of [false,true]){
+      const table=reportTables(f.b,[f.tw],undefined,{...template,options:{...template.options,homeworkAppendix:true,scores:true,feedback:true,combinedHomework,showHomeworkName}}).find(t=>t.kind==='homework')
+      assert.ok(table)
+      assert.ok(!table.fields.includes('score'))
+      assert.ok(!table.fields.includes('feedback'))
+      assert.ok(!JSON.stringify(table.headers).includes('已有分数'))
+      assert.ok(!JSON.stringify(table.headers).includes('教师反馈'))
+      assert.equal(table.rows.length,84)
+      assert.ok(table.rows.every(row=>row.length===table.fields.length))
+      assert.ok(table.facts.every(row=>row.length===table.fields.length))
+      assert.equal(table.headers[0].length,table.fields.length)
+    }
+  }
+  assert.equal(JSON.stringify(f.b),before)
+})
 test('FT333 class learning summary is never personal conclusion',()=>{assert.ok(personalReport('C01').blocks.some(b=>b.key==='learning'));assert.ok(!personalReport('P01').blocks.some(b=>b.key==='learning'))})
 test('FT403 FT404 FT405 classic layouts differ without splitting core table',()=>{assert.equal(reportOptions(personalReport('C01').template).notesPosition,'right');assert.equal(reportOptions(personalReport('C02').template).notesPosition,'bottom');assert.equal(reportOptions(personalReport('C03').template).density,'compact');for(const id of ['C01','C02','C03'])assert.equal(personalReport(id).tables.length,1)})
 test('FT339 FT340 FT341 FT344 all personal presets retain complete core tables',()=>{for(const id of ['P01','P02','P03']){assert.equal(tableOf(personalReport(id),'classroom').rows.length,5);assert.equal(tableOf(personalReport(id),'homework').rows.length,3)}})
