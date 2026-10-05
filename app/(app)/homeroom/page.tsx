@@ -15,7 +15,8 @@ import {
   useToast,
 } from "@/components/kit"
 import { Button } from "@/components/ui/button"
-import { overallGrade, overallHomework, studentsByHomeroom, UNITS, WEEK_LABEL } from "@/lib/demo/data"
+import { WEEK_LABEL } from "@/lib/demo/data"
+import { HomeroomPublications } from "@/components/mt/homeroom-publications"
 import {
   mainHeadTeacherOf,
   studentProfilesByClass,
@@ -694,79 +695,7 @@ function InterviewForm({
 }
 
 function PublishedFeedback({ room }: { room: string }) {
-  const demo = useDemo()
-  const students = studentsByHomeroom(room)
-  const published = demo.publication
-  const primaryUnit = (published?.units[0] ?? "P1") as "P1" | "S1" | "M1"
-
-  if (!published) {
-    return (
-      <EmptyState
-        title="本周暂无已发布反馈"
-        desc="任课教师发布后，这里会显示本班学生的已发布周反馈汇总。"
-      />
-    )
-  }
-
-  return (
-    <Card className="p-0">
-      <CardHeader
-        title={`已发布反馈 · ${published.units.join(" + ")}`}
-        desc={`第 ${published.version} 版 · 数学A班（只读）`}
-        action={
-          <Badge tone="info">
-            <Eye className="size-3" />
-            只读 · 仅已发布
-          </Badge>
-        }
-      />
-      <div className="thin-scroll overflow-x-auto">
-        <table className="w-full min-w-[640px] text-left text-[13px]">
-          <thead className="bg-muted/50 text-xs text-muted-foreground">
-            <tr>
-              <th className="px-4 py-2.5 font-medium">学生</th>
-              <th className="px-4 py-2.5 font-medium">课堂</th>
-              <th className="px-4 py-2.5 font-medium">作业</th>
-              <th className="px-4 py-2.5 font-medium">亮点</th>
-              <th className="px-4 py-2.5 font-medium">送达</th>
-            </tr>
-          </thead>
-          <tbody>
-            {students.map((s) => {
-              const f = demo.units[primaryUnit].feedback[s.id]
-              const grade = overallGrade(f, UNITS.find((u) => u.code === primaryUnit)!.teachingDays)
-              const hw = overallHomework(f)
-              return (
-                <tr key={s.id} className="border-t border-border">
-                  <td className="px-4 py-2.5 font-medium">{s.name}</td>
-                  <td className="px-4 py-2.5">{grade ?? <span className="text-muted-foreground/60">—</span>}</td>
-                  <td className="px-4 py-2.5">
-                    {hw.status === "not_submitted"
-                      ? "未交"
-                      : hw.ungraded
-                        ? "已交·待评分"
-                        : hw.status === "pending"
-                          ? "待确认"
-                          : `已交·${hw.grade}`}
-                  </td>
-                  <td className="px-4 py-2.5 text-muted-foreground">
-                    {f.highlights.length ? f.highlights.join("、") : "—"}
-                  </td>
-                  <td className="px-4 py-2.5">
-                    {s.parentContactMissing ? (
-                      <Badge tone="warning">需手动转达</Badge>
-                    ) : (
-                      <Badge tone="success">可送达</Badge>
-                    )}
-                  </td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
-      </div>
-    </Card>
-  )
+  return <HomeroomPublications room={room} />
 }
 
 function SectionTitle({

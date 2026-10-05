@@ -186,6 +186,7 @@ export interface RoutineOp {
 }
 
 export interface MtBiz {
+  publicationChecks?: import('./publication-tracking').PublicationCheck[]
   evaluationGenerations?: Record<string, number>
   regradeRequests?: Record<string, string>
   schema: 3
