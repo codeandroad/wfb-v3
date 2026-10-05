@@ -116,7 +116,10 @@ export function HwResultControls({ a, sid, showName }: { a: Assignment; sid: str
                 const v = e.target.value
                 if (v === "SUSPECT") return
                 if (v === "") w.setResult(a, sid, { submission: null, submissionConfirmed: false }, "提交情况")
-                else if (v === "MISSING") w.setResult(a, sid, { submission: "MISSING", submissionConfirmed: true }, "核实未交")
+                else if (v === "MISSING") {
+                  w.setResult(a, sid, { submission: "MISSING", submissionConfirmed: true }, "登记未交")
+                  setMore(true)
+                }
                 else w.setResult(a, sid, { submission: v as "ON_TIME", submissionConfirmed: false }, "提交情况")
               }}
             >
@@ -124,7 +127,7 @@ export function HwResultControls({ a, sid, showName }: { a: Assignment; sid: str
               <option value="ON_TIME">按时提交</option>
               <option value="LATE">迟交</option>
               <option value="SUBMITTED">已提交（时效未定）</option>
-              <option value="MISSING">已确认未交</option>
+              <option value="MISSING">未交</option>
               {subValue === "SUSPECT" ? (
                 <option value="SUSPECT" disabled>
                   疑似未交（待核实）
@@ -173,7 +176,7 @@ export function HwResultControls({ a, sid, showName }: { a: Assignment; sid: str
         )}
         <Badge tone={stateTone(st)}>{STATE_LABEL[st]}</Badge>
         {ext ? <span className="text-[11px] text-muted-foreground">个别延期至 {clockLabel(ext)}</span> : null}
-        {r?.note || r?.memo || r?.history?.length ? <span className="size-1.5 rounded-full bg-primary" aria-label="有说明或历史" /> : null}
+        {r?.reason || r?.note || r?.memo || r?.history?.length ? <span className="size-1.5 rounded-full bg-primary" aria-label="有说明或历史" /> : null}
         <button
           type="button"
           onClick={() => setMore((v) => !v)}
@@ -226,11 +229,13 @@ function ResultMore({ a, sid, req, disabled }: { a: Assignment; sid: string; req
           </label>
         ) : null}
         <label className="flex items-center gap-1">
-          原因（内部）
+          {r?.submission === "MISSING" ? "未交原因（可选，仅内部可见）" : "原因（内部）"}
           <input
+            aria-label={`${nameOf(sid)} ${r?.submission === "MISSING" ? "未交原因" : "原因"}`}
+            disabled={disabled}
             className="h-7 w-36 rounded-md border border-input bg-card px-1.5"
             value={reason}
-            placeholder="如：病假、比赛"
+            placeholder={r?.submission === "MISSING" ? "如：作业丢失、忘带" : "如：病假、比赛"}
             onChange={(e) => setReason(e.target.value)}
             onBlur={() => reason !== (r?.reason ?? "") && w.setResult(a, sid, { reason }, "原因")}
           />
@@ -304,7 +309,7 @@ const FILTERS: { k: ResultFilter; label: string; match: (s: HwState) => boolean 
   { k: "all", label: "全部", match: () => true },
   { k: "ungraded", label: "待评价", match: (s) => s === "UNGRADED" },
   { k: "due", label: "到期待核对", match: (s) => s === "DUE_UNRECORDED" || s === "SUSPECTED_MISSING" },
-  { k: "missing", label: "已确认未交", match: (s) => s === "MISSING" },
+  { k: "missing", label: "未交", match: (s) => s === "MISSING" },
   { k: "exception", label: "安排例外", match: (s) => s === "REVIEW" || s === "EXEMPT" || s === "OPTIONAL_OUT" },
   { k: "done", label: "已评价", match: (s) => s === "GRADED" || s === "NO_GRADE" },
 ]
@@ -323,7 +328,7 @@ export function HwProgressLine({ a }: { a: Assignment }) {
       )}
       {p.graded + p.noGrade ? ` · 已评价 ${p.graded + p.noGrade}` : ""}
       {p.ungraded ? ` · 待评价 ${p.ungraded}` : ""}
-      {p.missing ? ` · 已确认未交 ${p.missing}` : ""}
+      {p.missing ? ` · 未交 ${p.missing}` : ""}
       {p.dueUnrecorded + p.suspected ? ` · 到期待核对 ${p.dueUnrecorded + p.suspected}` : ""}
       {p.notDue ? ` · 未到截止 ${p.notDue}` : ""}
       {p.review ? ` · 安排待核对 ${p.review}` : ""}
@@ -790,7 +795,7 @@ function ManagePanel({ a, onCopy }: { a: Assignment; onCopy?: (a: Assignment) =>
             onClick={() => {
               const open = p.ungraded + p.dueUnrecorded + p.suspected + p.review + p.notDue
               if (open && !confirm(`仍有 ${open} 项未结（待评价、未登记或安排待核对）。结束检查不等于核对完成，这些项会保持原状。继续？`)) return
-              say(w.setLifecycle(a, "CLOSED", "结束检查"), "已结束检查；已确认未交保持不变")
+              say(w.setLifecycle(a, "CLOSED", "结束检查"), "已结束检查；未交保持不变")
             }}
           >
             结束检查
