@@ -11,7 +11,7 @@ import {
   type ElementStyle,
   type FormatRule,
 } from "@/lib/mt/report-customization";
-import type { ReportTemplate } from "@/lib/mt/reports";
+import type { ReportTemplate, FrozenReport } from "@/lib/mt/reports";
 import { Btn, inputCls } from "./ui";
 
 function ColorInput({
@@ -113,7 +113,9 @@ function NumericInput({
 export function ReportCustomizationEditor({
   value,
   onChange,
+  currentReport,
 }: {
+  currentReport?: FrozenReport;
   value: ReportTemplate;
   onChange: (t: ReportTemplate) => void;
 }) {
@@ -161,7 +163,7 @@ export function ReportCustomizationEditor({
       available[table].flatMap((field) =>
         ["header", "body"].map((part) => [
           `${table}.${field}.${part}`,
-          `${tableNames[table]} · ${FIELDS[field as keyof typeof FIELDS]} · ${part === "header" ? "表头" : "正文"}`,
+          table==='homework'&&field==='assignment'&&part==='body'?'作业名称 · 内容／矩阵小字（默认 10 号）':`${tableNames[table]} · ${FIELDS[field as keyof typeof FIELDS]} · ${part === "header" ? "表头" : "正文"}`,
         ]),
       ),
     ),
@@ -193,9 +195,11 @@ export function ReportCustomizationEditor({
   const setRules = (next: FormatRule[]) =>
     onChange({ ...value, customization: { ...c, rules: next } });
   const revisions = [...SYSTEM_REVS, ...Object.values(mt.biz.schemes.revs)];
+  const facts=(currentReport?.tables??[]).flatMap(t=>(t.facts??[]).flat()).flatMap(f=>f?[f,...(f.related??[]),...(f.parts??[]).flatMap(p=>p.fact?[p.fact]:[])]:[]);
+  const activeRevisions=(field:string)=>revisions.filter(r=>facts.some(f=>f.field===field&&f.revision===r.id));
   return (
     <div className="flex flex-col gap-3">
-      <details><summary className="cursor-pointer font-semibold">元信息内容与作业名称</summary><div className="flex flex-col gap-3 py-3"><p className="text-sm text-muted-foreground">系统行自动使用当前报告的已保存数据；每行可在元素细调中独立设置样式。自定义内容随样式保存。</p>{(c.metadata??DEFAULT_METADATA).map((row,index)=><div key={row.id} className="flex flex-wrap items-center gap-2"><span>{row.label}</span>{row.source==='custom'?<><input aria-label="自定义元信息标签" className={inputCls} value={row.label} maxLength={100} onChange={e=>onChange({...value,customization:{...c,metadata:(c.metadata??DEFAULT_METADATA).map((r,i)=>i===index?{...r,label:e.target.value}:r)}})}/><input aria-label="自定义元信息内容" className={inputCls} value={row.text??''} maxLength={500} placeholder="例如教师联系电话" onChange={e=>onChange({...value,customization:{...c,metadata:(c.metadata??DEFAULT_METADATA).map((r,i)=>i===index?{...r,text:e.target.value}:r)}})}/></>:<span className="text-sm text-muted-foreground">系统字段（自动读取）</span>}<Btn size="sm" onClick={()=>onChange({...value,customization:{...c,metadata:(c.metadata??DEFAULT_METADATA).filter((_,i)=>i!==index)}})}>删除行</Btn></div>)}<div className="flex flex-wrap gap-2"><Btn size="sm" disabled={(c.metadata??DEFAULT_METADATA).length>=20} onClick={()=>onChange({...value,customization:{...c,metadata:[...(c.metadata??DEFAULT_METADATA),{id:crypto.randomUUID(),source:'custom',label:'联系电话',text:''}]}})}>添加自定义行</Btn><Btn size="sm" onClick={()=>onChange({...value,customization:{...c,metadata:[...DEFAULT_METADATA,...(c.metadata??[]).filter(r=>r.source==='custom')]}})}>恢复系统三行</Btn></div><label className="text-sm"><input type="checkbox" checked={value.options?.showHomeworkName??value.kind==='personal'} onChange={e=>onChange({...value,options:{...value.options,showHomeworkName:e.target.checked}})}/> 作业栏显示作业名称</label></div></details>
+      <details><summary className="cursor-pointer font-semibold">元信息内容</summary><div className="flex flex-col gap-3 py-3"><p className="text-sm text-muted-foreground">系统行自动使用当前报告的已保存数据；每行可在元素细调中独立设置样式。自定义内容随样式保存。</p>{(c.metadata??DEFAULT_METADATA).map((row,index)=><div key={row.id} className="flex flex-wrap items-center gap-2"><span>{row.label}</span>{row.source==='custom'?<><input aria-label="自定义元信息标签" className={inputCls} value={row.label} maxLength={100} onChange={e=>onChange({...value,customization:{...c,metadata:(c.metadata??DEFAULT_METADATA).map((r,i)=>i===index?{...r,label:e.target.value}:r)}})}/><input aria-label="自定义元信息内容" className={inputCls} value={row.text??''} maxLength={500} placeholder="例如教师联系电话" onChange={e=>onChange({...value,customization:{...c,metadata:(c.metadata??DEFAULT_METADATA).map((r,i)=>i===index?{...r,text:e.target.value}:r)}})}/></>:<span className="text-sm text-muted-foreground">系统字段（自动读取）</span>}<Btn size="sm" onClick={()=>onChange({...value,customization:{...c,metadata:(c.metadata??DEFAULT_METADATA).filter((_,i)=>i!==index)}})}>删除行</Btn></div>)}<div className="flex flex-wrap gap-2"><Btn size="sm" disabled={(c.metadata??DEFAULT_METADATA).length>=20} onClick={()=>onChange({...value,customization:{...c,metadata:[...(c.metadata??DEFAULT_METADATA),{id:crypto.randomUUID(),source:'custom',label:'联系电话',text:''}]}})}>添加自定义行</Btn><Btn size="sm" onClick={()=>onChange({...value,customization:{...c,metadata:[...DEFAULT_METADATA,...(c.metadata??[]).filter(r=>r.source==='custom')]}})}>恢复系统三行</Btn></div></div></details>
       <details>
         <summary className="cursor-pointer font-semibold">元素细调</summary>
         <div className="flex flex-col gap-3 py-3">
@@ -224,10 +228,11 @@ export function ReportCustomizationEditor({
               onChange={(color) => update({ color })}
             />
             <ColorInput
-              label="背景颜色"
+              label="文字背景颜色"
               value={style.background}
               onChange={(background) => update({ background })}
             />
+            <ColorInput label="单元格背景颜色" value={style.cellBackground} onChange={cellBackground=>update({cellBackground})}/>
             {(
               [
                 ["size", "字号", 10, 36],
@@ -302,7 +307,7 @@ export function ReportCustomizationEditor({
             </Btn>
             <Btn
               size="sm"
-              disabled={!style.background}
+              disabled={!style.cellBackground}
               onClick={() => {
                 const elements = { ...c.elements };
                 for (const [key] of targets.filter(([key]) =>
@@ -310,7 +315,7 @@ export function ReportCustomizationEditor({
                 ))
                   elements[key] = {
                     ...elements[key],
-                    background: style.background,
+                    cellBackground: style.cellBackground,
                   };
                 onChange({ ...value, customization: { ...c, elements } });
               }}
@@ -364,23 +369,10 @@ export function ReportCustomizationEditor({
                   <>
                     <label className="text-sm">
                       实际评价方案修订
-                      <select
-                        className={inputCls}
-                        value={rule.revision ?? ""}
-                        onChange={(e) =>
-                          patch({ revision: e.target.value, grades: [] })
-                        }
-                      >
-                        <option value="">请选择，不按字母猜测</option>
-                        {revisions.map((r) => (
-                          <option key={r.id} value={r.id}>
-                            {r.name} · r{r.n}
-                          </option>
-                        ))}
-                      </select>
+                      <p>{activeRevisions(rule.field).find(r=>r.id===rule.revision)?.name??'此规则不属于当前报告采用的方案，请删除后重新添加'}{rule.revision?` · ${rule.revision}`:''}</p>
                     </label>
                     <div className="flex flex-wrap gap-2">
-                      {revisions
+                      {activeRevisions(rule.field)
                         .find((r) => r.id === rule.revision)
                         ?.levels.map((l) => (
                           <label className="text-sm" key={l.id}>
@@ -405,6 +397,7 @@ export function ReportCustomizationEditor({
                 ) : (
                   <div className="flex flex-wrap gap-2">{Object.entries(rule.field==='attendance'?ATT_LABEL:{...SUBMISSION_LABEL,MISSING_CONFIRMED:'确认未交'}).filter(([key])=>key!=='MISSING').map(([key,label])=><label key={key} className="text-sm"><input type="checkbox" checked={rule.statuses?.includes(key)??false} onChange={e=>patch({statuses:e.target.checked?[...(rule.statuses??[]),key]:(rule.statuses??[]).filter(s=>s!==key)})}/>{label}</label>)}</div>
                 )}
+                {rule.field==='quality'?<fieldset className="flex flex-wrap gap-2"><legend className="text-sm">同时满足提交情况（不选表示不限）</legend>{(['ON_TIME','LATE','SUBMITTED'] as const).map(status=><label key={status} className="text-sm"><input type="checkbox" checked={rule.submissionStatuses?.includes(status)??false} onChange={e=>patch({submissionStatuses:e.target.checked?[...(rule.submissionStatuses??[]),status]:(rule.submissionStatuses??[]).filter(s=>s!==status)})}/>{SUBMISSION_LABEL[status]}</label>)}</fieldset>:null}
                 <ColorInput
                   key={`${rule.id}-text`}
                   label="命中文字"
@@ -415,12 +408,13 @@ export function ReportCustomizationEditor({
                 />
                 <ColorInput
                   key={`${rule.id}-bg`}
-                  label="命中背景"
+                  label="命中文字背景"
                   value={rule.style.background}
                   onChange={(background) =>
                     patch({ style: { ...rule.style, background } })
                   }
                 />
+                <ColorInput label="命中单元格背景" value={rule.style.cellBackground} onChange={cellBackground=>patch({style:{...rule.style,cellBackground}})}/>
                 <NumericInput label="命中字号" min={10} max={36} step={1} value={rule.style.size} onChange={size=>patch({style:{...rule.style,size}})}/><label className="text-sm">命中字重<select className={inputCls} value={rule.style.weight??''} onChange={e=>patch({style:{...rule.style,weight:e.target.value?Number(e.target.value):undefined}})}><option value="">继承</option><option value="400">常规</option><option value="600">半粗</option><option value="700">加粗</option></select></label>
                 <div className="flex gap-2">
                   <Btn
@@ -453,18 +447,12 @@ export function ReportCustomizationEditor({
             {(["attendance", "classroom", "submission", "quality"] as const).map((field) => (
               <Btn
                 key={field}
+                disabled={(field==='classroom'||field==='quality')&&!activeRevisions(field).length}
                 size="sm"
                 onClick={() =>
                   setRules([
                     ...rules,
-                    {
-                      id: crypto.randomUUID(),
-                      name:
-                        `${FIELDS[field]}规则`,
-                      field,
-                      enabled: true,
-                      style: { color: "#166534" },
-                    },
+                    ...(field==='classroom'||field==='quality'?activeRevisions(field):[undefined]).map(revision=>({id:crypto.randomUUID(),name:`${FIELDS[field]}规则${revision?` · ${revision.name}`:''}`,field,revision:revision?.id,enabled:true,style:{color:'#166534'}})),
                   ])
                 }
               >

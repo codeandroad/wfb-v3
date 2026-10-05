@@ -145,12 +145,13 @@ export function HwResultControls({ a, sid, showName }: { a: Assignment; sid: str
             >
               <option value="">{submitted ? "待评价" : "—"}</option>
               {(rev?.levels ?? []).map((l) => (
-                <option key={l.id} value={l.id} title={l.guide || undefined}>
+                <option key={l.id} value={l.id} disabled={r?.submission==='LATE'&&l.id===rev?.levels[0]?.id} title={r?.submission==='LATE'&&l.id===rev?.levels[0]?.id?'迟交作业不可评最高等级':l.guide || undefined}>
                   {levelText(l)}
                 </option>
               ))}
               <option value="__NO__">明确不评价</option>
             </select>
+            {r?.submission==='LATE'?<span className="text-xs text-muted-foreground">迟交不可评最高等级{r.quality===rev?.levels[0]?.id?'；原最高等级需重新评价':''}</span>:null}
             {a.scoreEnabled ? (
               <input
                 key={`${sid}-${r?.score ?? "e"}-${r?.rev?.score ?? 0}`}
@@ -1067,7 +1068,7 @@ export function AssignForm({
         </div>
       ) : null}
       {copyFrom ? <p className="text-xs text-muted-foreground">复制题目内容自「{copyFrom.title}」；不复制提交、成绩、免做、延期或结束状态。</p> : null}
-      <input className={inputCls} placeholder="作业标题" value={title} onChange={(e) => edit(setTitle)(e.target.value)} aria-label="作业��题" />
+      <input className={inputCls} placeholder="作业��题" value={title} onChange={(e) => edit(setTitle)(e.target.value)} aria-label="作业��题" />
       <textarea
         className={inputCls}
         rows={3}
