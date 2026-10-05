@@ -1,11 +1,9 @@
-import { type FrozenReport, type ReportTable, visibleBlocks } from './reports'
+import { type FrozenReport, visibleBlocks } from './reports'
 import { resolveElement, colorValue, type ElementStyle } from './report-customization'
-import { classicMetadata } from './report-elements'
-
-type Paint = { height: number; draw: (ctx: CanvasRenderingContext2D, x: number, y: number) => void }
-
-const briefFont = (r: FrozenReport, size: number, bold = false) =>
-  `${bold ? '600' : '400'} ${size}px "Noto Report", ${r.template.font === 'serif' ? 'serif' : 'sans-serif'}`
+import {
+  makeCanvasKit, roundRectPath, paintHeaderBand, paintFooter, paintDataTable,
+  composeLongImage, reportTables, INK, MUTED, CARD_BG, type Paint,
+} from './report-canvas-shared'
 
 type BriefCard = { title: string; accent: string; lines: string[]; emptyHint: string }
 
@@ -28,50 +26,16 @@ function briefCards(r: FrozenReport): BriefCard[] {
   ]
 }
 
-function roundRectPath(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, rad: number) {
-  const radC = Math.min(rad, w / 2, h / 2)
-  ctx.beginPath()
-  ctx.moveTo(x + radC, y)
-  ctx.arcTo(x + w, y, x + w, y + h, radC)
-  ctx.arcTo(x + w, y + h, x, y + h, radC)
-  ctx.arcTo(x, y + h, x, y, radC)
-  ctx.arcTo(x, y, x + w, y, radC)
-  ctx.closePath()
-}
-
-export function renderBriefImages(r: FrozenReport): string[] {
+export function renderBriefImages(r: FrozenReport, version = '未发布预览稿'): string[] {
   const width = 1080, margin = 48, gap = 28
-  const ink = '#263a33', muted = '#5f7168', pageBg = '#f3f6f5', cardBg = '#ffffff'
-  const font = (size: number, bold = false) => briefFont(r, size, bold)
-  const scratch = document.createElement('canvas').getContext('2d')
-  if (!scratch) throw new Error('无法创建报告画布')
-  const wrap = (text: string, w: number, size: number, bold = false): string[] => {
-    scratch.font = font(size, bold)
-    const result: string[] = []
-    for (const paragraph of text.split('\n')) {
-      let line = ''
-      for (const char of paragraph) {
-        if (line && scratch.measureText(line + char).width > w) { result.push(line); line = '' }
-        line += char
-      }
-      result.push(line)
-    }
-    return result
-  }
-
-  // ---- 头部横幅 ----
-  const metaText = classicMetadata(r).filter(Boolean).join(' · ')
-  const titleStyle = resolveElement(r.template.customization, 'brief.header.title', { size: 36, weight: 600, color: '#ffffff', lineHeight: 1.3 } as ElementStyle)
-  const metaStyle = resolveElement(r.template.customization, 'brief.header.meta', { size: 18, weight: 400, color: '#dcebe4', lineHeight: 1.5 } as ElementStyle)
-  const titleLines = wrap(r.kind === 'personal' ? `${r.name} · 周反馈` : `${r.name}周反馈`, width - margin * 2 - 40, titleStyle.size!)
-  const metaLines = wrap(metaText, width - margin * 2 - 40, metaStyle.size!)
-  const headerH = 64 + titleLines.length * titleStyle.size! * titleStyle.lineHeight! + 12 + metaLines.length * metaStyle.size! * metaStyle.lineHeight! + 56
-
-  // ---- 卡片 ----
+  const kit = makeCanvasKit(r)
+  const { font, wrap } = kit
   const cardW = width - margin * 2
-  const cards = briefCards(r).map(card => {
-    const tStyle = resolveElement(r.template.customization, 'brief.card.title', { size: 22, weight: 600, color: ink, lineHeight: 1.4, padding: 36 } as ElementStyle)
-    const bStyle = resolveElement(r.template.customization, 'brief.card.body', { size: 17, weight: 400, color: ink, lineHeight: 1.7, padding: 36 } as ElementStyle)
+
+  // ---- 卡片（保留模板自定义元素覆盖） ----
+  const cards: Paint[] = briefCards(r).map(card => {
+    const tStyle = resolveElement(r.template.customization, 'brief.card.title', { size: 22, weight: 600, color: INK, lineHeight: 1.4, padding: 36 } as ElementStyle)
+    const bStyle = resolveElement(r.template.customization, 'brief.card.body', { size: 17, weight: 400, color: INK, lineHeight: 1.7, padding: 36 } as ElementStyle)
     const bodyW = cardW - bStyle.padding! * 2 - 28
     const rows = card.lines.length ? card.lines : [card.emptyHint]
     const rowLines = rows.map(text => wrap((card.lines.length ? '•  ' : '') + text, bodyW, bStyle.size!))
@@ -82,21 +46,18 @@ export function renderBriefImages(r: FrozenReport): string[] {
       ctx.save()
       ctx.shadowColor = 'rgba(36,95,80,0.08)'; ctx.shadowBlur = 24; ctx.shadowOffsetY = 6
       roundRectPath(ctx, x, y, cardW, height, 24)
-      ctx.fillStyle = colorValue(cardBg)!; ctx.fill()
+      ctx.fillStyle = colorValue(CARD_BG)!; ctx.fill()
       ctx.restore()
       roundRectPath(ctx, x, y, cardW, height, 24)
       ctx.strokeStyle = '#e2eae6'; ctx.lineWidth = 2; ctx.stroke()
-      // 左侧强调条
       ctx.fillStyle = colorValue(card.accent)!
       roundRectPath(ctx, x, y + 28, 8, height - 56, 4); ctx.fill()
-      // 标题
       ctx.font = font(tStyle.size!, true); ctx.fillStyle = colorValue(tStyle.color!)!; ctx.textAlign = 'left'
       const tY = y + tStyle.padding!
       ctx.fillText(card.title, x + tStyle.padding!, tY + tStyle.size!)
       ctx.fillStyle = colorValue(card.accent)!
       ctx.beginPath(); ctx.arc(x + tStyle.padding! - 16, tY + tStyle.size! * 0.62, 7, 0, Math.PI * 2); ctx.fill()
-      // 正文
-      ctx.font = font(bStyle.size!); ctx.fillStyle = colorValue(card.lines.length ? bStyle.color! : muted)!
+      ctx.font = font(bStyle.size!); ctx.fillStyle = colorValue(card.lines.length ? bStyle.color! : MUTED)!
       let ly = y + titleH
       rowLines.forEach(lines => {
         lines.forEach((text, i) => { ctx.fillText(text, x + bStyle.padding! + 14, ly + bStyle.size! + i * bStyle.size! * bStyle.lineHeight!) })
@@ -107,101 +68,14 @@ export function renderBriefImages(r: FrozenReport): string[] {
     return { height, draw }
   })
 
-  const footerStyle = resolveElement(r.template.customization, 'brief.footer', { size: 14, weight: 400, color: muted, lineHeight: 1.5 } as ElementStyle)
-  const footerText = `${r.teacher} · ${r.period}`
-  const footerH = footerStyle.size! * footerStyle.lineHeight! + 40
-
-  // ---- 数据表（与 HTML 预览一致，核心数据不缺席） ----
-  const tablePaints = (r.tables ?? []).filter(t => t.kind === 'classroom' || t.kind === 'homework' || t.kind === 'lessons').map(table => {
-    const cols = Math.max(1, table.headers[0]?.reduce((n, c) => n + (c.span ?? 1), 0) ?? 1)
-    const cellW = cardW / cols
-    const size = 13, pad = 6, lineH = size * 1.4, tSize = 16
-    const titleLines = wrap(table.title, cardW, tSize, true)
-    const titleH = titleLines.length * tSize * 1.35 + 12
-    const hHs = table.headers.map((row, ri) => {
-      let h = lineH + pad * 2
-      row.forEach(c => {
-        if (c.rowSpan === 2) return
-        const w = (c.span ?? 1) * cellW - pad * 2
-        h = Math.max(h, wrap(c.text, Math.max(24, w), size, true).length * lineH + pad * 2)
-      })
-      return h
-    })
-    const headerH = hHs.reduce((a, b) => a + b, 0)
-    const rowHs = table.rows.map(row => {
-      let h = lineH + pad * 2
-      row.forEach(cell => { h = Math.max(h, wrap(cell || '', Math.max(24, cellW - pad * 2), size).length * lineH + pad * 2) })
-      return h
-    })
-    const height = titleH + 8 + headerH + rowHs.reduce((a, b) => a + b, 0) + 8
-    const draw = (ctx: CanvasRenderingContext2D, x: number, y: number) => {
-      ctx.textAlign = 'left'
-      ctx.font = font(tSize, true); ctx.fillStyle = colorValue(r.template.color ?? '#245f50')!
-      titleLines.forEach((text, i) => ctx.fillText(text, x, y + tSize + i * tSize * 1.35))
-      let ty = y + titleH + 8
-      table.headers.forEach((row, ri) => {
-        let col = ri === 1 ? (table.identityColumns ?? 0) : 0
-        row.forEach(c => {
-          const span = c.span ?? 1, w = span * cellW
-          const h = c.rowSpan === 2 ? headerH : hHs[ri]
-          const cx = x + col * cellW
-          ctx.fillStyle = '#edf2ef'; ctx.fillRect(cx, ty, w, h)
-          ctx.strokeStyle = '#dbe3df'; ctx.lineWidth = 1; ctx.strokeRect(cx, ty, w, h)
-          ctx.font = font(size, true); ctx.fillStyle = colorValue(r.template.color ?? '#245f50')!
-          const lines = wrap(c.text, Math.max(24, w - pad * 2), size, true)
-          lines.forEach((text, i) => ctx.fillText(text, cx + pad, ty + pad + size + i * lineH))
-          col += span
-        })
-        ty += hHs[ri]
-      })
-      table.rows.forEach((row, i) => {
-        const rh = rowHs[i]
-        row.forEach((cell, ci) => {
-          const cx = x + ci * cellW
-          if (i % 2) { ctx.fillStyle = '#f6f8f7'; ctx.fillRect(cx, ty, cellW, rh) }
-          ctx.strokeStyle = '#dbe3df'; ctx.lineWidth = 1; ctx.strokeRect(cx, ty, cellW, rh)
-          ctx.font = font(size); ctx.fillStyle = ink
-          const lines = wrap(cell || '', Math.max(24, cellW - pad * 2), size)
-          lines.forEach((text, li) => ctx.fillText(text, cx + pad, ty + pad + size + li * lineH))
-        })
-        ty += rh
-      })
-    }
-    return { height, draw }
-  })
-
-  const totalH = headerH + gap + cards.reduce((n, c) => n + c.height + gap, 0) + tablePaints.reduce((n, t) => n + t.height + gap, 0) + footerH + margin
+  const accent = r.template.color ?? '#245f50'
+  const paints: Paint[] = [
+    paintHeaderBand(r, version, width, margin, kit),
+    ...cards,
+    ...reportTables(r).map(t => paintDataTable(t, cardW, kit, accent)),
+    paintFooter(r, width, margin, kit),
+  ]
+  const totalH = paints.reduce((n, p) => n + p.height + gap, 0) + margin
   if (totalH > 30000) throw new Error('报告高度超过安全画布范围，请缩小发布范围或调整密度')
-
-  const canvas = document.createElement('canvas')
-  canvas.width = width; canvas.height = Math.ceil(totalH)
-  const ctx = canvas.getContext('2d')
-  if (!ctx) throw new Error('无法生成报告')
-  ctx.fillStyle = colorValue(pageBg)!; ctx.fillRect(0, 0, width, totalH)
-
-  // 头部横幅：深绿底
-  const headGrad = ctx.createLinearGradient(0, 0, width, headerH)
-  headGrad.addColorStop(0, colorValue(r.template.color ?? '#245f50')!); headGrad.addColorStop(1, '#1b4a3e')
-  ctx.fillStyle = headGrad; ctx.fillRect(0, 0, width, headerH)
-  ctx.textAlign = 'left'
-  let hy = 64
-  ctx.font = font(titleStyle.size!, true); ctx.fillStyle = colorValue(titleStyle.color!)!
-  titleLines.forEach((text, i) => { ctx.fillText(text, margin + 20, hy + titleStyle.size! + i * titleStyle.size! * titleStyle.lineHeight!) })
-  hy += titleLines.length * titleStyle.size! * titleStyle.lineHeight! + 12
-  ctx.font = font(metaStyle.size!); ctx.fillStyle = colorValue(metaStyle.color!)!
-  metaLines.forEach((text, i) => { ctx.fillText(text, margin + 20, hy + metaStyle.size! + i * metaStyle.size! * metaStyle.lineHeight!) })
-
-  // 卡片
-  let y = headerH + gap
-  for (const card of cards) { card.draw(ctx, margin, y); y += card.height + gap }
-
-  // 数据表
-  for (const tp of tablePaints) { tp.draw(ctx, margin, y); y += tp.height + gap }
-
-  // 页脚
-  ctx.font = font(footerStyle.size!); ctx.fillStyle = colorValue(footerStyle.color!)!; ctx.textAlign = 'center'
-  ctx.fillText(footerText, width / 2, y + 20 + footerStyle.size!)
-  ctx.textAlign = 'left'
-
-  return [canvas.toDataURL('image/png')]
+  return [composeLongImage(paints, width, margin, gap)]
 }
