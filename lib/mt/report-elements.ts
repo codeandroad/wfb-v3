@@ -81,5 +81,16 @@ export function reportElementTargets(r?: FrozenReport): [string, string][] {
     add(`${block.key}.title`, `${block.title} · 标题`)
     add(`${block.key}.body`, `${block.title} · 正文`)
   }
+  const preset = r.template.preset ?? r.template.id
+  if (preset === 'C16') {
+    add('newspaper.masthead', '报纸 · 报头标题')
+    add('newspaper.headline', '报纸 · 头版头条标题')
+    add('newspaper.section', '报纸 · 栏目')
+  }
+  if (preset === 'P11') {
+    add('growth.name', '档案 · 姓名标题')
+    add('growth.dim', '档案 · 维度')
+    add('growth.note', '档案 · 点评')
+  }
   return [...targets]
 }

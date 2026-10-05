@@ -158,7 +158,6 @@ export function extractChips(r: FrozenReport): string[] {
 }
 
 export type FollowUps = { homework: string[]; leave: string[] }
-/** 待跟进：作业未交（姓名+日期）/ 出勤异常（姓名+日期+状态） */
 export function followUps(r: FrozenReport): FollowUps {
   const table = (r.tables ?? []).find(t => t.kind === 'classroom' && t.facts?.length)
   const homework: string[] = [], leave: string[] = []
@@ -199,4 +198,43 @@ export function dayGroups(table: ReportTable): DayGroup[] {
     col += span
   }
   return groups
+}
+
+const GRADE_PCT: Record<string, number> = { 'A+': 100, A: 90, 'A-': 80, 'B+': 70, B: 60, 'B-': 50, C: 40 }
+const gradePctOf = (g: string) => GRADE_PCT[g.trim()] ?? (isAGradeText(g) ? 90 : 50)
+const modeStr = (arr: string[]) => {
+  const c = new Map<string, number>()
+  arr.forEach(x => c.set(x, (c.get(x) ?? 0) + 1))
+  let best = '', n = 0
+  c.forEach((v, k) => { if (v > n) { n = v; best = k } })
+  return best
+}
+
+export type PersonalDim = { label: string; value: string; pct: number }
+/** 个人成长档案维度：出勤 / 课堂表现 / 作业（尽力从个人表提取） */
+export function personalDims(r: FrozenReport): PersonalDim[] {
+  const dims: PersonalDim[] = []
+  const ct = (r.tables ?? []).find(t => t.kind === 'classroom')
+  if (ct) {
+    let ab = 0, tot = 0
+    const grades: string[] = []
+    ct.rows.forEach(row => {
+      const a = (row[1] ?? '').trim()
+      if (a && !isEmptyCell(a)) { tot++; if (a !== '正常') ab++ }
+      const g = (row[2] ?? '').trim()
+      if (g && !isEmptyCell(g)) grades.push(g)
+    })
+    if (tot) dims.push({ label: '出勤', value: ab ? `异常 ${ab} 次` : '全勤', pct: Math.round(((tot - ab) / tot) * 100) })
+    const mg = modeStr(grades)
+    if (mg) dims.push({ label: '课堂表现', value: mg, pct: gradePctOf(mg) })
+  }
+  const hwRows = (r.tables ?? []).filter(t => t.kind === 'homework').flatMap(t => t.rows)
+  if (hwRows.length) {
+    const missing = hwRows.filter(row => row.join(' ').includes('未交')).length
+    dims.push({
+      label: '作业提交', value: missing ? `${missing} 次未交` : '全部提交',
+      pct: Math.round(((hwRows.length - missing) / hwRows.length) * 100),
+    })
+  }
+  return dims
 }

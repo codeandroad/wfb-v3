@@ -6,6 +6,8 @@ import { renderTimelineImages } from './report-timeline-export'
 import { renderQAImages } from './report-qa-export'
 import { renderLongImages } from './report-long-export'
 import { renderLetterImages } from './report-letter-export'
+import { renderNewspaperImages } from './report-newspaper-export'
+import { renderGrowthImages } from './report-growth-export'
 import { zipSync, strToU8 } from 'fflate'
 import type { Publication } from './model'
 import { reportFilename, validTemplate, type FrozenReport } from './reports'
@@ -20,6 +22,8 @@ export async function renderReportImages(report: FrozenReport, version: string):
   if (preset === 'C12') return renderDashboardImages(report, version)
   if (preset === 'C14') return renderQAImages(report, version)
   if (preset === 'C15') return renderLongImages(report, version)
+  if (preset === 'C16') return renderNewspaperImages(report, version)
+  if (preset === 'P11') return renderGrowthImages(report, version)
   if (preset === 'P12') return renderLetterImages(report, version)
   if (report.template.layout === 'timeline') return renderTimelineImages(report, version)
   if (report.template.layout === 'letter') return renderLetterImages(report, version)

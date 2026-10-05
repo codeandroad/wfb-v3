@@ -20,6 +20,7 @@ const STYLE_PRESETS: { id: string; kind: ReportKind; name: string; layout: Repor
   { id: 'C13', kind: 'class', name: '班级·时间轴周报', layout: 'timeline', modules: ['teaching', 'classroom', 'homework', 'highlights', 'next'] },
   { id: 'C14', kind: 'class', name: '班级·快问快答', layout: 'brief', modules: ['teaching', 'learning', 'classroom', 'homework', 'next'] },
   { id: 'C15', kind: 'class', name: '班级·一图流长图', layout: 'brief', modules: ['teaching', 'learning', 'classroom', 'homework', 'highlights', 'next'] },
+  { id: 'C16', kind: 'class', name: '班级周报', layout: 'brief', modules: ['teaching', 'learning', 'classroom', 'homework', 'highlights', 'next'] },
   { id: 'P11', kind: 'personal', name: '个人·成长档案', layout: 'timeline', modules: ['classroom', 'homework', 'highlights', 'comment', 'next'] },
   { id: 'P12', kind: 'personal', name: '个人·每周一信', layout: 'letter', modules: ['comment', 'classroom', 'homework', 'highlights', 'next'] },
 ]

@@ -1,4 +1,5 @@
 'use client'
+import { useMemo } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
 import type { FrozenReport, ReportTable } from '@/lib/mt/reports'
 import { visibleBlocks } from '@/lib/mt/reports'
@@ -9,7 +10,7 @@ import { darken } from '@/lib/mt/report-canvas-shared'
 import {
   computeStats, pct, dayGroups, isAGradeText, isEmptyCell,
   gradeDistribution, studentSummaries, parseHighlights,
-  extractChapter, extractChips, followUps,
+  extractChapter, extractChips, followUps, personalDims,
 } from '@/lib/mt/report-stats'
 
 /* ================= 主题 ================= */
@@ -45,19 +46,55 @@ const el = (r: FrozenReport, target: string, base: ElementStyle, fact?: CellFact
 /* ================= 数据 helpers ================= */
 const linesOf = (r: FrozenReport, ...keys: string[]) =>
   visibleBlocks(r).filter(b => keys.includes(b.key)).flatMap(b => b.lines).map(s => s.trim()).filter(Boolean)
-const tablesOf = (r: FrozenReport, ...kinds: string[]) => (r.tables ?? []).filter(t => kinds.includes(t.kind))
+const tablesOf = (r: FrozenReport, ...kinds: string[]) => (r.tables ?? []).filter(t => t.kind !== undefined && kinds.includes(t.kind))
 const matrixOf = (r: FrozenReport) => (r.tables ?? []).find(t => t.kind === 'classroom' && t.facts?.length)
 
-/* ================= 通用数据表（主题 + 元素细调 + 条件格式） ================= */
+/* ================= 通用数据表（主题 + 元素细调 + 条件格式） =================
+   固定布局 + 实测列宽 + 单元格不换行：比例统一，与 canvas 导出一致 */
+function useColumnWidths(report: FrozenReport, table: ReportTable, fontSize: number, pad: number): number[] {
+  return useMemo(() => {
+    try {
+      const canvas = document.createElement('canvas')
+      const ctx = canvas.getContext('2d')
+      if (!ctx) return []
+      const leafCount = Math.max(1, table.headers[0]?.reduce((n, c) => n + (c.span ?? 1), 0) ?? 1)
+      const widths = new Array(leafCount).fill(36)
+      const measure = (text: string, bold: boolean) => {
+        ctx.font = `${bold ? '600' : '400'} ${fontSize}px sans-serif`
+        // 浏览器渲染时 \n 折叠为空格：按折叠后的单行测量
+        return ctx.measureText((text || '').replace(/\s+/g, ' ').trim()).width
+      }
+      table.rows.forEach(row => row.forEach((cell, ci) => {
+        if (ci < leafCount) widths[ci] = Math.max(widths[ci], measure(cell, false))
+      }))
+      tableHeaders(table).forEach(({ header, col }) => {
+        const span = header.span ?? 1
+        const per = measure(header.text, true) / span
+        for (let i = 0; i < span && col + i < leafCount; i++) widths[col + i] = Math.max(widths[col + i], per)
+      })
+      const scale = report.template.customization?.tableScale ?? 1
+      return widths.map((w, ci) => {
+        const override = report.template.customization?.elements?.[cellTarget(table, ci, 'body')]?.width
+        return Math.ceil((override ?? w * scale) + pad * 2 + 10)
+      })
+    } catch { return [] }
+  }, [report, table, fontSize, pad])
+}
+
 function DataTableHTML({ report, table, t, showTitle }: { report: FrozenReport; table: ReportTable; t: HtmlTheme; showTitle?: boolean }) {
   const cust = report.template.customization
   const pad = t.compact ? 4 : 8
   const titleStyle = el(report, `${table.kind}.title`, { size: t.bodySize, weight: 600, color: t.primary })
+  const widths = useColumnWidths(report, table, t.tableSize, pad)
+  const totalW = widths.reduce((a, b) => a + b, 0)
   return (
     <section>
       {showTitle !== false && table.title ? <h3 className="mb-1 font-semibold" style={titleStyle}>{table.title}</h3> : null}
       <div className="overflow-x-auto rounded border" style={{ borderColor: t.border }}>
-        <table className="w-full border-collapse leading-relaxed">
+        <table className="border-collapse leading-relaxed" style={{ tableLayout: 'fixed', width: totalW || '100%' }}>
+          {widths.length ? (
+            <colgroup>{widths.map((w, i) => <col key={i} style={{ width: w }} />)}</colgroup>
+          ) : null}
           <thead>
             {table.headers.map((row, ri) => (
               <tr key={ri}>
@@ -65,8 +102,8 @@ function DataTableHTML({ report, table, t, showTitle }: { report: FrozenReport; 
                   const s = el(report, target, { size: t.tableSize, weight: 600, color: t.headerText, background: t.headerBg, padding: pad })
                   const bg = resolveCellBackground(cust, target) ?? s.background
                   return (
-                    <th key={col} colSpan={c.span} rowSpan={c.rowSpan} className="whitespace-pre-wrap border font-semibold"
-                      style={{ ...s, background: bg, borderColor: t.border }}>{c.text}</th>
+                    <th key={col} colSpan={c.span} rowSpan={c.rowSpan} className="border font-semibold"
+                      style={{ ...s, background: bg, borderColor: t.border, whiteSpace: 'nowrap' }}>{c.text}</th>
                   )
                 })}
               </tr>
@@ -84,8 +121,8 @@ function DataTableHTML({ report, table, t, showTitle }: { report: FrozenReport; 
                   }, fact)
                   const bg = resolveCellBackground(cust, target, fact) ?? (i % 2 ? t.stripe : s.background)
                   return (
-                    <td key={j} className="whitespace-pre-wrap border align-top"
-                      style={{ ...s, background: bg, borderColor: t.border }}>{cell}</td>
+                    <td key={j} className="border align-top"
+                      style={{ ...s, background: bg, borderColor: t.border, whiteSpace: 'nowrap' }}>{cell}</td>
                   )
                 })}
               </tr>
@@ -534,6 +571,8 @@ function LetterHTML({ report }: { report: FrozenReport }) {
 export function ReportHTML({ report }: { report: FrozenReport }) {
   const preset = report.template.preset ?? report.template.id
   const layout = report.template.layout
+  if (preset === 'P11') return <GrowthHTML report={report} />
+  if (preset === 'C16') return <NewspaperHTML report={report} />
   if (layout === 'timeline') return <TimelineHTML report={report} />
   if (layout === 'letter') return <LetterHTML report={report} />
   if (layout === 'brief') {
@@ -543,4 +582,121 @@ export function ReportHTML({ report }: { report: FrozenReport }) {
     return <CardsHTML report={report} />
   }
   return <ClassicHTML report={report} />
+}
+
+/* ================= C16 班级周报（报纸风 · 对标 preview-2.html 样式四） ================= */
+const NpSec = ({ n, title, s, children }: { n: string; title: string; s: CSSProperties; children: ReactNode }) => (
+  <section className="mb-4">
+    <h4 className="mb-2 border-b pb-1 text-[14px]" style={{ ...s, letterSpacing: 2, borderColor: '#2b2b2b' }}>
+      <span className="mr-2 px-2 py-0.5 text-[12px] font-normal text-white" style={{ background: '#2b2b2b' }}>{n}</span>{title}
+    </h4>
+    {children}
+  </section>
+)
+function NewspaperHTML({ report }: { report: FrozenReport }) {
+  const t = themeOf(report)
+  const s = computeStats(report)
+  const chapter = extractChapter(report)
+  const chips = extractChips(report)
+  const stars = parseHighlights(report)
+  const teaching = linesOf(report, 'teaching')
+  const learning = linesOf(report, 'learning')
+  const next = linesOf(report, 'next')
+  const subject = (report.scope || '').split('·')[0].trim()
+  const qi = /第\s*(\d+)\s*周/.exec(report.period || '')
+  const SERIF = '"Songti SC","STSong",serif'
+  const masthead = el(report, 'newspaper.masthead', { size: 26, weight: 800, color: INK })
+  const headlineS = el(report, 'newspaper.headline', { size: 20, weight: 700, color: INK })
+  const secS = el(report, 'newspaper.section', { size: 14, weight: 700, color: INK })
+  const bodyS = el(report, 'learning.body', { size: t.bodySize, color: INK, lineHeight: 1.8 })
+  const subBits = [
+    chapter && `${chapter}开篇周`,
+    s.attTotal ? `${pct(s.attNormal, s.attTotal)} 出勤` : '',
+    s.hwTotal ? `${pct(s.hwDone, s.hwTotal)} 作业提交` : '',
+  ].filter(Boolean)
+  return (
+    <div className="mx-auto w-full" style={{ maxWidth: 720 }}>
+      <div className="rounded-xl border bg-white p-7" style={{ borderColor: t.border }}>
+        <div className="mb-1.5 border-b-4 pb-3 text-center" style={{ borderColor: '#2b2b2b' }}>
+          <h2 style={{ ...masthead, fontFamily: SERIF, letterSpacing: 6 }}>{report.name}{subject}周报</h2>
+          <p className="mt-1.5 text-[12px]" style={{ color: MUTED, letterSpacing: 2 }}>
+            {[qi ? `第 ${qi[1]} 期` : '', report.period, `主编 ${report.teacher}`].filter(Boolean).join(' ｜ ')}
+          </p>
+        </div>
+        <h3 className="my-4 text-center" style={{ ...headlineS, fontFamily: SERIF, lineHeight: 1.5 }}>
+          {chapter ? `${chapter}：本周学习纪实` : '本周学习纪实'}
+        </h3>
+        {subBits.length ? <p className="mb-4 text-center text-[13px]" style={{ color: MUTED }}>{subBits.join(' · ')}</p> : null}
+        <NpSec n="头版" title="头版头条" s={secS}>
+          {[...teaching.slice(0, 2), ...learning.slice(0, 1)].map((p, i) => (
+            <p key={i} className="mb-2 text-justify" style={bodyS}>{p}</p>
+          ))}
+        </NpSec>
+        <div className="grid grid-cols-2 gap-4">
+          <NpSec n="速递" title="知识速递" s={secS}>
+            <ul className="list-disc pl-5" style={bodyS}>
+              {chips.length ? chips.map((c, i) => <li key={i} className="mb-1">{c}</li>) : <li>暂无</li>}
+            </ul>
+          </NpSec>
+          <NpSec n="光荣" title="本周光荣榜" s={secS}>
+            <ul className="list-disc pl-5" style={bodyS}>
+              {stars.length ? stars.slice(0, 6).map((b, i) => (
+                <li key={i} className="mb-1"><b>{b.name}</b>{b.reason ? ` —— ${b.reason}` : ''}</li>
+              )) : <li>暂无</li>}
+            </ul>
+          </NpSec>
+        </div>
+        <NpSec n="预告" title="下期预告" s={secS}>
+          <p className="text-justify" style={bodyS}>{next[0] ?? '暂无'}</p>
+        </NpSec>
+        {tablesOf(report, 'classroom', 'homework', 'lessons').map(tb => <DataTableHTML key={tb.title} report={report} table={tb} t={t} />)}
+      </div>
+      <Foot report={report} />
+    </div>
+  )
+}
+
+/* ================= P11 个人成长档案（对标 preview-2.html 样式三） ================= */
+function GrowthHTML({ report }: { report: FrozenReport }) {
+  const t = themeOf(report)
+  const dims = personalDims(report)
+  const comment = linesOf(report, 'comment')
+  const next = linesOf(report, 'next')
+  const nameS = el(report, 'growth.name', { size: 19, weight: 700, color: INK })
+  const dimS = el(report, 'growth.dim', { size: 13.5, color: INK })
+  const noteS = el(report, 'growth.note', { size: 13.5, color: '#4a463c', lineHeight: 1.8 })
+  return (
+    <div className="mx-auto w-full" style={{ maxWidth: 560 }}>
+      <div className="rounded-xl border bg-white p-6" style={{ borderColor: t.border }}>
+        <h2 className="mb-1" style={nameS}>{report.name} · 本周成长档案</h2>
+        <p className="mb-5 text-[12.5px]" style={{ color: MUTED }}>{classicMetadata(report).filter(Boolean).join(' ｜ ')}</p>
+        <div className="space-y-4">
+          {dims.map(d => (
+            <div key={d.label} style={dimS}>
+              <div className="mb-1.5 flex items-center justify-between">
+                <span>{d.label}</span><b style={{ color: INK }}>{d.value}</b>
+              </div>
+              <div className="h-2.5 overflow-hidden rounded-full" style={{ background: '#f2efe9' }}>
+                <div className="h-full rounded-full" style={{ width: `${d.pct}%`, background: t.primary }} />
+              </div>
+            </div>
+          ))}
+        </div>
+        {comment.length ? (
+          <div className="mt-5 rounded-xl border p-4" style={{ ...noteS, background: '#faf8f2', borderColor: '#eee9db' }}>
+            老师点评：{comment.join(' ')}
+          </div>
+        ) : null}
+        {next.length ? (
+          <div className="mt-3 rounded-xl p-4 text-[13.5px]" style={{ background: '#eef4ec', color: '#3a5a4a', lineHeight: 1.7 }}>
+            下周小目标：{next[0]}
+          </div>
+        ) : null}
+        <div className="mt-4">
+          {tablesOf(report, 'classroom', 'homework').map(tb => <DataTableHTML key={tb.title} report={report} table={tb} t={t} />)}
+        </div>
+      </div>
+      <Foot report={report} />
+    </div>
+  )
 }
