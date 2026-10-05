@@ -325,7 +325,7 @@ export function reportTables(
         kind: "classroom",
         identityColumns: identityTitles.length,
         groupSize: split ? 2 : 1,
-        title: `${tw.task.label} · ${preset === "C03" ? "紧凑对照" : "课堂矩阵"}`,
+        title: `${tw.task.label} · ${preset === "C03" ? "紧凑对��" : "课堂矩阵"}`,
         headers: split
           ? [
               [
@@ -445,7 +445,8 @@ export function reportTables(
                     ]),
                 {
                   field: "quality",
-                  parts:o.combinedHomework?[{text:result(a,id)[0],fact:{field:'submission',status:allowed?(r.submission==='MISSING'?(r.submissionConfirmed?'MISSING_CONFIRMED':undefined):r.submission??undefined):undefined}},{text:' · '},{text:result(a,id)[1],fact:{field:'quality',revision:submitted?a.schemeRevId??undefined:undefined,grade:submitted?r.quality??undefined:undefined}}]:undefined,
+                  related:submitted?[{field:'submission',status:r.submission??undefined}]:undefined,
+                  parts:o.combinedHomework?[{text:result(a,id)[0],fact:{field:'submission',status:allowed?(r.submission==='MISSING'?(r.submissionConfirmed?'MISSING_CONFIRMED':undefined):r.submission??undefined):undefined}},{text:' · '},{text:result(a,id)[1],fact:{field:'quality',revision:submitted?a.schemeRevId??undefined:undefined,grade:submitted?r.quality??undefined:undefined,related:submitted?[{field:'submission',status:r.submission??undefined}]:undefined}}]:undefined,
                   revision: submitted
                     ? (a.schemeRevId ?? undefined)
                     : undefined,

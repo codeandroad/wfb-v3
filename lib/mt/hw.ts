@@ -309,6 +309,11 @@ export function applyHwPatch(
     }
     if ((patch.score ?? null) !== null && !a.scoreEnabled) return { error: "本作业未启用分数" }
   }
+  const highest=revById(a.schemeRevId)?.levels[0]?.id
+  if(r.submission==='LATE'&&r.quality&&r.quality===highest){
+    if(patch.quality)return {error:'迟交作业不能登记为当前评价方案的最高等级'}
+    if(patch.submission==='LATE'&&before.submission!=='LATE'){r.history=[...(r.history??[]),{at:ctx.at,what:'改为迟交，最高等级已撤销，请重新评价',from:`质量 ${r.quality}`}];r.quality=null;r.qualitySource=undefined;bump(r,'quality')}
+  }
   if (patch.quality === null && "quality" in patch) {
     r.qualitySource = undefined
     if ((ctx.source ?? "MANUAL") === "MANUAL" && before.quality) r.qualityCleared = true
