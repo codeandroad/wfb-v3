@@ -1,4 +1,4 @@
-import { type FrozenReport, visibleBlocks } from './reports'
+import { type FrozenReport, type ReportTable, visibleBlocks } from './reports'
 import { resolveElement, colorValue, type ElementStyle } from './report-customization'
 import { classicMetadata } from './report-elements'
 
@@ -110,7 +110,67 @@ export function renderBriefImages(r: FrozenReport): string[] {
   const footerStyle = resolveElement(r.template.customization, 'brief.footer', { size: 14, weight: 400, color: muted, lineHeight: 1.5 } as ElementStyle)
   const footerText = `${r.teacher} · ${r.period}`
   const footerH = footerStyle.size! * footerStyle.lineHeight! + 40
-  const totalH = headerH + gap + cards.reduce((n, c) => n + c.height + gap, 0) + footerH + margin
+
+  // ---- 数据表（与 HTML 预览一致，核心数据不缺席） ----
+  const tablePaints = (r.tables ?? []).filter(t => t.kind === 'classroom' || t.kind === 'homework' || t.kind === 'lessons').map(table => {
+    const cols = Math.max(1, table.headers[0]?.reduce((n, c) => n + (c.span ?? 1), 0) ?? 1)
+    const cellW = cardW / cols
+    const size = 13, pad = 6, lineH = size * 1.4, tSize = 16
+    const titleLines = wrap(table.title, cardW, tSize, true)
+    const titleH = titleLines.length * tSize * 1.35 + 12
+    const hHs = table.headers.map((row, ri) => {
+      let h = lineH + pad * 2
+      row.forEach(c => {
+        if (c.rowSpan === 2) return
+        const w = (c.span ?? 1) * cellW - pad * 2
+        h = Math.max(h, wrap(c.text, Math.max(24, w), size, true).length * lineH + pad * 2)
+      })
+      return h
+    })
+    const headerH = hHs.reduce((a, b) => a + b, 0)
+    const rowHs = table.rows.map(row => {
+      let h = lineH + pad * 2
+      row.forEach(cell => { h = Math.max(h, wrap(cell || '', Math.max(24, cellW - pad * 2), size).length * lineH + pad * 2) })
+      return h
+    })
+    const height = titleH + 8 + headerH + rowHs.reduce((a, b) => a + b, 0) + 8
+    const draw = (ctx: CanvasRenderingContext2D, x: number, y: number) => {
+      ctx.textAlign = 'left'
+      ctx.font = font(tSize, true); ctx.fillStyle = colorValue(r.template.color ?? '#245f50')!
+      titleLines.forEach((text, i) => ctx.fillText(text, x, y + tSize + i * tSize * 1.35))
+      let ty = y + titleH + 8
+      table.headers.forEach((row, ri) => {
+        let col = ri === 1 ? (table.identityColumns ?? 0) : 0
+        row.forEach(c => {
+          const span = c.span ?? 1, w = span * cellW
+          const h = c.rowSpan === 2 ? headerH : hHs[ri]
+          const cx = x + col * cellW
+          ctx.fillStyle = '#edf2ef'; ctx.fillRect(cx, ty, w, h)
+          ctx.strokeStyle = '#dbe3df'; ctx.lineWidth = 1; ctx.strokeRect(cx, ty, w, h)
+          ctx.font = font(size, true); ctx.fillStyle = colorValue(r.template.color ?? '#245f50')!
+          const lines = wrap(c.text, Math.max(24, w - pad * 2), size, true)
+          lines.forEach((text, i) => ctx.fillText(text, cx + pad, ty + pad + size + i * lineH))
+          col += span
+        })
+        ty += hHs[ri]
+      })
+      table.rows.forEach((row, i) => {
+        const rh = rowHs[i]
+        row.forEach((cell, ci) => {
+          const cx = x + ci * cellW
+          if (i % 2) { ctx.fillStyle = '#f6f8f7'; ctx.fillRect(cx, ty, cellW, rh) }
+          ctx.strokeStyle = '#dbe3df'; ctx.lineWidth = 1; ctx.strokeRect(cx, ty, cellW, rh)
+          ctx.font = font(size); ctx.fillStyle = ink
+          const lines = wrap(cell || '', Math.max(24, cellW - pad * 2), size)
+          lines.forEach((text, li) => ctx.fillText(text, cx + pad, ty + pad + size + li * lineH))
+        })
+        ty += rh
+      })
+    }
+    return { height, draw }
+  })
+
+  const totalH = headerH + gap + cards.reduce((n, c) => n + c.height + gap, 0) + tablePaints.reduce((n, t) => n + t.height + gap, 0) + footerH + margin
   if (totalH > 30000) throw new Error('报告高度超过安全画布范围，请缩小发布范围或调整密度')
 
   const canvas = document.createElement('canvas')
@@ -134,6 +194,9 @@ export function renderBriefImages(r: FrozenReport): string[] {
   // 卡片
   let y = headerH + gap
   for (const card of cards) { card.draw(ctx, margin, y); y += card.height + gap }
+
+  // 数据表
+  for (const tp of tablePaints) { tp.draw(ctx, margin, y); y += tp.height + gap }
 
   // 页脚
   ctx.font = font(footerStyle.size!); ctx.fillStyle = colorValue(footerStyle.color!)!; ctx.textAlign = 'center'
