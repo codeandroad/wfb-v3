@@ -21,7 +21,7 @@ export function publicationRequirement(b: MtBiz, taskId: string, week: number) {
   const task = taskById(taskId)
   const read = scheduleReadOfWeek(week, task?.teacher_id)
   if (read.status !== 'ok') return { required: false, known: false, label: '课表待确认', reason: read.message }
-  if (read.fullHoliday) return { required: false, known: true, label: '假期无需发布', reason: '本周完整位于校历假期且无调入补课，系统自动免发，无需教务操作；假期作业及课堂记录保留。' }
+  if (read.fullHoliday) return { required: false, known: true, label: '假期无需发布', reason: '本周完整位于校历假期（假期内补课同步停课），系统自动免发，无需教务操作；假期作业及课堂记录保留。' }
   const dates = weekDates(week)
   const lessons = read.lessons.filter(l => l.taskId === taskId && dates.includes(l.date) && l.date >= TERM.start && l.date <= TERM.end && (!task || (l.date >= task.valid_from && l.date <= task.valid_through)))
   const homework = (b.assignments ?? []).some(a => a.taskId === taskId && a.status !== 'WITHDRAWN' && assignmentWeek(a) === week)

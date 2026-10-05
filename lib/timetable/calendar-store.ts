@@ -62,6 +62,8 @@ export function swapClonesFor(
   sourceEntries?: (date: string) => ProjectedEntry[],
 ): ProjectedEntry[] {
   const out: ProjectedEntry[] = []
+  // 显式停课覆盖补课目标日；来源日停课仍允许调出到非假期日期。
+  if (events.some(e => e.kind === 'holiday' && eventCovers(e, date))) return out
   for (const s of events.filter((e) => e.kind === "swap" && e.targetDate === date)) {
     const source = sourceEntries ? sourceEntries(s.date) : entries
     for (const e of source.filter(x => x.date === s.date && !x.makeupFrom && !x.movedTo)) {

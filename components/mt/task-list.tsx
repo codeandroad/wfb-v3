@@ -175,7 +175,7 @@ function TaskRow({ tw, teacherId, q, st }: { tw: TaskWeek; teacherId: string; q:
   const pct = tw.elapsedTotal ? Math.round((tw.processed / tw.elapsedTotal) * 100) : null
 
   return (
-    <li className="flex flex-col gap-3 px-5 py-4 lg:flex-row lg:items-center">
+    <li className="flex flex-col gap-2 px-4 py-2 lg:flex-row lg:items-center">
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
           <Link
@@ -214,7 +214,7 @@ function TaskRow({ tw, teacherId, q, st }: { tw: TaskWeek; teacherId: string; q:
       </div>
 
       <div className="flex flex-wrap items-center gap-3 lg:justify-end">
-        <div className="w-40">
+        {tw.elapsedTotal > 0 && <div className="w-32">
           <div className="flex items-baseline justify-between text-xs">
             <span className="text-muted-foreground">课堂记录</span>
             <span className="font-mono tabular-nums">
@@ -225,7 +225,7 @@ function TaskRow({ tw, teacherId, q, st }: { tw: TaskWeek; teacherId: string; q:
             {pct !== null ? <div className="h-full rounded-full bg-primary" style={{ width: `${pct}%` }} /> : null}
           </div>
           <p className="mt-0.5 text-[11px] text-muted-foreground">{pct === null ? "尚无已发生课次" : `已处理 ${pct}%`}</p>
-        </div>
+        </div>}
         <Badge tone={tw.status.tone}>{tw.status.label}</Badge>
         <LinkButton href={href}>
           {tw.status.action}
