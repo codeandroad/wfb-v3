@@ -54,7 +54,7 @@ function timelineNodes(r: FrozenReport): Node[] {
 }
 
 /** C13 时间轴周报 / P11 成长档案：纵向时间轴 + 数据表 */
-export function renderTimelineImages(r: FrozenReport, version = '未发布预览稿'): string[] {
+export function renderTimelineImages(r: FrozenReport, version = '未发布预览稿', scale = 1): string[] {
   const width = 1080, margin = 48, gap = 28
   const kit = makeCanvasKit(r)
   const { font, wrap } = kit
@@ -112,5 +112,5 @@ export function renderTimelineImages(r: FrozenReport, version = '未发布预览
   ]
   const totalH = paints.reduce((n, p) => n + p.height + gap, 0) + margin
   if (totalH > 30000) throw new Error('报告高度超过安全画布范围，请缩小发布范围或调整密度')
-  return [composeLongImage(paints, width, margin, gap)]
+  return [composeLongImage(paints, width, margin, gap, scale)]
 }

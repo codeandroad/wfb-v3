@@ -7,7 +7,7 @@ import {
 import { colorValue } from './report-customization'
 
 /** C12 班级仪表盘 canvas 导出：3 tiles + 等级分布条形图 + 徽章墙 + 待跟进 + 汇总表（对标 preview.html 样式三） */
-export function renderDashboardImages(r: FrozenReport, version = '未发布预览稿'): string[] {
+export function renderDashboardImages(r: FrozenReport, version = '未发布预览稿', scale = 1): string[] {
   const width = 1080, margin = 48, gap = 28
   const kit = makeCanvasKit(r)
   const { font, wrap } = kit
@@ -132,5 +132,5 @@ export function renderDashboardImages(r: FrozenReport, version = '未发布预�
   ]
   const totalH = paints.reduce((n, p) => n + p.height + gap, 0) + margin
   if (totalH > 30000) throw new Error('报告高度超过安全画布范围，请缩小发布范围或调整密度')
-  return [composeLongImage(paints, width, margin, gap)]
+  return [composeLongImage(paints, width, margin, gap, scale)]
 }

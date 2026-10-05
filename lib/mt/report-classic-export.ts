@@ -31,7 +31,7 @@ export function classicColumnWidths(r:FrozenReport,table:ReportTable,context?:Ca
   return widths.map((width,col)=>r.template.customization?.elements?.[cellTarget(table,col,'body')]?.width??width)
 }
 
-export function renderClassicImages(r:FrozenReport):string[] {
+export function renderClassicImages(r:FrozenReport, scale = 1):string[] {
   const o=reportOptions(r.template),personal=r.kind==='personal',compact=o.density==='compact'
   const margin=28,gap=24,ink='#263a33',font=(size:number,bold=false)=>reportFont(r,size,bold)
   const scratch=document.createElement('canvas').getContext('2d');if(!scratch)throw new Error('无法创建报告画布')
@@ -101,7 +101,7 @@ export function renderClassicImages(r:FrozenReport):string[] {
   const metaRows=visibleMetadataRows(r)
   const metaLines=classicMetadata(r).map((text,i)=>{const s=resolveElement(r.template.customization,`metadata.${metaRows[i].id}`,{...meta,padding:0});const lines=wrap(text,width-margin*2-s.padding!*2,s.size!);return {s,lines,height:lines.length*s.size!*s.lineHeight!+s.padding!*2}})
   const headerHeight=margin+metaLines.reduce((n,row)=>n+row.height,0)+meta.padding!,bodyHeight=sidebar?Math.max(tableHeight,note.height):tableHeight+(notes.length?note.height+12:0)
-  const makeCanvas=(height:number)=>{if(height>30000)throw new Error('报告高度超过安全画布范围，请缩小发布范围或调整密度');const canvas=document.createElement('canvas');canvas.width=width;canvas.height=Math.ceil(height);const ctx=canvas.getContext('2d');if(!ctx)throw new Error('无法生成报告');ctx.fillStyle=r.template.background;ctx.fillRect(0,0,width,height);return {canvas,ctx}}
+  const makeCanvas=(height:number)=>{if(height>30000)throw new Error('报告高度超过安全画布范围，请缩小发布范围或调整密度');const canvas=document.createElement('canvas');canvas.width=Math.ceil(width*scale);canvas.height=Math.ceil(height*scale);const ctx=canvas.getContext('2d');if(!ctx)throw new Error('无法生成报告');ctx.scale(scale,scale);ctx.fillStyle=r.template.background;ctx.fillRect(0,0,width,height);return {canvas,ctx}}
   const {canvas,ctx}=makeCanvas(headerHeight+bodyHeight+margin)
   if(meta.background){ctx.fillStyle=colorValue(meta.background)!;ctx.fillRect(margin,margin,width-margin*2,headerHeight-margin-meta.padding!)}
   let metaY=margin

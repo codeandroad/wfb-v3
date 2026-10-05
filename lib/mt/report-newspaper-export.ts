@@ -7,7 +7,7 @@ import {
 import { colorValue } from './report-customization'
 
 /** C16 班级周报（报纸风）canvas 导出：报头 + 头版头条 + 知识速递/光荣榜 + 下期预告 + 汇总表（对标 preview-2.html 样式四） */
-export function renderNewspaperImages(r: FrozenReport, version = '未发布预览稿'): string[] {
+export function renderNewspaperImages(r: FrozenReport, version = '未发布预览稿', scale = 1): string[] {
   const width = 1080, margin = 48, gap = 28
   // 报纸风强制宋体衬线
   const kit = makeCanvasKit({ ...r, template: { ...r.template, font: 'serif' } })
@@ -149,5 +149,5 @@ export function renderNewspaperImages(r: FrozenReport, version = '未发布预�
   ]
   const totalH = paints.reduce((n, p) => n + p.height + gap, 0) + margin
   if (totalH > 30000) throw new Error('报告高度超过安全画布范围，请缩小发布范围或调整密度')
-  return [composeLongImage(paints, width, margin, gap)]
+  return [composeLongImage(paints, width, margin, gap, scale)]
 }

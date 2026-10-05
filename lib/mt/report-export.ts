@@ -12,23 +12,23 @@ import { zipSync, strToU8 } from 'fflate'
 import type { Publication } from './model'
 import { reportFilename, validTemplate, type FrozenReport } from './reports'
 
-export async function renderReportImages(report: FrozenReport, version: string): Promise<string[]> {
+export async function renderReportImages(report: FrozenReport, version: string, scale = 2): Promise<string[]> {
   if(!validTemplate(report.template)) throw new Error('报告配置无效，请检查字号、颜色对比度与分页设置。')
   const loaded = await document.fonts.load('22px "Noto Report"', '教学反馈')
   if (!loaded.length) throw new Error('中文报告字体加载失败，请重试，未输出空白图片')
   await document.fonts.ready
   // 自定义样式走各自的 canvas 渲染器（与 HTML 预览同构）；用户另存的模板按 layout 兜底
   const preset = report.template.preset ?? report.template.id
-  if (preset === 'C12') return renderDashboardImages(report, version)
-  if (preset === 'C14') return renderQAImages(report, version)
-  if (preset === 'C15') return renderLongImages(report, version)
-  if (preset === 'C16') return renderNewspaperImages(report, version)
-  if (preset === 'P11') return renderGrowthImages(report, version)
-  if (preset === 'P12') return renderLetterImages(report, version)
-  if (report.template.layout === 'timeline') return renderTimelineImages(report, version)
-  if (report.template.layout === 'letter') return renderLetterImages(report, version)
-  if (report.template.layout === 'brief') return renderBriefImages(report, version)
-  return report.template.options?.classic ? renderClassicImages(report) : renderTableImages(report,version)
+  if (preset === 'C12') return renderDashboardImages(report, version, scale)
+  if (preset === 'C14') return renderQAImages(report, version, scale)
+  if (preset === 'C15') return renderLongImages(report, version, scale)
+  if (preset === 'C16') return renderNewspaperImages(report, version, scale)
+  if (preset === 'P11') return renderGrowthImages(report, version, scale)
+  if (preset === 'P12') return renderLetterImages(report, version, scale)
+  if (report.template.layout === 'timeline') return renderTimelineImages(report, version, scale)
+  if (report.template.layout === 'letter') return renderLetterImages(report, version, scale)
+  if (report.template.layout === 'brief') return renderBriefImages(report, version, scale)
+  return report.template.options?.classic ? renderClassicImages(report, scale) : renderTableImages(report,version, scale)
 }
 export function downloadFile(data: Blob | string, filename: string) {
   const url = typeof data === 'string' ? data : URL.createObjectURL(data)

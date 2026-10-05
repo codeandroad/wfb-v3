@@ -6,7 +6,7 @@ import {
 import { colorValue } from './report-customization'
 
 /** P12 每周一信：称呼 + 正文 + 课堂作业 + 下周安排 + 落款 + 数据表 */
-export function renderLetterImages(r: FrozenReport, version = '未发布预览稿'): string[] {
+export function renderLetterImages(r: FrozenReport, version = '未发布预览稿', scale = 1): string[] {
   const width = 1080, margin = 48, gap = 28
   const kit = makeCanvasKit(r)
   const { font, wrap } = kit
@@ -64,5 +64,5 @@ export function renderLetterImages(r: FrozenReport, version = '未发布预览�
   ]
   const totalH = paints.reduce((n, p) => n + p.height + gap, 0) + margin
   if (totalH > 30000) throw new Error('报告高度超过安全画布范围，请缩小发布范围或调整密度')
-  return [composeLongImage(paints, width, margin, gap)]
+  return [composeLongImage(paints, width, margin, gap, scale)]
 }

@@ -193,13 +193,14 @@ export function paintDataTable(table: ReportTable, availW: number, kit: CanvasKi
 }
 
 /** 组装整张长图：各 Paint 纵向堆叠 */
-export function composeLongImage(paints: Paint[], width: number, margin: number, gap: number): string {
+export function composeLongImage(paints: Paint[], width: number, margin: number, gap: number, scale = 1): string {
   const totalH = paints.reduce((n, p) => n + p.height + gap, 0) + margin
   const canvas = document.createElement('canvas')
-  canvas.width = width; canvas.height = Math.ceil(totalH)
+  canvas.width = Math.ceil(width * scale); canvas.height = Math.ceil(totalH * scale)
   const ctx = canvas.getContext('2d')
   if (!ctx) throw new Error('无法创建报告画布')
-  ctx.fillStyle = PAGE_BG; ctx.fillRect(0, 0, canvas.width, canvas.height)
+  ctx.scale(scale, scale)
+  ctx.fillStyle = PAGE_BG; ctx.fillRect(0, 0, width, totalH)
   let y = margin
   for (const p of paints) { p.draw(ctx, margin, y); y += p.height + gap }
   return canvas.toDataURL('image/png')

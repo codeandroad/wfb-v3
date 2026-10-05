@@ -13,7 +13,7 @@ export function tableSegments(table:ReportTable, maxGroups:number):ReportTable[]
   })
 }
 
-export function renderTableImages(report:FrozenReport,version:string):string[] {
+export function renderTableImages(report:FrozenReport,version:string, scale = 1):string[] {
   const t=report.template,o=reportOptions(t), width=o.orientation==='portrait'?1000:1440, margin=36, available=width-margin*2
   const family=t.font==='serif'?'Georgia, "Noto Report", serif':'"Noto Report", sans-serif'
   const measure=document.createElement('canvas').getContext('2d');if(!measure)throw new Error('无法创建图片画布')
@@ -92,8 +92,9 @@ export function renderTableImages(report:FrozenReport,version:string):string[] {
     const top=margin+heading.length*o.titleSize*1.5+context.length*o.bodySize*1.5+24
     const bottom=wrap(`${version} · ${o.output==='long'?'内容段 ':''}${index+1}/${pages.length}\n责任教师：${o.signature||report.teacher} · 截止 ${report.cutoff.slice(0,16).replace('T',' ')}`,available,14)
     const height=Math.ceil(top+page.parts.reduce((n,p)=>n+p.height,0)+bottom.length*22+margin*2)
-    const canvas=document.createElement('canvas');canvas.width=width;canvas.height=height
+    const canvas=document.createElement('canvas');canvas.width=Math.ceil(width*scale);canvas.height=Math.ceil(height*scale)
     const ctx=canvas.getContext('2d');if(!ctx)throw new Error('无法创建图片')
+    ctx.scale(scale,scale)
     ctx.fillStyle=t.background;ctx.fillRect(0,0,width,height);ctx.fillStyle=t.color;ctx.fillRect(margin,margin-12,48,4);ctx.font=font(o.titleSize,true)
     heading.forEach((v,i)=>ctx.fillText(v,margin,margin+o.titleSize+i*o.titleSize*1.5))
     ctx.fillStyle='#263a33';ctx.font=font(o.bodySize);context.forEach((v,i)=>ctx.fillText(v,margin,margin+heading.length*o.titleSize*1.5+o.bodySize+i*o.bodySize*1.5))
@@ -104,7 +105,7 @@ export function renderTableImages(report:FrozenReport,version:string):string[] {
   const output:HTMLCanvasElement[]=[]
   if(o.output==='long') {
     let group:HTMLCanvasElement[]=[],height=0
-    const flush=()=>{if(!group.length)return;const canvas=document.createElement('canvas');canvas.width=width;canvas.height=height;const ctx=canvas.getContext('2d');if(!ctx)throw new Error('无法拼接长图');let y=0;for(const page of group){ctx.drawImage(page,0,y);y+=page.height}output.push(canvas);group=[];height=0}
+    const flush=()=>{if(!group.length)return;const canvas=document.createElement('canvas');canvas.width=Math.ceil(width*scale);canvas.height=Math.ceil(height*scale);const ctx=canvas.getContext('2d');if(!ctx)throw new Error('无法拼接长图');let y=0;for(const page of group){ctx.drawImage(page,0,y);y+=page.height}output.push(canvas);group=[];height=0}
     for(const page of canvases){if(height+page.height>14000)flush();group.push(page);height+=page.height}flush()
   }else output.push(...canvases)
   return output.map(canvas=>{const data=canvas.toDataURL('image/png');if(!data.startsWith('data:image/png;base64,')||data.length<1000)throw new Error('PNG生成失败');return data})
