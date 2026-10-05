@@ -99,11 +99,11 @@ function DataTableHTML({ report, table, t, showTitle }: { report: FrozenReport; 
             {table.headers.map((row, ri) => (
               <tr key={ri}>
                 {tableHeaders(table).filter(h => h.row === ri).map(({ header: c, col, field, target }) => {
-                  const s = el(report, target, { size: t.tableSize, weight: 600, color: t.headerText, background: t.headerBg, padding: pad })
-                  const bg = resolveCellBackground(cust, target) ?? s.background
+                  const s = el(report, target, { size: t.tableSize, weight: 600, color: t.headerText, padding: pad })
+                  const bg = resolveCellBackground(cust, target) ?? t.headerBg
                   return (
                     <th key={col} colSpan={c.span} rowSpan={c.rowSpan} className="border font-semibold"
-                      style={{ ...s, background: bg, borderColor: t.border, whiteSpace: 'nowrap' }}>{c.text}</th>
+                      style={{ ...s, background: bg, borderColor: t.border, whiteSpace: 'nowrap' }}><span style={{ background: s.background }}>{c.text}</span></th>
                   )
                 })}
               </tr>
@@ -116,13 +116,13 @@ function DataTableHTML({ report, table, t, showTitle }: { report: FrozenReport; 
                   const fact = table.facts?.[i]?.[j]
                   const target = cellTarget(table, j, 'body')
                   const s = el(report, target, {
-                    size: t.tableSize, weight: 400, color: INK, background: t.pageBg,
+                    size: t.tableSize, weight: 400, color: INK,
                     padding: pad, align: 'center', lineHeight: 1.4,
                   }, fact)
-                  const bg = resolveCellBackground(cust, target, fact) ?? (i % 2 ? t.stripe : s.background)
+                  const bg = resolveCellBackground(cust, target, fact) ?? (i % 2 ? t.stripe : t.pageBg)
                   return (
                     <td key={j} className="border align-top"
-                      style={{ ...s, background: bg, borderColor: t.border, whiteSpace: 'nowrap' }}>{cell}</td>
+                      style={{ ...s, background: bg, borderColor: t.border, whiteSpace: 'nowrap' }}><span style={{ background: s.background }}>{cell}</span></td>
                   )
                 })}
               </tr>
