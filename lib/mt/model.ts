@@ -402,7 +402,7 @@ export interface EffectiveLessonInput {
   note?: string
 }
 export type ScheduleRead =
-  | { status: "ok"; lessons: EffectiveLessonInput[]; exclusions?: { date: string; reason: string }[] }
+  | { status: "ok"; lessons: EffectiveLessonInput[]; fullHoliday?: boolean; exclusions?: { date: string; reason: string }[] }
   | { status: "error"; message: string }
   | { status: "unconfirmed"; message: string }
 

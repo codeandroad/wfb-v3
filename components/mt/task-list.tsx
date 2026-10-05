@@ -24,7 +24,7 @@ import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import type { ReactNode } from "react"
 
-type StatusFilter = "all" | "todo" | "ready" | "published"
+type StatusFilter = "all" | "todo" | "ready" | "published" | "exempt"
 
 export function TaskListPage() {
   const mt = useMt()
@@ -75,6 +75,7 @@ export function TaskListPage() {
     if (q && !text.includes(q)) return false
     if (st === "todo") return ["start", "progress"].includes(tw.status.key)
     if (st === "ready") return ["ready", "changed"].includes(tw.status.key)
+    if (st === 'exempt') return ['holiday', 'waived'].includes(tw.status.key)
     if (st === "published") return tw.status.key === "published"
     return true
   })
@@ -87,7 +88,7 @@ export function TaskListPage() {
   return (
     <div>
       {header}
-      
+      {scheduleRead.status === 'ok' && scheduleRead.fullHoliday && <section role="status" className="mb-5 rounded-lg border border-primary bg-muted p-5 text-foreground"><h2 className="text-lg font-semibold">本周为完整假期，无需发布反馈</h2><p className="mt-2 text-sm">系统已依据校历自动免除本周发布任务，不计待发布或逾期，无需教务审批。作业记录与历史反馈保留。</p></section>}
 
       <div className="mb-4 flex flex-wrap items-center gap-3">
 
@@ -108,6 +109,7 @@ export function TaskListPage() {
               ["todo", "待填写"],
               ["ready", "待发布"],
               ["published", "已发布"],
+              ["exempt", "假期 / 已免除"],
             ] as const
           ).map(([k, l]) => (
             <button
