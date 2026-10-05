@@ -11,6 +11,7 @@ import { setScheduleSource, type ScheduleRead } from "@/lib/mt/model"
 import { ScheduleRevContext } from "@/lib/mt/store"
 import { useDemo } from "@/lib/demo/store"
 import { PERSONAS } from "@/lib/demo/nav"
+import { fullHolidayWeek } from '@/lib/timetable/publication-calendar'
 
 export function ScheduleBridge({ children }: { children: ReactNode }) {
   const tt = useTimetable()
@@ -25,6 +26,12 @@ export function ScheduleBridge({ children }: { children: ReactNode }) {
       const cacheKey = `${teacherId}|${weekStartIso}`
       const hit = cache.get(cacheKey)
       if (hit) return hit
+      const dates = Array.from({ length: 7 }, (_, i) => addDays(weekStartIso, i))
+      if (fullHolidayWeek(events, dates)) {
+        const holiday: ScheduleRead = { status: 'ok', lessons: [], fullHoliday: true, exclusions: dates.map(date => ({ date, reason: '整周校历假期' })) }
+        cache.set(cacheKey, holiday)
+        return holiday
+      }
       let out: ScheduleRead
       if (!teacherId) out = { status: "unconfirmed", message: "当前演示身份没有任教身份" }
       else {

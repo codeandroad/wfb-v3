@@ -68,4 +68,37 @@ base.publicationWaivers=[{...clean.publicationWaivers[0],periodId:feedbackPeriod
 assert.equal(taskWeek(base,task,5).status.key,'waived','教师端不再属于待发布')
 assert.ok(taskWeek(base,task,5).lessons.length,'免除保留课堂登记课次')
 assert.ok(HOMEROOMS.some(room=>homeroomTasks(base,homeroomName(room.id),5).some(r=>r.taskId===task.id)),'未发布任务通过名单关联主班')
-console.log('PASS publication tracking: generation, frozen history, late/revised/withdrawn reports, homeroom scoping, holiday, unknown source, cross-week makeup, waiver/restore, teacher state and retained lessons')
+const { fullHolidayWeek } = require('../lib/timetable/publication-calendar.ts')
+const { publicationPolicy, publicationPolicyErrors, parsePublicationDeadline } = require('../lib/mt/publication-policy.ts')
+assert.equal(parsePublicationDeadline('2026-10-16 18:00'),'2026-10-16T18:00:00+08:00')
+assert.equal(parsePublicationDeadline('2026-02-30 18:00'),null)
+assert.equal(parsePublicationDeadline('2026-10-16 25:00'),null)
+assert.equal(parsePublicationDeadline(''),null)
+const { weekDates, membersInWeek } = require('../lib/mt/model.ts')
+const holiday = [{id:'h',kind:'holiday',date:'2026-09-28',endDate:'2026-10-04'}]
+assert.equal(fullHolidayWeek(holiday,weekDates(5)),true)
+assert.equal(fullHolidayWeek([{...holiday[0],endDate:'2026-10-03'}],weekDates(5)),false,'部分假期不能自动整周免发')
+assert.equal(fullHolidayWeek([...holiday,{id:'s',kind:'swap',date:'2026-09-25',targetDate:'2026-10-03'}],weekDates(5)),false,'假期调入补课不能漏判')
+setScheduleSource(()=>({status:'ok',lessons:[],fullHoliday:true}))
+base.publicationWaivers=[]
+assert.equal(publicationRequirement(base,task.id,5).label,'假期无需发布')
+assert.equal(taskWeek(base,task,5).status.key,'holiday')
+assert.equal(createPublicationCheck(base,5,'教务','').entries.filter(isIncomplete).length,0)
+setScheduleSource(start=>({status:'ok',lessons:[{taskId:task.id,date:start}]}))
+base.clock='2026-10-06T18:00:00+08:00'
+base.publications=[]
+base.publicationPolicies=[{taskId:task.id,periodId:feedbackPeriodId(5),deadline:'2026-10-08T23:59:00+08:00',actor:'教务',at:base.clock,reason:'延期'}]
+assert.equal(weeklyPublicationTasks(base,5).find(r=>r.taskId===task.id).status,'待发布','延期解除当前逾期')
+assert.equal(publicationPolicy(base,task.id,6).deadline,'2026-10-11T23:59:59+08:00','不串周期')
+const rule={...base.publicationPolicies[0],deadline:undefined,requirements:{classReport:true,allPersonal:true,summary:true,instruction:'每人反馈'}}
+base.publicationPolicies.push(rule)
+assert.equal(publicationPolicy(base,task.id,5).deadline,'2026-10-08T23:59:00+08:00','设置要求不能清空截止')
+assert.ok(publicationPolicyErrors(base,[task.id],5,[]).length)
+const audience=membersInWeek(base.memberships[task.id]??[],5)
+base.summaries[`${task.id}|${feedbackPeriodId(5)}`]={teaching:'本周总结'}
+assert.equal(publicationPolicyErrors(base,[task.id],5,[{kind:'class',audience:'parent'},...audience.map(studentId=>({kind:'personal',audience:'parent',studentId}))]).length,0)
+base.publicationPolicies.push({...rule,requirements:null})
+assert.equal(publicationPolicyErrors(base,[task.id],5,[]).length,0,'清除要求恢复默认')
+base.publicationPolicies.push({...rule,requirements:undefined,deadline:null})
+assert.equal(weeklyPublicationTasks(base,5).find(r=>r.taskId===task.id).status,'逾期待发布','恢复默认截止重算逾期')
+console.log('PASS holiday auto-exemption, incoming makeup, deadline override/reset, requirement enforcement/reset; publication tracking: generation, frozen history, late/revised/withdrawn reports, homeroom scoping, holiday, unknown source, cross-week makeup, waiver/restore, teacher state and retained lessons')

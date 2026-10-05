@@ -19,6 +19,7 @@ import { SaveState } from './shared'
 import { downloadFile, renderReportImages } from '@/lib/mt/report-export'
 import { cn } from '@/lib/utils'
 import { activeWaiver } from '@/lib/mt/publication-tracking'
+import { publicationPolicy, publicationPolicyErrors } from '@/lib/mt/publication-policy'
 
 export function ReportWorkspace({ tw, teacherId, onOpenStudent }: { tw: TaskWeek; teacherId: string; onOpenStudent: (sid: string) => void }) {
   const mt = useMt(), router = useRouter(), path = usePathname(), params = useSearchParams()
@@ -67,10 +68,12 @@ export function ReportWorkspace({ tw, teacherId, onOpenStudent }: { tw: TaskWeek
   const related = mt.biz.publications.filter(p => p.periodId === tw.periodId && p.taskIds.slice().sort().join() === prep.taskIds.slice().sort().join())
   const previous = related.find(p => p.id === params.get('revise')) ?? related.at(-1)
   const differences = reportDiff(previous?.reports, data.reports)
-  const errors: string[] = []
+  const policies = prep.taskIds.map(id => ({ id, ...publicationPolicy(mt.biz, id, tw.week) }))
+  const errors: string[] = publicationPolicyErrors(mt.biz, prep.taskIds, tw.week, data.reports)
   const waived = prep.taskIds.map(id => activeWaiver(mt.biz, id, tw.week)).filter(w => !!w)
   if (waived.length) errors.push('所选范围含教务已免除任务，无需发布；如需恢复发布，请联系教务。组合范围可取消选择已免除的其他分工。')
   const schedule = scheduleReadOfWeek(tw.week)
+  if (schedule.status === 'ok' && schedule.fullHoliday) errors.push('整周假期无需发布，系统已自动免发。')
   if (schedule.status !== 'ok') errors.push(`课表来源不可用：${schedule.message}。不能把读取失败当作无课。`)
   if (related.at(-1)?.reports && !reportDiff(related.at(-1)?.reports, data.reports).length) errors.push('与上一版本内容和呈现一致。请到发布记录重导出或补发，不创建重复版本。')
   if (saveError) errors.push(saveError)
@@ -116,6 +119,8 @@ export function ReportWorkspace({ tw, teacherId, onOpenStudent }: { tw: TaskWeek
   const maxPage = Math.max(1, Math.ceil(filtered.length / 27))
   const parentReports = data.reports.filter(r => r.audience === 'parent')
   return <div className="flex flex-col gap-3">
+    {schedule.status === 'ok' && schedule.fullHoliday && <p role="status" className="rounded-lg border border-primary bg-muted p-4 text-base font-semibold">假期无需发布 · 系统自动免发。本周完整位于校历假期，无需申请教务免除；历史报告和作业仍然保留。</p>}
+    <section aria-label="教务发布要求" className="rounded-lg border border-border bg-card p-3 text-sm">{policies.map(p=><div key={p.id}><p>第 {tw.week} 周 · {siblings.find(t=>t.id===p.id)?.label} · 截止：{new Date(p.deadline).toLocaleString('zh-CN',{timeZone:'Asia/Shanghai'})}（北京时间）</p>{p.requirements && <p>教务要求：{[p.requirements.classReport && '班级反馈',p.requirements.allPersonal && '全体个人反馈',p.requirements.summary && '公共总结',p.requirements.instruction].filter(Boolean).join('；')}</p>}</div>)}</section>
     {waived.map(w => <p key={w.taskId} role="status" className="rounded-lg border border-border bg-muted p-3 text-sm">教务已免除本周发布：{w.reason} · {w.actor}。课堂登记、作业处理及已发布历史仍然保留。</p>)}
     <nav aria-label="发布工作区" className="flex flex-wrap items-center justify-between gap-2 border-b border-border pb-3"><div className="flex gap-2">{[['prepare', '发布准备'], ['templates', '模板中心'], ['history', '发布记录']].map(([v, name]) => <Btn key={v} variant={view === v ? 'primary' : 'ghost'} onClick={() => navigate(v)}>{name}</Btn>)}</div><span className="text-sm text-muted-foreground">{saveError ? '保存失败，输入已保留' : '准备已保存'} · 第 {tw.week} 周整周范围</span></nav>
     {msg ? <p role="status" className="rounded-lg border border-border bg-card p-3 text-sm">{msg}</p> : null}

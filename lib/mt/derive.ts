@@ -134,6 +134,7 @@ export function taskWeek(biz: MtBiz, task: STask, week: number): TaskWeek {
 
   let status: TaskWeek["status"]
   if (activeWaiver(biz, task.id, week)) status = { key: 'waived', label: '教务已免除发布', action: '继续课堂登记', tone: 'info' }
+  else if ((scheduleReadOfWeek(week, task.teacher_id) as { fullHoliday?: boolean }).fullHoliday) status = { key: 'holiday', label: '假期无需发布 · 系统自动免发', action: '查看', tone: 'success' }
   else if (scheduleReadOfWeek(week, task.teacher_id).status !== 'ok' && !published) status = { key: 'unknown', label: '课表待确认', action: '查看', tone: 'warning' }
   else if (!lessons.length) status = { key: "none", label: "本周无课", action: "查看", tone: "neutral" }
   else if (!elapsed.length) status = { key: "future", label: "课次未开始", action: "查看", tone: "neutral" }

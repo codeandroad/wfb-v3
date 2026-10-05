@@ -8,6 +8,8 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
 import { schoolNow } from "./clock"
+import { publicationPolicyErrors } from './publication-policy'
+import { scheduleReadOfWeek, taskById } from './model'
 import { sourceVersion, validTemplate } from './reports'
 import { generationOf } from "./regrading"
 import {
@@ -186,6 +188,7 @@ export interface RoutineOp {
 }
 
 export interface MtBiz {
+  publicationPolicies?: import('./publication-policy').PublicationPolicy[]
   publicationWaivers?: import('./publication-tracking').PublicationWaiver[]
   publicationChecks?: import('./publication-tracking').PublicationCheck[]
   evaluationGenerations?: Record<string, number>
@@ -700,6 +703,10 @@ export function MtProvider({ children }: { children: ReactNode }) {
         if (input.taskIds.some(id => (cur.publicationWaivers ?? []).filter(w => w.taskId === id && w.periodId === input.periodId).at(-1)?.waived)) return { ok: false, error: '教务已免除此周期发布任务，请先联系教务恢复；课堂登记不受影响。' }
         const dup = cur.publications.find((p) => p.idemKey === input.idemKey)
         if (dup) return { ok: true, pub: dup, reused: true }
+        if (input.periodId !== feedbackPeriodId(input.week)) return { ok: false, error: '发布周期不一致，请刷新。' }
+        if (input.taskIds.some(id => { const read = scheduleReadOfWeek(input.week, taskById(id)?.teacher_id); return read.status === 'ok' && read.fullHoliday })) return { ok: false, error: '整周校历假期，系统自动免发，无需发布。' }
+        const policyErrors = publicationPolicyErrors(cur, input.taskIds, input.week, input.reports)
+        if (policyErrors.length) return { ok: false, error: policyErrors.join(' ') }
         if (faultsRef.current.saveFail) return { ok: false, error: '保存失败（故障注入），输入已保留' }
         if (input.reports) {
           let persisted: MtBiz | null = null
@@ -1502,7 +1509,7 @@ export function useHomeworkWriters() {
         const out = result as { batch: HwBatch; reused: boolean } | null
         return out ? { ok: true as const, ...out } : { ok: false as const, error: "批量执行未完成" }
       },
-      /** 安全撤销：只撤仍等于本次写入、且之后没有被改动的字段；保持资格不变量 */
+      /** 安全撤销：只撤仍等于本次写入、且之后没有被改动的字段；保持��格不变量 */
       undoBatch(aId: string, batchId: string) {
         let res = { restored: 0, kept: 0 }
         const r = mt.command("撤销批量", (s) =>
