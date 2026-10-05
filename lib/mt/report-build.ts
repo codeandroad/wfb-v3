@@ -51,7 +51,7 @@ export function prepareReports(b: MtBiz, tws: TaskWeek[], p: Preparation, person
   }
   for (const report of result) {
     const override=report.studentId?p.personalOverrides?.[report.studentId]:undefined
-    if(override){const base=report.template.customization??{},elements={...base.elements};for(const [key,style] of Object.entries(override.elements??{}))elements[key]={...elements[key],...style};report.template={...report.template,customization:{elements,rules:[...(base.rules??[]),...(override.rules??[])]}}}
+    if(override){const base=report.template.customization??{},elements={...base.elements};for(const [key,style] of Object.entries(override.elements??{}))elements[key]={...elements[key],...style};report.template={...report.template,customization:{...base,...override,elements,rules:[...(base.rules??[]),...(override.rules??[])]}}}
     report.template = {...report.template,options:reportOptions(report.template)}
     const schedule = scheduleReadOfWeek(tws[0].week)
     if (schedule.status === 'ok' && schedule.exclusions?.length) report.blocks.push({key:'next',title:'校历安排',lines:schedule.exclusions.map(x=>`${x.date}：${x.reason}，不计缺勤或课堂评价。`)})
@@ -62,7 +62,7 @@ export function prepareReports(b: MtBiz, tws: TaskWeek[], p: Preparation, person
       if(lines.length)report.blocks.push({key:'comment',title:'选入观察',lines})
     }
     if (report.kind === 'class') report.blocks.push({key:'legend',title:'评价说明',lines:legends})
-    if (report.template.options?.normalShort || report.template.preset === 'C03') report.blocks.push({key:'legend',title:'出勤简写',lines:['√：已确认正常出勤；无需评���：当日全部适用课次已确认未出席。']})
+    if (report.template.options?.normalShort || report.template.preset === 'C03') report.blocks.push({key:'legend',title:'出勤简写',lines:['√：已确认正常出勤；无需评���：当日全部��用课次已确认未出席。']})
   }
   result.sort((a,b) => Number(a.kind === 'personal') - Number(b.kind === 'personal') || Number(a.audience === 'internal') - Number(b.audience === 'internal'))
   return { reports: result, students: students.filter(s => p.personal && p.selected.includes(s.studentId)), roster, draft, excluded, legends }
