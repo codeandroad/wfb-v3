@@ -10,6 +10,7 @@ import { ReportFormatRulesEditor } from './report-format-rules-editor'
 
 export function ReportCustomizationEditor({ value, onChange, currentReport }: { currentReport?: FrozenReport; value: ReportTemplate; onChange: (t: ReportTemplate) => void }) {
   const c = value.customization ?? {}, [selectedTarget, setTarget] = useState('metadata')
+  const [widthScope, setWidthScope] = useState<'table' | 'field'>('table')
   const targets = reportElementTargets(currentReport && { ...currentReport, template: value })
   const target = targets.some(([key]) => key === selectedTarget) ? selectedTarget : targets[0]?.[0] ?? ''
   const style = c.elements?.[target] ?? {}
@@ -70,14 +71,16 @@ export function ReportCustomizationEditor({ value, onChange, currentReport }: { 
             <NumericInput label="字号" min={10} max={36} step={1} value={style.size} onChange={size => update({ size })} />
             {!isInline ? <NumericInput label="内边距" min={0} max={24} step={1} value={style.padding} onChange={padding => update({ padding })} /> : null}
             <NumericInput label="行高" min={1} max={2} step={0.1} value={style.lineHeight} onChange={lineHeight => update({ lineHeight })} />
-            {isColumn ? <><NumericInput label="列宽权重（设计像素）" min={30} max={600} step={1} value={style.width} onChange={width => update({ width })} /><NumericInput label="最小行高" min={0} max={240} step={1} value={style.minHeight} onChange={minHeight => update({ minHeight })} /></> : null}
+            {isColumn ? <><label className="flex flex-col gap-1 text-sm">列宽调整范围<select aria-label="列宽调整范围" className={inputCls} value={widthScope} onChange={e => setWidthScope(e.target.value as 'table' | 'field')}><option value="table">整表同比例</option><option value="field">仅当前字段</option></select></label>{widthScope === 'table' ? <NumericInput label="整表列宽比例（%，默认 100）" min={10} max={2000} step={1} value={c.tableScale === undefined ? undefined : Math.round(c.tableScale * 100)} onChange={percent => onChange({ ...value, customization: { ...c, tableScale: percent === undefined ? undefined : percent / 100 } })} /> : <NumericInput label="当前字段列宽权重（设计像素）" min={30} max={600} step={1} value={style.width} onChange={width => update({ width })} />}<NumericInput label="最小行高" min={0} max={240} step={1} value={style.minHeight} onChange={minHeight => update({ minHeight })} /></> : null}
             <label className="flex flex-col gap-1 text-sm">字重<select className={inputCls} value={style.weight ?? ''} onChange={e => update({ weight: e.target.value ? Number(e.target.value) : undefined })}><option value="">继承</option><option value="400">常规</option><option value="600">半粗</option><option value="700">加粗</option></select></label>
             {!isInline ? <label className="flex flex-col gap-1 text-sm">对齐<select className={inputCls} value={style.align ?? ''} onChange={e => update({ align: (e.target.value as ElementStyle['align']) || undefined })}><option value="">继承</option><option value="left">左</option><option value="center">中</option><option value="right">右</option></select></label> : null}
           </div>
           <div className="flex flex-wrap gap-2">
+            {isColumn ? <Btn size="sm" disabled={c.tableScale === undefined} onClick={() => onChange({ ...value, customization: { ...c, tableScale: undefined } })}>恢复整表列宽</Btn> : null}
             <Btn size="sm" onClick={() => { const elements = { ...c.elements }; delete elements[target]; onChange({ ...value, customization: { ...c, elements } }) }}>恢复此元素</Btn>
             <Btn size="sm" disabled={!style.cellBackground} onClick={() => { const elements = { ...c.elements }; for (const [key] of targets.filter(([key]) => key.endsWith('.header'))) elements[key] = { ...elements[key], cellBackground: style.cellBackground }; onChange({ ...value, customization: { ...c, elements } }) }}>统一全部表头背景</Btn>
           </div>
+          {isColumn ? <p className="text-sm leading-relaxed text-muted-foreground">整表比例 200 表示所有列同时加宽为两倍；仅当前字段的权重只调整该字段各列。自动列宽按实际字号测量；手动收窄后仍可换行。适配预览会缩放整张图片，原始比例可核对真实宽度；图片总宽上限 3200 像素。</p> : null}
           <p className="text-sm leading-relaxed text-muted-foreground">空值表示继承。条件格式覆盖同属性时，以列表中靠后的规则为准。</p>
         </> : null}
       </div>
