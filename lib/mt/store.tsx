@@ -113,7 +113,7 @@ export interface RepairLog {
 /**
  * r4 存量修复（幂等，只处理能确定的情形）：
  * - 记录中出现的课次（出勤 + 覆盖）全部确认未出席却保留等级 → 等级转入失效历史，处理为不适用；
- * - 仍有参加但覆盖包含未出席课次 → 移出该课次并标记核对，不删除合法等级；
+ * - 仍有参加但覆盖包含未出席课次 → 自动移出该课次，保留合法等级且不再要求核对；
  * - 确定未出席日的有日期亮点 → 失效；关联未出席课次的亮点 → 失效；
  * - 同周存在确定未出席日的无日期旧亮点 → 标记待核对，不擅自删除或计入。
  * 运行时投影另以真实课次兜底，修复未覆盖的情形也不会进入有效输出。
@@ -141,8 +141,8 @@ export function repairEligibility(b: MtBiz): { biz: MtBiz; log: RepairLog | null
       const e: DayElig = { kind: "ABSENT", attended: [], absent: abs, unknown: [], future: [] }
       records[k] = reconcileGrade(r, e, b.clock, "存量修复：未出席日不应保留课堂评价")
       log.grades.push(k)
-    } else if (confirmed && att.length && r.gradeCovered.some((id) => abs.includes(id))) {
-      records[k] = { ...r, gradeCovered: r.gradeCovered.filter((id) => !abs.includes(id)), coverageReview: true }
+    } else if (confirmed && att.length && (r.coverageReview || r.gradeCovered.some((id) => abs.includes(id)))) {
+      records[k] = { ...r, gradeCovered: r.gradeCovered.filter((id) => !abs.includes(id)), coverageReview: false }
       log.coverage.push(k)
     }
   }

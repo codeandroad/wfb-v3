@@ -78,7 +78,7 @@ export function ReportWorkspace({ tw, teacherId, onOpenStudent }: { tw: TaskWeek
   if (tws.some(t => mt.unsettled(scopeTask(t.task.id)).length)) errors.push('源记录尚未成功保存，请等待或重试保存。')
   if (!validTemplate(personal) || !validTemplate(classTemplate)) errors.push('模板配置非法。')
   const selectedDays = tws.flatMap(t => t.days.filter(d => (prep.classReport || (prep.personal && prep.selected.includes(d.studentId))) && d.elapsed.length))
-  const invalidDays = selectedDays.filter(d => d.rec.conflict || d.coverageReview || (d.elig.kind === 'ABSENT' && !!d.gradeEff))
+  const invalidDays = selectedDays.filter(d => d.rec.conflict || (d.elig.kind === 'ABSENT' && !!d.gradeEff))
   if (invalidDays.length) errors.push('存在考勤或评价资格矛盾，需到源记录核对。')
   const pending = selectedDays.filter(d => d.state === 'PENDING')
   if (pending.length && !prep.stage) errors.push(`${uniq(pending.map(d => d.studentId)).length} 人存在未完成课堂记录。请处理，或明确选择本周阶段反馈。`)

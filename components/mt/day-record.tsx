@@ -423,14 +423,7 @@ function DayRow({ d, tw, date, onOpen }: { d: StudentDay; tw: TaskWeek; date: st
                 rev={std.rev}
                 onChange={(v) => rw.setGrade(d, tw.week, v, std.revId)}
               />
-              {d.coverageReview ? (
-                <span className="flex items-center gap-1 text-xs text-warning-foreground" data-testid="coverage-review">
-                  出勤已更正，评价覆盖待核对
-                  <button type="button" className="underline hover:text-foreground" onClick={() => rw.confirmCoverage(d, tw.week)}>
-                    确认保留
-                  </button>
-                </span>
-              ) : null}
+
             </div>
           )}
         </td>
