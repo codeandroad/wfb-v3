@@ -30,7 +30,7 @@ export function reportTables(
   prep?: Preparation,
 ): ReportTable[] {
   const tables: ReportTable[] = [],
-    o = reportOptions(template),
+    o = { ...reportOptions(template), ...(sid ? { scores: false, feedback: false } : {}) },
     preset = template.preset ?? template.id,
     now = Date.parse(b.clock);
   const header = (texts: string[]) => texts.map((text) => ({ text }));
