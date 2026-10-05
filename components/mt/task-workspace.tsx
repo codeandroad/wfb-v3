@@ -202,7 +202,7 @@ export function TaskWorkspacePage({ id }: { id: string }) {
             )}
           >
             {t.label}
-            {t.k === "homework" && tw.hwPending ? <span className="ml-1 text-xs text-[#8a5a12]">{tw.hwPending} 项结果待确认</span> : null}
+            {t.k === "homework" && tw.hwPending ? <span className="ml-1 text-xs text-[#8a5a12]">{tw.hwPending}项待评价</span> : null}
             {t.k === "publish" && tw.unpublishedChanges ? <span className="ml-1 text-xs text-[#8a5a12]">有未发布修改</span> : null}
           </button>
         ))}

@@ -34,8 +34,10 @@ export function renderClassicImages(r:FrozenReport):string[] {
     const natural=columnWidths(table)
     const total=natural.reduce((a,b)=>a+b,0),widths=natural.map(w=>w*width/total)
     const spanWidth=(col:number,span:number)=>widths.slice(col,col+span).reduce((a,b)=>a+b,0)
+    const headerSize=compact&&table.headers.length===1?Math.min(size,14):size
+    const fitHeader=(text:string,width:number,requested:number)=>{if(!compact||table.headers.length!==1)return requested;scratch.font=font(requested,true);return Math.max(Math.min(14,requested),Math.min(requested,requested*width/Math.max(1,scratch.measureText(text).width)))}
     const headerOccupied=new Set<number>()
-    const headerHeight=Math.max(32,...table.headers.flatMap((row,index)=>{let col=0;return row.map(c=>{while(index>0&&headerOccupied.has(col))col++;const span=c.span??1,hs=resolveElement(r.template.customization,`${table.kind}.${index===0&&table.headers.length>1&&col>0?'date':table.fields?.[col]??(col===0?'name':'body')}.header`,{size,padding:pad,lineHeight:1.3}),h=wrap(c.text,spanWidth(col,span)-hs.padding!*2,hs.size!).length*hs.size!*hs.lineHeight!+hs.padding!*2;if((c.rowSpan??1)>1)for(let i=0;i<span;i++)headerOccupied.add(col+i);col+=span;return h})}))
+    const headerHeight=Math.max(32,...table.headers.flatMap((row,index)=>{let col=0;return row.map(c=>{while(index>0&&headerOccupied.has(col))col++;const span=c.span??1,hs=resolveElement(r.template.customization,`${table.kind}.${index===0&&table.headers.length>1&&col>0?'date':table.fields?.[col]??(col===0?'name':'body')}.header`,{size:headerSize,padding:pad,lineHeight:1.3}),fs=fitHeader(c.text,spanWidth(col,span)-hs.padding!*2,hs.size!),h=wrap(c.text,spanWidth(col,span)-hs.padding!*2,fs).length*fs*hs.lineHeight!+hs.padding!*2;if((c.rowSpan??1)>1)for(let i=0;i<span;i++)headerOccupied.add(col+i);col+=span;return h})}))
     const rowHeights=table.rows.map((row,index)=>Math.max(size+pad*2,...row.map((c,col)=>{const s=resolveElement(r.template.customization,`${table.kind}.${table.fields?.[col]??(col===0?'name':'body')}.body`,{size,padding:pad,lineHeight:1.3},table.facts?.[index]?.[col]);return Math.max(s.minHeight??0,wrap(c,widths[col]-s.padding!*2,s.size!).length*s.size!*s.lineHeight!+s.padding!*2)})))
     const height=table.headers.length*headerHeight+rowHeights.reduce((a,b)=>a+b,0)
     return {height,draw:(ctx,x,y)=>{
@@ -43,8 +45,8 @@ export function renderClassicImages(r:FrozenReport):string[] {
       const cell=(text:string,col:number,top:number,h:number,span:number,header:boolean,striped:boolean,fact?:CellFact,dateHeader=false)=>{
         const w=spanWidth(col,span),left=x+spanWidth(0,col)
         const field=dateHeader?'date':table.fields?.[col]??(col===0?'name':'body')
-        const s=resolveElement(r.template.customization,`${table.kind}.${field}.${header?'header':'body'}`,{size,padding:pad,weight:header?600:400,color:header?o.headerText:ink,background:header?o.headerBackground:striped?o.stripeColor:r.template.background,align:personal&&!header?'left':'center',lineHeight:1.3,borderColor:o.borderColor,borderWidth:o.borders?(o.borderWeight==='strong'?1.5:.7):0},fact)
-        const fs=s.size!,p=s.padding!,lh=fs*s.lineHeight!
+        const s=resolveElement(r.template.customization,`${table.kind}.${field}.${header?'header':'body'}`,{size:header?headerSize:size,padding:pad,weight:header?600:400,color:header?o.headerText:ink,background:header?o.headerBackground:striped?o.stripeColor:r.template.background,align:personal&&!header?'left':'center',lineHeight:1.3,borderColor:o.borderColor,borderWidth:o.borders?(o.borderWeight==='strong'?1.5:.7):0},fact)
+        const p=s.padding!,fs=header?fitHeader(text,w-p*2,s.size!):s.size!,lh=fs*s.lineHeight!
         ctx.fillStyle=colorValue(s.background!)!;ctx.fillRect(left,top,w,h)
         if(s.borderWidth){ctx.strokeStyle=colorValue(s.borderColor!)!;ctx.lineWidth=s.borderWidth;ctx.strokeRect(left,top,w,h)}
         const lines=wrap(text,w-p*2,fs);ctx.font=font(fs,s.weight!>=600);ctx.fillStyle=colorValue(s.color!)!;ctx.textAlign=s.align!

@@ -5,7 +5,7 @@ import { classroomRevFor, levelOf, parentText, revById } from './schemes'
 import type { Preparation, ReportTable, ReportTemplate } from './reports'
 import { reportOptions } from './report-options'
 
-export const classicDate = (date:string) => `${['周日','周一','周二','周三','周四','周五','周六'][new Date(`${date}T12:00:00+08:00`).getUTCDay()]} ${date.slice(5).replace('-','')}`
+export const classicDate = (date:string) => `${['周日','周一','周二','周三','周四','周五','周六'][new Date(`${date}T12:00:00+08:00`).getUTCDay()]} ${Number(date.slice(5,7))}/${Number(date.slice(8,10))}`
 export function hasHomeworkRecord(a:Assignment) {
   return a.recipients.some(id=>{const r=a.results[id];return !!r && (!!r.submission || !!r.quality || r.score!=null || !!r.note?.trim() || !!r.noGrade)})
 }
@@ -36,6 +36,6 @@ export function classicMatrix(b:MtBiz,tw:TaskWeek,t:ReportTemplate,p?:Preparatio
   }
   const split=o.mode==='B'
   const homeworkLabel=(e:typeof events[number])=>`作业${assignments.filter(a=>homeworkCheckDate(a,p)===e.date).length>1?`\n${e.assignment?.title}`:''}`
-  const top=[{text:'姓名',rowSpan:split?2:1},...events.map(e=>e.assignment?{text:split?classicDate(e.date):`${classicDate(e.date)}\n${homeworkLabel(e)}`}:{text:classicDate(e.date),span:split?2:1})]
+  const top=[{text:'姓名',rowSpan:split?2:1},...events.map(e=>e.assignment?{text:split?classicDate(e.date):`${classicDate(e.date)} ${homeworkLabel(e).replace(/\n/g,' · ')}`}:{text:classicDate(e.date),span:split?2:1})]
   return {kind:'classroom',fields:['name',...events.flatMap(e=>e.assignment?['quality']:split?['attendance','classroom']:['attendance'])],facts:tw.students.map(id=>[undefined,...events.flatMap(e=>{if(e.assignment){const a=e.assignment,r=a.results[id],eligible=a.recipients.includes(id)&&!excluded.some(x=>x.assignmentId===a.id&&x.studentId===id)&&!!r&&!r.review&&requirementOf(a,id)!=='EXEMPT'&&r.participating!==false;return [{field:r?.submission==='MISSING'?'submission':'quality',status:eligible&&r?.submission==='MISSING'&&r.submissionConfirmed?'MISSING_CONFIRMED':undefined,revision:eligible?a.schemeRevId??undefined:undefined,grade:eligible&&r?.submission&&r.submission!=='MISSING'?r.quality??undefined:undefined}]}const d=tw.byStudent[id]?.find(d=>d.date===e.date),states=[...new Set(d?.elapsed.map(l=>d.rec.att[l.id]?.v).filter(Boolean))];const att={field:'attendance',status:states.length===1?states[0]:undefined};return split?[att,{field:'classroom',revision:rev?.id,grade:d?.elig.kind==='ELIGIBLE'&&d.handlingEff==='CONFIRMED'&&d.elapsed.length?d.gradeEff??undefined:undefined}]:[att]})]),title:tw.task.label,identityColumns:1,headers:split?[top,events.flatMap(e=>e.assignment?[{text:homeworkLabel(e)}]:[{text:'出勤'},{text:'课堂'}])]:[top],rows:tw.students.map(id=>[studentById(id)?.name??id,...events.flatMap(e=>{if(e.assignment)return [homework(e.assignment,id)];const day=tw.byStudent[id]?.find(d=>d.date===e.date);return split?[attendance(day),grade(day)]:[`${attendance(day)} / ${grade(day)}`]})])}
 }
