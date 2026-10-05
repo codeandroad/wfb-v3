@@ -405,8 +405,6 @@ export function reportTables(
           "assignment",
           ...homeworkDateFields,
           ...(o.combinedHomework ? ["quality"] : ["submission", "quality"]),
-          ...(o.scores ? ["score"] : []),
-          ...(o.feedback ? ["feedback"] : []),
         ],
         facts: ids.flatMap((id) =>
           assignments
@@ -453,16 +451,7 @@ export function reportTables(
                     : undefined,
                   grade: submitted ? (r.quality ?? undefined) : undefined,
                 },
-                ...(o.scores
-                  ? [
-                      {
-                        field: "score",
-                        score:
-                          submitted && r.score != null ? r.score : undefined,
-                      },
-                    ]
-                  : []),
-                ...(o.feedback ? [undefined] : []),
+
               ];
             }),
         ),
@@ -473,8 +462,7 @@ export function reportTables(
             "作业",
             ...homeworkDateLabels,
             ...(o.combinedHomework ? ["提交与质量"] : ["提交情况", "质量评价"]),
-            ...(o.scores ? ["已有分数"] : []),
-            ...(o.feedback ? ["教师反馈"] : []),
+
           ]),
         ],
         rows: ids.flatMap((id) =>
@@ -495,8 +483,7 @@ export function reportTables(
                 ...(o.combinedHomework
                   ? [r.slice(0, 2).join(" · ")]
                   : r.slice(0, 2)),
-                ...(o.scores ? [r[2]] : []),
-                ...(o.feedback ? [r[3]] : []),
+
               ];
             }),
         ),
