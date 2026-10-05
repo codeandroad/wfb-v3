@@ -15,11 +15,11 @@ const CLASSIC_PRESETS: [string, ReportKind, string][] = [
 // 自定义样式模板：layout 声明目标呈现布局（brief 卡片 / timeline 时间轴 / letter 信件）；
 // 在新布局的 canvas 渲染器落地前，先以 classic 表格渲染占位，保证模板中心可选、可预览、可发布。
 const STYLE_PRESETS: { id: string; kind: ReportKind; name: string; layout: ReportTemplate['layout']; modules: ModuleKey[] }[] = [
-  { id: 'C11', kind: 'class', name: '班级·三卡片速览', layout: 'brief', modules: ['teaching', 'classroom', 'homework', 'highlights', 'next'] },
-  { id: 'C12', kind: 'class', name: '班级·仪表盘', layout: 'brief', modules: ['learning', 'classroom', 'homework', 'highlights', 'next'] },
-  { id: 'C13', kind: 'class', name: '班级·时间轴周报', layout: 'timeline', modules: ['teaching', 'classroom', 'homework', 'highlights', 'next'] },
-  { id: 'C14', kind: 'class', name: '班级·快问快答', layout: 'brief', modules: ['teaching', 'learning', 'classroom', 'homework', 'next'] },
-  { id: 'C15', kind: 'class', name: '班级·一图流长图', layout: 'brief', modules: ['teaching', 'learning', 'classroom', 'homework', 'highlights', 'next'] },
+  { id: 'C11', kind: 'class', name: '三卡片速览', layout: 'brief', modules: ['teaching', 'classroom', 'homework', 'highlights', 'next'] },
+  { id: 'C12', kind: 'class', name: '仪表盘', layout: 'brief', modules: ['learning', 'classroom', 'homework', 'highlights', 'next'] },
+  { id: 'C13', kind: 'class', name: '时间轴周报', layout: 'timeline', modules: ['teaching', 'classroom', 'homework', 'highlights', 'next'] },
+  { id: 'C14', kind: 'class', name: '快问快答', layout: 'brief', modules: ['teaching', 'learning', 'classroom', 'homework', 'next'] },
+  { id: 'C15', kind: 'class', name: '一图流长图', layout: 'brief', modules: ['teaching', 'learning', 'classroom', 'homework', 'highlights', 'next'] },
   { id: 'C16', kind: 'class', name: '班级周报', layout: 'brief', modules: ['teaching', 'learning', 'classroom', 'homework', 'highlights', 'next'] },
   { id: 'P11', kind: 'personal', name: '个人·成长档案', layout: 'timeline', modules: ['classroom', 'homework', 'highlights', 'comment', 'next'] },
   { id: 'P12', kind: 'personal', name: '个人·每周一信', layout: 'letter', modules: ['comment', 'classroom', 'homework', 'highlights', 'next'] },
@@ -32,6 +32,7 @@ export const SYSTEM_TEMPLATES: ReportTemplate[] = [
   ...STYLE_PRESETS.map(s => baseTemplate(s.id, s.kind, s.name, s.layout, s.modules, styleOptions as unknown as Record<string, unknown>)),
 ]
 export function classicTemplate(t: ReportTemplate): ReportTemplate {
+  t = { ...t, name: t.name.replace(/^班级\s*[·•]\s*/, '') }
   if (t.options?.classic) return t
   const preset=SYSTEM_TEMPLATES.find(s=>s.id===t.preset)||SYSTEM_TEMPLATES.find(s=>s.kind===t.kind)!
   return {...t,preset:preset.id,options:{...preset.options,...t.options,classic:true}}
