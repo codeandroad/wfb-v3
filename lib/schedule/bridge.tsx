@@ -20,8 +20,10 @@ export function ScheduleBridge({ children }: { children: ReactNode }) {
 
   const source = useMemo(() => {
     const cache = new Map<string, ScheduleRead>()
-    return (weekStartIso: string): ScheduleRead => {
-      const hit = cache.get(weekStartIso)
+    return (weekStartIso: string, requestedTeacher?: string): ScheduleRead => {
+      const teacherId = requestedTeacher ?? PERSONAS[persona]?.teacherId ?? null
+      const cacheKey = `${teacherId}|${weekStartIso}`
+      const hit = cache.get(cacheKey)
       if (hit) return hit
       let out: ScheduleRead
       if (!teacherId) out = { status: "unconfirmed", message: "当前演示身份没有任教身份" }
@@ -45,7 +47,7 @@ export function ScheduleBridge({ children }: { children: ReactNode }) {
           }
         }
       }
-      cache.set(weekStartIso, out)
+      cache.set(cacheKey, out)
       return out
     }
   }, [tt, events, teacherId])
