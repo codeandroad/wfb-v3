@@ -1,6 +1,7 @@
 "use client"
 
 import { Badge, Card, EmptyState } from "@/components/kit"
+import { HomeworkMetrics, HomeworkStatistics } from "@/components/mt/homework-dashboard"
 import { SaveState } from "@/components/mt/shared"
 import { Btn, Modal, inputCls } from "@/components/mt/ui"
 import {
@@ -403,7 +404,9 @@ export function HwReview({
   manageHref,
   onCopy,
   initialStudent,
+  cockpit = false,
 }: {
+  cockpit?: boolean
   a: Assignment
   manageHref?: string
   onCopy?: (a: Assignment) => void
@@ -418,6 +421,7 @@ export function HwReview({
   const [page, setPage] = useState(1)
   const [picked, setPicked] = useState<Set<string>>(new Set())
   const [manage, setManage] = useState(false)
+  const [view, setView] = useState<"roster" | "stats" | "info">("roster")
   const [msg, setMsg] = useState<BatchMsg | null>(null)
   const [showWhy, setShowWhy] = useState(false)
   const busy = useRef(false)
@@ -518,8 +522,8 @@ export function HwReview({
   const disabledWhy = !rev ? "这份作业的评价标准待核对，只能登记提交" : !lvl ? "请先选择等级" : ""
 
   return (
-    <Card className="overflow-hidden">
-      <div className="flex flex-col gap-2 border-b border-border px-4 py-3">
+    <Card className={cockpit ? "overflow-hidden rounded-2xl [&_select]:min-h-8 [&_select]:rounded-full [&_select]:px-3 [&_select]:text-sm [&_button]:text-sm" : "overflow-hidden"}>
+      <div className={cockpit ? "flex flex-col gap-3 border-b border-border p-5 [&_h3]:text-xl [&_p]:text-sm" : "flex flex-col gap-2 border-b border-border px-4 py-3"}>
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div className="min-w-0">
             <h3 className="text-pretty font-semibold">{a.title}</h3>
@@ -543,11 +547,13 @@ export function HwReview({
           </div>
         </div>
         <HwProgressLine a={a} />
-        {a.instructions ? <p className="text-pretty text-xs leading-relaxed">{a.instructions}</p> : null}
+        {a.instructions ? <p className="rounded-lg bg-muted/40 p-3 text-pretty text-sm leading-relaxed">{a.instructions}</p> : null}
+        {cockpit && <HomeworkMetrics a={a} nowTs={nowTs} />}
       </div>
-
-      {manage && !manageHref ? <ManagePanel a={a} onCopy={onCopy} /> : null}
-
+      {cockpit && <div className="flex gap-1 border-b border-border px-4" role="group" aria-label="作业详情视图">{([{key:"roster",label:"学生名单"},{key:"stats",label:"统计分析"},{key:"info",label:"作业信息"}] as const).map(t => <button key={t.key} type="button" aria-pressed={view === t.key} onClick={() => setView(t.key)} className={`border-b-2 px-4 py-3 text-sm ${view === t.key ? "border-primary font-semibold text-primary" : "border-transparent text-muted-foreground"}`}>{t.label}</button>)}</div>}
+      {(manage || (cockpit && view === "info")) && !manageHref ? <ManagePanel a={a} onCopy={onCopy} /> : null}
+      {cockpit && view === "stats" && <HomeworkStatistics a={a} nowTs={nowTs} />}
+      <div hidden={cockpit && view !== "roster"}>
       {life === "WITHDRAWN" ? (
         <p className="border-b border-border px-4 py-2.5 text-xs text-muted-foreground">作业已撤回：结果保留可查，不能再登记或批量处理。</p>
       ) : (
@@ -692,9 +698,9 @@ export function HwReview({
                 />
               ) : null}
               <div className="flex min-w-0 flex-1 flex-col gap-0.5 sm:flex-row sm:items-start sm:gap-3">
-                <span className="w-28 shrink-0 pt-1 text-sm">
-                  {nameOf(sid)}
-                  <span className="block text-[11px] text-muted-foreground">{homeroomName(studentById(sid)?.homeroom_id ?? "")}</span>
+                <span className={cockpit ? "flex w-40 shrink-0 items-center gap-2 text-sm" : "w-28 shrink-0 pt-1 text-sm"}>
+                  {cockpit && <span aria-hidden className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 font-semibold text-primary">{nameOf(sid)?.slice(0,1)}</span>}
+                  <span>{nameOf(sid)}<span className="block text-sm text-muted-foreground">{homeroomName(studentById(sid)?.homeroom_id ?? "")}</span></span>
                 </span>
                 <HwResultControls a={a} sid={sid} />
               </div>
@@ -703,6 +709,7 @@ export function HwReview({
         </ul>
       )}
       <Pager page={pg.page} pages={pg.pages} total={visible.length} size={prefs.pageSize} onPage={setPage} />
+      </div>
     </Card>
   )
 }

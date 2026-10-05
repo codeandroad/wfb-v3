@@ -1,7 +1,8 @@
 "use client"
 
 import { EmptyState, PageHeader } from "@/components/kit"
-import { AssignForm, HwListItem, HwReview, type AssignMode } from "@/components/mt/homework"
+import { HomeworkOverview, HomeworkAssignmentCard } from "@/components/mt/homework-dashboard"
+import { AssignForm, HwReview, type AssignMode } from "@/components/mt/homework"
 import { MtLoading } from "@/components/mt/shared"
 import { Btn, Modal } from "@/components/mt/ui"
 import { permittedTasks, useTeacherId } from "@/lib/mt/derive"
@@ -68,7 +69,7 @@ export function HomeworkCenter() {
 
   const target = hwParam ? mt.biz.assignments.find((a) => a.id === hwParam) : null
   const deniedHw = hwParam && (!target || !taskIds.has(target.taskId))
-  const open = !deniedHw ? (target ?? null) : null
+  const open = !deniedHw && !deniedTask ? (target ?? list[0] ?? null) : null
   const openTask = open ? taskById(open.taskId) : null
 
   const startAssign = (mode: AssignMode, copyFrom?: Assignment) => {
@@ -101,6 +102,7 @@ export function HomeworkCenter() {
         </p>
       ) : null}
 
+      <div className="mb-4"><HomeworkOverview assignments={mine} nowTs={nowTs} /></div>
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <select
           aria-label="教学任务"
@@ -148,12 +150,7 @@ export function HomeworkCenter() {
                 const t = taskById(a.taskId)
                 return (
                   <li key={a.id}>
-                    <HwListItem
-                      a={a}
-                      active={a.id === open?.id}
-                      sub={!taskParam && t ? formalTaskName(t) : undefined}
-                      onClick={() => setParams({ hw: a.id, stu: null })}
-                    />
+                    <HomeworkAssignmentCard a={a} active={a.id === open?.id} nowTs={nowTs} onClick={() => setParams({ hw: a.id, stu: null })} />
                   </li>
                 )
               })}
@@ -163,7 +160,7 @@ export function HomeworkCenter() {
         {open && openTask ? (
           <div className="flex min-w-0 flex-col gap-2">
             <p className="text-xs text-muted-foreground">{formalTaskName(openTask)}</p>
-            <HwReview key={open.id} a={open} initialStudent={stuParam} onCopy={(a) => startAssign("COPY", a)} />
+            <HwReview cockpit key={open.id} a={open} initialStudent={stuParam} onCopy={(a) => startAssign("COPY", a)} />
           </div>
         ) : (
           <EmptyState icon={<ClipboardList className="size-7" />} title="选择一份作业开始评阅" desc="选择后即可登记提交、评价和批量处理。" />
