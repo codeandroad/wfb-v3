@@ -51,7 +51,7 @@ export function PersonNoField({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         onBlur={() => setBlurred(true)}
-        placeholder={`留空则自动生成，或填写已有编号，如 ${CURRENT_SCHOOL.code}202609088${type}`}
+        placeholder={`按当前学校预设填写，如 ${patternFor(type, "202609").replace("NNN", "088")}`}
         className="font-mono tracking-wide"
         spellCheck={false}
         autoComplete="off"
@@ -64,16 +64,9 @@ export function PersonNoField({
           <div className="flex items-start gap-2 rounded-md border border-dashed border-border bg-muted/40 px-3 py-2 text-[12.5px] text-muted-foreground">
             <Sparkles className="mt-0.5 size-3.5 shrink-0 text-primary" aria-hidden />
             <p className="leading-relaxed">
-              创建成功后自动生成：
+              手工编号尚未填写。当前格式为
               <span className="mx-1 font-mono font-medium text-foreground">{patternFor(type, yyyymm)}</span>
-              {yyyymm ? (
-                <>
-                  （按{PERSON_DATE_LABEL[type]}年月 {formatYyyymm(yyyymm)}；该段{PERSON_TYPE_LABEL[type]}流水号当前预计从{" "}
-                  <span className="font-mono">{nextSerialPreview(type, yyyymm)}</span> 起，最终以创建结果为准）
-                </>
-              ) : (
-                <>（请先填写{PERSON_DATE_LABEL[type]}日期）</>
-              )}
+              {yyyymm ? <>，当前年月号段预计从 <span className="font-mono">{nextSerialPreview(type, yyyymm)}</span> 起。</> : <>；如改选自动生成，请先填写{PERSON_DATE_LABEL[type]}年月。</>}
             </p>
           </div>
         ) : null}
@@ -124,7 +117,7 @@ export function PersonNoField({
                 }}
               >
                 <Eraser className="size-3" />
-                清空，改为自动生成
+                清空输入
               </Button>
             </div>
           </div>
@@ -137,11 +130,12 @@ export function PersonNoField({
 }
 
 function NoStructure({ type }: { type: PersonType }) {
+  const pattern = patternFor(type)
   const parts = [
-    { k: CURRENT_SCHOOL.code, d: "学校代码" },
-    { k: "YYYYMM", d: `${PERSON_DATE_LABEL[type]}年月` },
-    { k: "NNN", d: "流水号 001–999" },
+    { k: pattern.slice(0, 2), d: "编号代码" },
+    { k: pattern.includes("YYYYMM") ? "YYYYMM" : "YYMM", d: `${PERSON_DATE_LABEL[type]}年月` },
     { k: type, d: PERSON_TYPE_LABEL[type] },
+    { k: "NNN", d: "流水号 001–999" },
   ]
   return (
     <div className="flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
@@ -161,12 +155,12 @@ function NoStructure({ type }: { type: PersonType }) {
   )
 }
 
-/** 已创建人员的正式编号展示：稳定值，不能在普通资料编辑中修改。 */
+/** 已创建人员的当前正式编号；普通资料编辑不修改，授权人员可通过明确编号操作更正。 */
 export function FormalNoBadge() {
   return (
-    <span className="inline-flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5 text-[11px] text-muted-foreground" title="正式编号创建后保持稳定，不能在资料编辑中修改">
+    <span className="inline-flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5 text-[11px] text-muted-foreground" title="普通资料编辑不修改编号；授权人员可通过明确操作更正">
       <Lock className="size-3" aria-hidden />
-      正式编号 · 不可编辑
+      当前正式编号
     </span>
   )
 }

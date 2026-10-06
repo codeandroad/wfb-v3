@@ -55,7 +55,7 @@ export function StaffDetailSheet({ staff, endedDutyIds, onClose, onOpenDuty, onA
       open
       onClose={onClose}
       title={staff.name}
-      desc={`${staff.employeeNo} · ${staff.department}／${staff.jobTitle}`}
+      desc={`${staff.employeeNo || "待编号"} · ${staff.department}／${staff.jobTitle}`}
       width="max-w-xl"
       footer={
         action ? undefined : (
@@ -75,17 +75,6 @@ export function StaffDetailSheet({ staff, endedDutyIds, onClose, onOpenDuty, onA
               <Button variant="ghost" size="sm" onClick={() => setAction("return")}>
                 <CalendarCheck className="size-3.5" />
                 销假
-              </Button>
-            ) : null}
-            {staff.status !== "left" ? (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-destructive hover:text-destructive"
-                onClick={() => setAction("resign")}
-              >
-                <LogOut className="size-3.5" />
-                办理离职
               </Button>
             ) : null}
             {homepageEligible(staff.id) ? (
@@ -163,16 +152,21 @@ export function StaffDetailSheet({ staff, endedDutyIds, onClose, onOpenDuty, onA
           <div className="grid grid-cols-2 gap-3 text-[13px]">
             <div className="col-span-2 flex flex-wrap items-center gap-2 rounded-lg border border-border bg-muted/30 px-3 py-2">
               <span className="text-xs text-muted-foreground">员工编号</span>
-              <span className="font-mono text-[13px] font-semibold tracking-wide">{staff.employeeNo}</span>
-              <FormalNoBadge />
+              <span className="font-mono text-[13px] font-semibold tracking-wide">{staff.employeeNo || "待编号"}</span>
+              {staff.employeeNo ? <FormalNoBadge /> : null}
+              <Button type="button" size="xs" variant="outline" className="ml-auto" onClick={() => setAction("number")}>
+                {staff.employeeNo ? "修改 / 清空" : "设置工号"}
+              </Button>
               <span className="basis-full text-xs text-muted-foreground/70">
-                创建后为稳定正式编号；“编辑资料”不包含编号，部门、职务或角色变化也不会重新编号。
+                普通资料编辑不会改号；授权人员可通过明确的设置、修改或清空操作维护，历史号码不回收。
               </span>
             </div>
             <Meta label="部门" value={staff.department} />
             <Meta label="职务" value={staff.jobTitle} />
-            <Meta label="首次正式入职" value={staff.joinedAt ?? "未填写"} muted={!staff.joinedAt} />
+            <Meta label="英文名／常用名" value={staff.englishName || "未填写"} muted={!staff.englishName} />
+            <Meta label="首次入职年月" value={staff.joinedAt?.slice(0, 7) ?? "未填写"} muted={!staff.joinedAt} />
             <Meta label="性别" value={staff.gender} />
+            <Meta label="学历" value={staff.educationLevel || "未填写"} muted={!staff.educationLevel} />
             <Meta label="在职状态" value={STAFF_STATUS_LABEL[staff.status]} />
           </div>
 
@@ -303,6 +297,14 @@ export function StaffDetailSheet({ staff, endedDutyIds, onClose, onOpenDuty, onA
             </div>
           ))}
           <InfoNote>请假不是离职，停用账号不是结束岗位，返聘不表示旧职责自动恢复。</InfoNote>
+          {staff.status !== "left" ? (
+            <div className="mt-4 flex items-center justify-between gap-3 rounded-lg border border-border p-3">
+              <div><p className="text-[13px] font-medium">任职管理</p><p className="text-xs text-muted-foreground">低频人事操作；进入入口不会直接办理离职。</p></div>
+              <Button variant="outline" size="sm" className="text-destructive hover:text-destructive" onClick={() => setAction("resign")}>
+                <LogOut className="size-3.5" />办理离职
+              </Button>
+            </div>
+          ) : null}
         </div>
       ) : null}
       </>
@@ -348,20 +350,18 @@ function Meta({ label, value, mono, muted }: { label: string; value: string; mon
 
 function MoreInfo({ staff }: { staff: StaffProfile }) {
   const rows: { label: string; value: string }[] = []
-  if (staff.englishName) rows.push({ label: "英文名／常用名", value: staff.englishName })
+  if (staff.firstWorkAt) rows.push({ label: "首次参加工作年月", value: staff.firstWorkAt })
   if (staff.wechat) rows.push({ label: "微信号", value: staff.wechat })
   if (staff.interests?.length) rows.push({ label: "兴趣爱好", value: staff.interests.join("、") })
-  if (staff.specialties?.length) rows.push({ label: "特长／擅长领域", value: staff.specialties.join("、") })
-  if (!rows.length) return null
+  const hasBackground = !!staff.educationExperiences?.length || !!staff.workExperiences?.length
+  if (!rows.length && !hasBackground) return null
   return (
-    <div>
-      <p className="mb-2 text-[13px] font-semibold">更多资料</p>
-      <div className="grid grid-cols-2 gap-3 text-[13px]">
-        {rows.map((r) => (
-          <Meta key={r.label} label={r.label} value={r.value} />
-        ))}
-      </div>
-      <p className="mt-2 text-xs text-muted-foreground">个人补充资料，按字段权限与个人显示设置展示；列表默认不展示。</p>
+    <div className="space-y-3">
+      <p className="text-[13px] font-semibold">更多资料</p>
+      {rows.length ? <div className="grid grid-cols-2 gap-3 text-[13px]">{rows.map((row) => <Meta key={row.label} label={row.label} value={row.value} />)}</div> : null}
+      {staff.educationExperiences?.length ? <div><p className="text-xs font-medium text-muted-foreground">教育经历</p><div className="mt-1 space-y-1">{staff.educationExperiences.map((item) => <p key={item.id} className="text-[13px]">{[item.school, item.major, item.graduation].filter(Boolean).join(" · ")}</p>)}</div></div> : null}
+      {staff.workExperiences?.length ? <div><p className="text-xs font-medium text-muted-foreground">过往工作经历</p><div className="mt-1 space-y-1">{staff.workExperiences.map((item) => <p key={item.id} className="text-[13px]">{[item.organization, item.role, [item.start, item.end].filter(Boolean).join("—")].filter(Boolean).join(" · ")}</p>)}</div></div> : null}
+      <p className="text-xs text-muted-foreground">背景资料按人员资料权限读取，默认不进入教师主页、普通名单或身份名片。</p>
     </div>
   )
 }

@@ -65,12 +65,12 @@ export function StaffCreateModal({
               <dl className="mt-1.5 space-y-0.5 text-muted-foreground">
                 <div className="flex flex-wrap items-center gap-2">
                   <dt className="w-16 shrink-0 text-muted-foreground/70">员工编号</dt>
-                  <dd className="font-mono font-semibold tracking-wide text-foreground">{issuedNo}</dd>
-                  <FormalNoBadge />
+                  <dd className="font-mono font-semibold tracking-wide text-foreground">{issuedNo || "待编号"}</dd>
+                  {issuedNo ? <FormalNoBadge /> : null}
                 </div>
                 <div className="flex gap-2">
                   <dt className="w-16 shrink-0 text-muted-foreground/70">来源</dt>
-                  <dd>{state.customNo ? "手工填写的已有编号" : `按首次正式入职年月 ${state.joinedAt.slice(0, 7)} 自动生成`}</dd>
+                  <dd>{state.numberIntent === "none" ? "暂不编号" : state.numberIntent === "manual" ? "手工填写" : `按首次入职年月 ${state.joinedAt.slice(0, 7)} 自动生成`}</dd>
                 </div>
                 <div className="flex gap-2">
                   <dt className="w-16 shrink-0 text-muted-foreground/70">职责</dt>

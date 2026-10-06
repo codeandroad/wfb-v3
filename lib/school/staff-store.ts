@@ -9,6 +9,7 @@ const STORAGE_KEY = "tgs-proto:staff-patches:v1"
 export type StaffPatch = Partial<
   Pick<
     StaffProfile,
+    | "employeeNo"
     | "department"
     | "jobTitle"
     | "gender"
@@ -19,6 +20,11 @@ export type StaffPatch = Partial<
     | "statusNote"
     | "accountStatus"
     | "englishName"
+    | "educationLevel"
+    | "firstWorkAt"
+    | "educationExperiences"
+    | "workExperiences"
+    | "interests"
     | "wechat"
   >
 > & { extraHistory?: HistoryItem[] }

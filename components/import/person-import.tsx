@@ -12,7 +12,7 @@ import { ImportStepper, type ImportStep } from "./import-stepper"
 type Filter = "all" | "issue" | "ok"
 
 const GROUP_LABEL: Record<PersonType, string> = { S: "行政班", E: "部门" }
-const SCHOOL = CURRENT_SCHOOL.code
+  const SCHOOL = CURRENT_SCHOOL.numbering.code
 
 export function PersonImport({ type }: { type: PersonType }) {
   const { push } = useToast()
@@ -104,10 +104,10 @@ export function PersonImport({ type }: { type: PersonType }) {
             <div className="flex flex-col gap-3 rounded-xl border border-border bg-card p-4 text-[13px] lg:w-80">
               <p className="font-medium">{label}编号列（可选）</p>
               <p className="font-mono text-[13px] tracking-wide text-primary">
-                {SCHOOL}YYYYMMNNN{type}
+                {SCHOOL}YYMM{type}NNN
               </p>
               <ul className="flex flex-col gap-1.5 leading-relaxed text-muted-foreground">
-                <li>YYYYMM 为{PERSON_DATE_LABEL[type]}年月，NNN 为 001–999。</li>
+                <li>天行使用简短版：YYMM 为{PERSON_DATE_LABEL[type]}年月，类型在流水号前，NNN 为 001–999；品牌简称仍为 TGS。</li>
                 <li>留空：正式导入时由系统自动生成。</li>
                 <li>填写：须为新格式、未被占用，且在文件内唯一。</li>
                 <li>旧格式编号（如 TG202309G10018）不再接受。</li>

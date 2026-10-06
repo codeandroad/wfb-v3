@@ -20,6 +20,10 @@ export interface SchoolEvent {
 
 export interface SchoolInstance {
   code: string
+  numbering: {
+    code: string
+    preset: "standard" | "short"
+  }
   nameZh: string
   nameEn: string
   brand: {
@@ -37,6 +41,7 @@ export interface SchoolInstance {
 
 export const CURRENT_SCHOOL: SchoolInstance = {
   code: "TGS",
+  numbering: { code: "TG", preset: "short" },
   nameZh: "天行创世纪学校",
   nameEn: "Teensen Genesis School",
   brand: {
