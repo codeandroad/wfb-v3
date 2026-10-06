@@ -366,7 +366,7 @@ function StaffRow({
               {staff.isCurrent ? <Badge tone="neutral" className="ml-1.5">本人</Badge> : null}
             </button>
             <p className="flex items-center gap-2 text-xs text-muted-foreground">
-              <span className="font-mono">{staff.employeeNo}</span>
+              <span className="font-mono">{staff.employeeNo || "待编号"}</span>
               {homepageEligible(staff.id) ? (
                 <Link href={`/people/${staff.id}`} className="text-primary hover:underline">
                   主页

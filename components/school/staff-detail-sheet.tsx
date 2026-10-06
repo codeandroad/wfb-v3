@@ -203,7 +203,7 @@ export function StaffDetailSheet({ staff, endedDutyIds, onClose, onOpenDuty, onA
               <p className="text-[13px] text-muted-foreground">当前无任职资格。</p>
             )}
             <p className="mt-2 text-xs text-muted-foreground">
-              人事侧的合法资格，是安排职责的前提；本身不���于已有实际负责对象，也不等于账号已开通。
+              人事侧的合法资格，是安排职责的前提；本身不等于已有实际负责对象，也不等于账号已开通。
             </p>
           </div>
 
