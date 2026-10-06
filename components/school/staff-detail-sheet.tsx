@@ -26,9 +26,7 @@ import {
 } from "lucide-react"
 import { StaffActionPanel, type StaffAction } from "./staff-actions"
 import { useState } from "react"
-import { FormalNoBadge } from "./person-no-field"
 import { useStaffPermission } from "@/lib/school/staff-store"
-import { personNoMonth, yyyymmOf } from "@/lib/school/person-no"
 
 interface Props {
   staff: StaffProfile
@@ -46,8 +44,6 @@ export function StaffDetailSheet({ staff, endedDutyIds, onClose, onOpenDuty, onA
   const [tab, setTab] = useState("profile")
   const [action, setAction] = useState<StaffAction | null>(null)
   const canManage = useStaffPermission()
-  const numberMonth = personNoMonth(staff.employeeNo, "E")
-  const monthMismatch = numberMonth && staff.joinedAt && yyyymmOf(staff.joinedAt) !== numberMonth
 
   const duties = staff.duties.map((d) =>
     endedDutyIds.has(d.id) || staff.status === "left" ? { ...d, status: "ended" as const } : d,
@@ -155,17 +151,7 @@ export function StaffDetailSheet({ staff, endedDutyIds, onClose, onOpenDuty, onA
       {tab === "profile" ? (
         <div className="space-y-5">
           <div className="grid grid-cols-2 gap-3 text-[13px]">
-            <div className="col-span-2 flex flex-wrap items-center gap-2 rounded-lg border border-border bg-muted/30 px-3 py-2">
-              <span className="text-xs text-muted-foreground">员工编号</span>
-              <span className="font-mono text-[13px] font-semibold tracking-wide">{staff.employeeNo || "待编号"}</span>
-              {staff.employeeNo ? <FormalNoBadge /> : null}
-              <Button type="button" size="xs" variant="outline" className="ml-auto" disabled={!canManage} onClick={() => canManage && setAction("number")}>
-                {staff.employeeNo ? "修改 / 清空" : "设置工号"}
-              </Button>
-              <span className="basis-full text-xs text-muted-foreground/70">
-                普通资料编辑不会改号；授权人员可通过明确的设置、修改或清空操作维护，历史号码不回收。
-              </span>
-            </div>
+            <Meta label="员工编号" value={staff.employeeNo || "待编号"} muted={!staff.employeeNo} />
             <Meta label="部门" value={staff.department || "未填写"} muted={!staff.department} />
             <Meta label="职务" value={staff.jobTitle || "未填写"} muted={!staff.jobTitle} />
             <Meta label="英文名／常用名" value={staff.englishName || "未填写"} muted={!staff.englishName} />
@@ -188,7 +174,6 @@ export function StaffDetailSheet({ staff, endedDutyIds, onClose, onOpenDuty, onA
             </div>
           </div>
 
-          {monthMismatch ? <p className="text-xs text-muted-foreground">工号年月与首次入职年月不一致；资料已保留，工号不会自动变化。</p> : null}
           {canManage ? <MoreInfo staff={staff} /> : null}
 
           <div>

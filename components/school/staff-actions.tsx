@@ -1,8 +1,9 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
+import { useToast } from "@/components/kit"
 import { type StaffProfile } from "@/lib/demo/staff"
-import { checkPersonNo, nextPersonNo, registerIssued, yyyymmOf } from "@/lib/school/person-no"
+import { checkPersonNo, nextPersonNo, personNoMonth, registerIssued, yyyymmOf } from "@/lib/school/person-no"
 import { updateStaff, useStaffPermission } from "@/lib/school/staff-store"
 import { backgroundError, cleanEducation, cleanWork } from "@/lib/school/staff-background"
 import { StaffFormFields, initialStaffForm, type StaffFormState } from "./staff-form-fields"
@@ -11,7 +12,7 @@ import { PERSONAS } from "@/lib/demo/nav"
 import { ArrowLeft } from "lucide-react"
 import { useState } from "react"
 
-export type StaffAction = "edit" | "number" | "leave" | "return" | "resign"
+export type StaffAction = "edit" | "leave" | "return" | "resign"
 
 const inputClass =
   "h-9 w-full rounded-md border border-input bg-background px-3 text-[13px] outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
@@ -41,7 +42,7 @@ export function StaffActionPanel({
 }) {
   const canManage = useStaffPermission()
   if (!canManage || action === "resign" && staff.status === "left") return <div className="flex flex-col gap-3"><p role="alert">当前身份无权办理，或该人员已离职。</p><Button variant="outline" onClick={onCancel}>返回详情</Button></div>
-  const title = { edit: "编辑资料", number: staff.employeeNo ? "修改或清空工号" : "设置工号", leave: "登记请假", return: "办理销假", resign: "办理离职" }[action]
+  const title = { edit: "编辑资料", leave: "登记请假", return: "办理销假", resign: "办理离职" }[action]
   return (
     <div className="flex flex-col gap-4">
       <button
@@ -54,7 +55,6 @@ export function StaffActionPanel({
       </button>
       <h3 className="text-[15px] font-semibold">{title}</h3>
       {action === "edit" ? <EditForm staff={staff} onDone={onDone} onCancel={onCancel} /> : null}
-      {action === "number" ? <NumberForm staff={staff} onDone={onDone} onCancel={onCancel} /> : null}
       {action === "leave" ? <LeaveForm staff={staff} onDone={onDone} onCancel={onCancel} /> : null}
       {action === "return" ? <ReturnForm staff={staff} onDone={onDone} onCancel={onCancel} /> : null}
       {action === "resign" ? <ResignForm staff={staff} onDone={onDone} onCancel={onCancel} /> : null}
@@ -80,11 +80,33 @@ function Actions({ onCancel, submitLabel, disabled, danger }: { onCancel: () => 
 function EditForm({ staff, onDone, onCancel }: FormProps) {
   const initial: StaffFormState = { ...initialStaffForm(), name: staff.name, department: staff.department || null, jobTitle: staff.jobTitle || null, gender: staff.gender, joinedAt: staff.joinedAt ?? "", phone: staff.phone, email: staff.email, englishName: staff.englishName ?? "", educationLevel: staff.educationLevel ?? "未填写", firstWorkAt: staff.firstWorkAt ?? "", educationExperiences: staff.educationExperiences ?? [], workExperiences: staff.workExperiences ?? [], interests: staff.interests ?? [], wechat: staff.wechat ?? "" }
   const [state, setState] = useState(initial)
+  const [editingNumber, setEditingNumber] = useState(false)
+  const { push } = useToast()
   const set = <K extends keyof StaffFormState>(key: K, value: StaffFormState[K]) => setState((current) => ({ ...current, [key]: value }))
   const canManage = useStaffPermission()
+  const numberMonth = personNoMonth(staff.employeeNo, "E")
+  const monthMismatch = numberMonth && state.joinedAt && yyyymmOf(state.joinedAt) !== numberMonth
   const error = backgroundError(state.firstWorkAt, state.educationExperiences, state.workExperiences)
   const changed = JSON.stringify({ ...state, touched: false }) !== JSON.stringify(initial)
   const valid = !!state.name.trim() && (!state.email.trim() || /^\S+@\S+\.\S+$/.test(state.email.trim())) && (!state.joinedAt || !!yyyymmOf(state.joinedAt)) && !error
+  if (editingNumber) return (
+    <div className="flex flex-col gap-4">
+      <Button type="button" variant="ghost" size="sm" className="self-start" onClick={() => setEditingNumber(false)}>
+        <ArrowLeft data-icon="inline-start" />
+        返回资料编辑
+      </Button>
+      <h4 className="text-sm font-semibold">{staff.employeeNo ? "修改员工编号" : "设置员工编号"}</h4>
+      <NumberForm
+        staff={staff}
+        onCancel={() => setEditingNumber(false)}
+        onDone={(message, joinedAt) => {
+          if (joinedAt) setState((current) => current.joinedAt === (staff.joinedAt ?? "") ? { ...current, joinedAt } : current)
+          setEditingNumber(false)
+          push(message)
+        }}
+      />
+    </div>
+  )
   return <form className="flex flex-col gap-4" onSubmit={(event) => {
     event.preventDefault()
     set("touched", true)
@@ -98,14 +120,23 @@ function EditForm({ staff, onDone, onCancel }: FormProps) {
     }, "资料更新")
     onDone("资料已保存；工号与任职状态保持不变")
   }}>
-    <p className="rounded-lg border border-border bg-muted/30 p-3 text-xs text-muted-foreground">当前工号 <span className="font-mono text-foreground">{staff.employeeNo || "待编号"}</span> · 本次仅保存资料，工号通过单独授权操作维护。</p>
+    <div className="flex items-center justify-between rounded-lg border border-border p-3">
+      <div className="flex flex-col gap-1">
+        <span className="text-sm text-muted-foreground">员工编号</span>
+        <span className="font-mono text-sm">{staff.employeeNo || "待编号"}</span>
+      </div>
+      <Button type="button" size="sm" variant="outline" disabled={!canManage} onClick={() => setEditingNumber(true)}>
+        {staff.employeeNo ? "修改" : "设置"}
+      </Button>
+    </div>
+    {monthMismatch ? <p className="text-sm text-muted-foreground">工号年月与首次入职年月不一致；保存资料不会自动改号。</p> : null}
     <StaffFormFields state={state} set={set} hideNumber />
     {error ? <p role="alert" className="text-sm text-destructive">{error}</p> : null}
     <Actions onCancel={onCancel} submitLabel="保存修改" disabled={!canManage || !valid || !changed} />
   </form>
 }
 
-function NumberForm({ staff, onDone, onCancel }: FormProps) {
+function NumberForm({ staff, onDone, onCancel }: Omit<FormProps, "onDone"> & { onDone: (message: string, joinedAt?: string) => void }) {
   const canManage = useStaffPermission()
   const demo = useDemo()
   const [mode, setMode] = useState<"manual" | "auto" | "clear">("manual")
@@ -132,7 +163,7 @@ function NumberForm({ staff, onDone, onCancel }: FormProps) {
       if (mode === "auto" && nextPersonNo("E", yyyymmOf(joinedAt)!) !== next) throw new Error("号段已变化，请重新确认新号。")
       if (next) registerIssued(next, "E", staff.id)
       updateStaff(staff.id, { employeeNo: next, ...(mode === "auto" && joinedAt !== staff.joinedAt?.slice(0, 7) ? { joinedAt } : {}) }, `${mode === "clear" ? "清空" : staff.employeeNo ? "修改" : "设置"}工号：${staff.employeeNo || "待编号"} → ${next || "待编号"}；操作者 ${PERSONAS[demo.persona].label}；${new Date().toISOString()}${note.trim() ? `；备注：${note.trim()}` : ""}`)
-      onDone(mode === "clear" ? "工号已清空，历史号码仍保留" : "工号已保存，内部ID与业务关系不变")
+      onDone(mode === "clear" ? "工号已清空，历史号码仍保留" : "工号已保存，内部ID与业务关系不变", mode === "auto" ? joinedAt : undefined)
     } catch (cause) { setFailure(cause instanceof Error ? cause.message : "保存失败，请重试。"); setConfirmed(false) }
   }}>
     <p className="rounded-lg border border-border bg-muted/30 p-3 text-sm">目标人员：<strong>{staff.name}</strong> · 当前工号 <span className="font-mono">{staff.employeeNo || "待编号"}</span></p>
