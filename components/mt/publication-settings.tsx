@@ -13,7 +13,7 @@ import { Modal } from './ui'
 
 const control = 'rounded-lg border border-input bg-card px-3 py-2 text-sm text-foreground'
 const button = 'rounded-lg bg-primary px-4 py-2 text-sm text-primary-foreground disabled:opacity-50'
-export function PublicationSettings() {
+export function PublicationSettings({embedded=false}:{embedded?:boolean}) {
   const mt = useMt()
   const demo = useDemo()
   const [from, setFrom] = useState<number | null>(null)
@@ -52,9 +52,10 @@ export function PublicationSettings() {
   if (mt.loadError) return <EmptyState title="数据读取失败" desc="请先恢复模拟存储。"/>
   const labels: Record<string,string> = {waive:'批量免除发布',restore:'批量恢复发布义务',deadline:'统一设置截止时间',resetDeadline:'恢复默认截止时间',requirements:'设置发布要求',resetRequirements:'清除定制发布要求'}
   return <div className="flex flex-col gap-3 font-sans">
-    <PageHeader title="发布规则与集中管理" desc="选择教师、任课范围和周次，一次调整多项任务；整周假期自动免发，无需在这里手动免除。"/>
-    <nav className="flex flex-wrap gap-4 text-sm"><Link className="text-primary underline" href="/management">返回发布检查</Link><Link className="text-primary underline" href="/management/records">教师发布档案</Link><Badge tone="info">交互原型 · 仅本浏览器保存</Badge></nav>
-    <Card><CardHeader className="px-3 py-2" title="选择作用范围" desc="按本学期现有任课任务与指定周次生成明确目标，不会自动影响未来新建任务。"/><div className="flex flex-wrap gap-4 p-3">
+    {embedded&&<div className="tm-tip">批量操作只作用于当时已存在的「任务 × 周期」，不会自动匹配未来新建任务。截止、发布要求、免除为独立字段，互不清空；操作需填写原因并留痕。</div>}
+    {!embedded&&<><PageHeader title="发布规则与集中管理" desc="选择教师、任课范围和周次，一次调整多项任务；整周假期自动免发，无需在这里手动免除。"/>
+    <nav className="flex flex-wrap gap-4 text-sm"><Link className="text-primary underline" href="/management">返回发布检查</Link><Link className="text-primary underline" href="/management/records">教师发布档案</Link><Badge tone="info">交互原型 · 仅本浏览器保存</Badge></nav></>}
+    <Card><CardHeader className="px-3 py-2" title="选择作用范围" desc="按本学期现有任课任务与指定周次生成明确目标，不会自动影响未来新建任务。"/><div className={embedded?'tm-rules-scope':'flex flex-wrap gap-4 p-3'}>
       <label className="flex flex-col gap-2 text-sm">任课教师<select className={control} value={teacher} onChange={e=>{setTeacher(e.target.value);setTask('')}}><option value="">全部教师</option>{TEACHERS.map(t=><option key={t.id} value={t.id}>{teacherName(t.id)}</option>)}</select></label>
       <label className="flex flex-col gap-2 text-sm">教学班 / 分工<select className={control} value={task} onChange={e=>setTask(e.target.value)}><option value="">全部任课任务</option>{TASKS.filter(t=>!teacher||t.teacher_id===teacher).map(t=><option key={t.id} value={t.id}>{formalTaskName(t)}</option>)}</select></label>
       <label className="flex flex-col gap-2 text-sm">开始周<select className={control} value={start} onChange={e=>{setFrom(+e.target.value);setTo(Math.max(end,+e.target.value))}}>{Array.from({length:MAX_WEEK},(_,i)=><option key={i} value={i+1}>第 {i+1} 周</option>)}</select></label>
