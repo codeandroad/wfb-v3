@@ -22,7 +22,8 @@ export function ScheduleBridge({ children }: { children: ReactNode }) {
   const source = useMemo(() => {
     const cache = new Map<string, ScheduleRead>()
     return (weekStartIso: string, requestedTeacher?: string): ScheduleRead => {
-      const teacherId = requestedTeacher ?? PERSONAS[persona]?.teacherId ?? null
+      // 教学场景与课表使用不同的林老师主键；不得把未知教师映射到当前登录人。
+      const teacherId = requestedTeacher === 'TEACHER_LYNN' ? 'lin' : requestedTeacher ?? PERSONAS[persona]?.teacherId ?? null
       const cacheKey = `${teacherId}|${weekStartIso}`
       const hit = cache.get(cacheKey)
       if (hit) return hit
@@ -37,7 +38,8 @@ export function ScheduleBridge({ children }: { children: ReactNode }) {
       else {
         const cur = teacherCurrent(tt, teacherId, weekStartIso)
         if (cur.kind === "load_error") out = { status: "error", message: "本人课表读取失败，暂不能判断本周课次" }
-        else if (cur.kind !== "ok") out = { status: "unconfirmed", message: "尚未采用学校课表，暂无有效个人安排" }
+        else if (cur.kind === "no_account") out = { status: "unconfirmed", message: "该教师尚无系统账号，无法读取其个人有效课表" }
+        else if (cur.kind !== "ok") out = { status: "unconfirmed", message: tt.adoptions[teacherId] ? "所选周没有已生效的个人课表版本" : "该教师尚无学校课表采用记录" }
         else {
           const dates = Array.from({ length: 7 }, (_, i) => addDays(weekStartIso, i))
           const { entries } = teacherWeekEntries(tt, teacherId, weekStartIso)
