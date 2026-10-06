@@ -19,9 +19,9 @@ interface ExportPreset {
   n: number
 }
 
-export function ImportHub() {
+export function ImportHub({ initialFocus }: { initialFocus?: SheetCode[] }) {
   const [tab, setTab] = useState<Tab>("import")
-  const [view, setView] = useState<"home" | "flow">("home")
+  const [view, setView] = useState<"home" | "flow">(initialFocus ? "flow" : "home")
   const [logId, setLogId] = useState<string | null>(null)
   const [preset, setPreset] = useState<string | undefined>()
   const [exp, setExp] = useState<ExportPreset>({ n: 0 })
@@ -49,7 +49,7 @@ export function ImportHub() {
 
   const JOURNEYS: { id: string; title: string; go: () => void }[] = [
     { id: "J01", title: "单表教室：真实读取与预览，无课程/学生依赖", go: () => startIntake(["06"], "选择一个只含教室的 XLSX 或 CSV；也可载入“单表：教室”示例。") },
-    { id: "J02", title: "部门＋职务＋员工：同批引用，编号留空预览自动", go: () => startSample("staff-dept") },
+    { id: "J02", title: "部门＋职务＋员工：同批引用，编号留空默认待编号", go: () => startSample("staff-dept") },
     { id: "J03", title: "多工作表 XLSX：实际表名/行数据/统计与本地校验", go: () => startIntake(undefined, "选择一个含多个工作表的 XLSX；统计全部来自实际解析。") },
     { id: "J04", title: "分批：先人员，后教学关系，引用已有对象", go: () => startSample("teaching-later") },
     { id: "J05", title: "员工无账号：资格与班主任任命，访问待开户", go: () => startSample("hrt") },
@@ -79,7 +79,7 @@ export function ImportHub() {
     <div>
       <PageHeader
         title="数据导入"
-        desc="单表、多工作表、分批导入与导出重建。文件在本机真实解析；写入学校、正式编号与权限需后端核验，当前为示例结果。"
+        desc="文件在本机真实解析；教职工和编号保存到共享会话原型，其他业务仍模拟。未接正式后台，不会自动开户或发送邀请。"
         actions={
           <Button variant="outline" size="sm" onClick={() => setJourneys(true)}>
             <Route className="size-4" aria-hidden />
@@ -112,7 +112,7 @@ export function ImportHub() {
           />
         </div>
         <div hidden={tab !== "import" || view !== "flow"}>
-          <WorkbookFlow ref={flow} onHome={() => setView("home")} onOpenLog={openLog} />
+          <WorkbookFlow ref={flow} initialFocus={initialFocus} onHome={() => setView("home")} onOpenLog={openLog} />
         </div>
         {tab === "templates" ? <TemplatesPanel key={preset} initialPreset={preset} onUseSample={startSample} /> : null}
         {tab === "export" ? <ExportPanel key={exp.n} initialPack={exp.pack} initialScope={exp.scope} initialMode={exp.mode} /> : null}

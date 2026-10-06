@@ -3,6 +3,7 @@
 import { STUDENT_PROFILES } from "@/lib/demo/school"
 import { STAFF } from "@/lib/demo/staff"
 import { CURRENT_SCHOOL } from "./instance"
+import { createNumberingLedger, parseNumber, type Claim, type NumberingConfig } from "./numbering-ledger"
 
 export type PersonType = "S" | "E"
 export type NumberingPreset = "standard" | "short"
@@ -20,47 +21,53 @@ export type PersonNoCheck =
   | { status: "invalid"; issue: PersonNoIssue; title: string; detail: string }
 
 const NUMBERING = CURRENT_SCHOOL.numbering
-const issued: Record<PersonType, Set<string>> = {
-  S: new Set(STUDENT_PROFILES.map((person) => person.studentNo).filter(Boolean)),
-  E: new Set(STAFF.map((person) => person.employeeNo).filter(Boolean)),
-}
-const logicalClaims = new Set<string>()
-
-function parseCurrent(no: string, type: PersonType) {
-  const code = NUMBERING.code
-  const expression = NUMBERING.preset === "short"
-    ? new RegExp(`^(${code})(\\d{2})(\\d{2})(${type})(\\d{3})$`)
-    : new RegExp(`^(${code})(\\d{4})(\\d{2})(${type})(\\d{3})$`)
-  const match = expression.exec(no)
-  if (!match) return null
-  const year = NUMBERING.preset === "short" ? `20${match[2]}` : match[2]
-  return { yyyymm: `${year}${match[3]}`, serial: match[5], type: match[4] as PersonType }
-}
-
+const CONFIG: NumberingConfig = { schoolId: "teensen-genesis-school", ...NUMBERING }
+const STORAGE_KEY = "tgs-proto:number-claims:v2"
+const seed: Claim[] = []
 for (const type of ["S", "E"] as const) {
-  for (const no of issued[type]) {
-    const parsed = parseCurrent(no, type)
-    if (parsed) logicalClaims.add(`${type}:${parsed.yyyymm}:${parsed.serial}`)
+  const people = type === "E" ? STAFF.map((p) => ({ id: p.id, no: p.employeeNo })) : STUDENT_PROFILES.map((p) => ({ id: p.id, no: p.studentNo }))
+  for (const person of people) {
+    // Only the explicitly known demo legacy format can supply a logical claim.
+    const legacy = new RegExp(`^TGS(\\d{6})(\\d{3})${type}$`).exec(person.no)
+    seed.push({ schoolId: CONFIG.schoolId, type, no: person.no, owner: person.id, ...(legacy ? { yyyymm: legacy[1], serial: legacy[2] } : parseNumber(person.no, type, CONFIG)) })
   }
 }
-
-export function isIssued(no: string, type: PersonType) {
-  if (issued[type].has(no)) return true
-  const parsed = parseCurrent(no, type)
-  return !!parsed && logicalClaims.has(`${type}:${parsed.yyyymm}:${parsed.serial}`)
+const ledger = createNumberingLedger(seed)
+let hydrated = false
+function hydrateClaims() {
+  if (hydrated || typeof window === "undefined") return
+  hydrated = true
+  try {
+    const saved = JSON.parse(window.sessionStorage.getItem(STORAGE_KEY) || "[]") as Claim[]
+    for (const claim of saved) if (!ledger.claims.some((existing) => existing.no === claim.no && existing.schoolId === claim.schoolId && existing.type === claim.type)) ledger.claims.push(claim)
+  } catch { /* unavailable session storage leaves the in-memory prototype intact */ }
 }
-
-export function registerIssued(no: string, type: PersonType) {
-  issued[type].add(no)
-  const parsed = parseCurrent(no, type)
-  if (parsed) logicalClaims.add(`${type}:${parsed.yyyymm}:${parsed.serial}`)
+function parseCurrent(no: string, type: PersonType) { return parseNumber(no, type, CONFIG) }
+export function personNoMonth(no: string, type: PersonType) {
+  hydrateClaims()
+  return ledger.claims.find((claim) => claim.no === no && claim.type === type && claim.schoolId === CONFIG.schoolId)?.yyyymm ?? parseCurrent(no, type)?.yyyymm
+}
+export function historicalNumbers(owner: string) {
+  hydrateClaims()
+  return ledger.claims.filter((claim) => claim.owner === owner && claim.schoolId === CONFIG.schoolId).map((claim) => claim.no)
+}
+export function isIssued(no: string, type: PersonType) {
+  hydrateClaims()
+  return ledger.occupied(no, type, CONFIG)
+}
+export function registerIssued(no: string, type: PersonType, owner?: string) {
+  hydrateClaims()
+  ledger.register(no, type, CONFIG, owner)
+  try { window.sessionStorage.setItem(STORAGE_KEY, JSON.stringify(ledger.claims)) } catch { /* keep in-memory state */ }
 }
 
 export function yyyymmOf(date: string): string | null {
-  const match = /^(\d{4})-(\d{2})/.exec(date)
-  if (!match) return null
+  const match = /^(\d{4})-(\d{2})(?:-(\d{2}))?$/.exec(date)
+  if (!match || Number(match[1]) === 0) return null
   const month = Number(match[2])
-  return month >= 1 && month <= 12 ? `${match[1]}${match[2]}` : null
+  if (month < 1 || month > 12) return null
+  if (match[3] && (Number(match[3]) < 1 || Number(match[3]) > new Date(Date.UTC(Number(match[1]), month, 0)).getUTCDate())) return null
+  return `${match[1]}${match[2]}`
 }
 
 export function formatYyyymm(yyyymm: string) {
@@ -76,16 +83,9 @@ export function patternFor(type: PersonType, yyyymm?: string | null) {
   return `${NUMBERING.code}${month}${type}NNN`
 }
 
-export function nextPersonNo(type: PersonType, yyyymm: string): string {
-  const year = Number(yyyymm.slice(0, 4))
-  if (NUMBERING.preset === "short" && (year < 2000 || year > 2099)) {
-    throw new Error("本校简短编号只支持 2000—2099 年；可保持待编号或修正首次年月。")
-  }
-  for (let serial = 1; serial <= 999; serial += 1) {
-    const value = String(serial).padStart(3, "0")
-    if (!logicalClaims.has(`${type}:${yyyymm}:${value}`)) return `${NUMBERING.code}${displayMonth(yyyymm)}${type}${value}`
-  }
-  throw new Error(`${formatYyyymm(yyyymm)} 的${PERSON_TYPE_LABEL[type]}号段已用尽。`)
+export function nextPersonNo(type: PersonType, yyyymm: string, reserved: ReadonlySet<string> = new Set()): string {
+  hydrateClaims()
+  return ledger.next(type, yyyymm, CONFIG, reserved)
 }
 
 export function nextSerialPreview(type: PersonType, yyyymm: string) {
@@ -93,7 +93,7 @@ export function nextSerialPreview(type: PersonType, yyyymm: string) {
 }
 
 export function checkPersonNo(raw: string, type: PersonType, sourceDate?: string): PersonNoCheck {
-  if (raw === "") return { status: "empty" }
+  if (!raw.trim()) return { status: "empty" }
   const example = patternFor(type, "202109").replace("NNN", "028")
   if (/[^A-Za-z0-9]/.test(raw)) return { status: "invalid", issue: "illegal_char", title: "包含非法符号", detail: `编号只能包含 ASCII 大写字母和数字，如 ${example}。` }
   if (/[a-z]/.test(raw)) return { status: "invalid", issue: "lowercase", title: "字母需大写", detail: `请按当前预设填写，如 ${example}。` }
@@ -101,7 +101,7 @@ export function checkPersonNo(raw: string, type: PersonType, sourceDate?: string
   const parsed = parseCurrent(raw, type)
   if (!parsed) return { status: "invalid", issue: "format", title: "格式不符合当前预设", detail: `本校使用${NUMBERING_PRESETS[NUMBERING.preset].label}：${patternFor(type)}，如 ${example}。` }
   const month = Number(parsed.yyyymm.slice(4))
-  if (month < 1 || month > 12) return { status: "invalid", issue: "month", title: "年月不合法", detail: "月份须为 01—12。" }
+  if (month < 1 || month > 12 || Number(parsed.yyyymm.slice(0, 4)) === 0) return { status: "invalid", issue: "month", title: "年月不合法", detail: "年份不能为 0000，月份须为 01—12。" }
   if (parsed.serial === "000") return { status: "invalid", issue: "serial", title: "流水号不合法", detail: "流水号须为 001—999。" }
   if (isIssued(raw, type)) return { status: "invalid", issue: "conflict", title: "编号已存在", detail: `${raw} 已被占用；历史号码不会回收。` }
   const source = sourceDate ? yyyymmOf(sourceDate) : null

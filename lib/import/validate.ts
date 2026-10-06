@@ -4,6 +4,7 @@
 import { CURRENT_SCHOOL } from "@/lib/school/instance"
 import { checkPersonNo, nextPersonNo, yyyymmOf } from "@/lib/school/person-no"
 import { isRealDate, type ParsedFile, type ParsedSheet } from "./parse"
+import { validBackgroundDate, workRangeInvalid } from "@/lib/school/staff-background"
 import { idField, SHEET, sheetTitle, type FieldDef, type SheetCode, type SheetDef } from "./schema"
 import { candidateById, EXISTING_PREFIX, TARGET_SAMPLE } from "./target-sample"
 
@@ -41,6 +42,8 @@ export interface RowResult {
   matched?: string
   reuse?: boolean
   numberPreview?: string
+  numberSource?: string
+  personId?: string
   edited: string[]
 }
 
@@ -257,6 +260,8 @@ export function buildPlan(input: PlanInput): Plan {
           continue
         }
         if (fd.kind === "date" && !isRealDate(v)) push("block", fd, "日期格式错误", `「${v}」不是有效日期，应为 YYYY-MM-DD 的真实日期。`, ["edit"])
+        if (fd.kind === "month" && !yyyymmOf(v)) push("block", fd, "年月格式错误", "请填写真实 YYYY-MM 年月；已有准确具体日期可保留。", ["edit"])
+        if (fd.kind === "partialDate" && !validBackgroundDate(v)) push("block", fd, "时间格式错误", "请填写年份或年月，不补造日期。", ["edit"])
         if (fd.kind === "time" && !/^\d{2}:\d{2}$/.test(v)) push("block", fd, "时间格式错误", `「${v}」应为 HH:MM。`, ["edit"])
         if (fd.kind === "enum" && fd.options && !fd.options.includes(v)) push("block", fd, "不是合法选项", `「${v}」不在可选项中：${fd.options.join(" / ")}。`, ["edit"])
         if (fd.kind === "email" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) push("warn", fd, "邮箱格式可疑", `「${v}」看起来不是有效邮箱；仅作联系字段，不用于合并身份。`, ["edit"])
@@ -302,11 +307,14 @@ export function buildPlan(input: PlanInput): Plan {
         const type = noField.personType!
         const no = values.no ?? ""
         const date = values.firstDate ?? ""
-        if (no === "") {
-          const ym = isRealDate(date) ? yyyymmOf(date) : null
-          if (ym) autoQueue.push({ row, type, yyyymm: ym })
+        if (!no.trim()) {
+          if (values.numberIntent === "自动生成") {
+            const ym = yyyymmOf(date)
+            if (ym) autoQueue.push({ row, type, yyyymm: ym })
+            else push("block", noField, `请填写首次${type === "E" ? "入职" : "入学"}年月`, "自动生成只读取本校首次年月；也可改为暂不编号。", ["edit"])
+          } else if (values.numberIntent === "手工填写") push("block", noField, "未填写编号", "请填写合法编号或改为暂不编号。", ["edit"])
         } else {
-          const c = checkPersonNo(no, type, isRealDate(date) ? date : undefined)
+          const c = checkPersonNo(no, type, yyyymmOf(date) ? date : undefined)
           if (c.status === "invalid") {
             if (c.issue === "conflict") push("block", noField, "编号已存在", `${c.detail} 若是同一人请引用已有；若确为新人员，请改为自动编号。`, ["match-existing", "confirm-new"])
             else push("block", noField, c.title, c.detail, ["edit", "auto-no", "exclude-row"])
@@ -318,6 +326,8 @@ export function buildPlan(input: PlanInput): Plan {
           }
         }
       }
+
+      if (code === "11" && workRangeInvalid(values.workStart, values.workEnd)) push("block", def.fields.find((field) => field.key === "workEnd") ?? null, "结束时间早于开始时间", "请修正对应的过往工作经历。", ["edit"])
 
       // 同名不同身份
       if ((code === "11" || code === "13" || code === "14") && values.name) {
@@ -436,19 +446,15 @@ export function buildPlan(input: PlanInput): Plan {
 
   // 自动编号预览（不占号）
   const used = new Set(personNos.keys())
-  const offsets = new Map<string, number>()
   for (const q of autoQueue) {
-    const k = `${q.type}${q.yyyymm}`
-    const base = Number(nextPersonNo(q.type, q.yyyymm).slice(SCHOOL.length + 6, SCHOOL.length + 9))
-    let n = offsets.get(k) ?? base
-    let candidate = `${SCHOOL}${q.yyyymm}${String(n).padStart(3, "0")}${q.type}`
-    while (used.has(candidate)) {
-      n++
-      candidate = `${SCHOOL}${q.yyyymm}${String(n).padStart(3, "0")}${q.type}`
+    try {
+      const candidate = nextPersonNo(q.type, q.yyyymm, used)
+      used.add(candidate)
+      q.row.numberPreview = candidate
+    } catch (error) {
+      q.row.issues.push({ id: nid(), sheet: q.row.sheet, rowKey: q.row.key, line: q.row.line, field: "no", level: "block", title: "无法生成编号", detail: error instanceof Error ? error.message : "请检查号段。", fixes: ["edit"] })
+      q.row.status = "block"
     }
-    used.add(candidate)
-    offsets.set(k, n + 1)
-    q.row.numberPreview = candidate
     q.row.action = actionText(SHEET[q.row.sheet], q.row)
   }
 
@@ -496,7 +502,7 @@ function actionText(def: SheetDef, row: RowResult) {
   const noun = def.name
   if (def.role === "relation") return `拟新增${noun}`
   if (row.numberPreview) return `拟新增${noun} · 预览编号 ${row.numberPreview}`
-  return `拟新增${noun}`
+  return `拟新增${noun}${(def.code === "11" || def.code === "13") && !row.values.no?.trim() ? " · 待编号" : ""}`
 }
 
 export function dependencyImpact(plan: Plan, code: SheetCode) {

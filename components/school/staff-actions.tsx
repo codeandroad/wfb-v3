@@ -1,9 +1,13 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { DEPARTMENTS, JOB_TITLES, type EducationExperience, type StaffProfile, type WorkExperience } from "@/lib/demo/staff"
+import { type StaffProfile } from "@/lib/demo/staff"
 import { checkPersonNo, nextPersonNo, registerIssued, yyyymmOf } from "@/lib/school/person-no"
-import { updateStaff } from "@/lib/school/staff-store"
+import { updateStaff, useStaffPermission } from "@/lib/school/staff-store"
+import { backgroundError, cleanEducation, cleanWork } from "@/lib/school/staff-background"
+import { StaffFormFields, initialStaffForm, type StaffFormState } from "./staff-form-fields"
+import { useDemo } from "@/lib/demo/store"
+import { PERSONAS } from "@/lib/demo/nav"
 import { ArrowLeft } from "lucide-react"
 import { useState } from "react"
 
@@ -35,6 +39,8 @@ export function StaffActionPanel({
   onDone: (message: string) => void
   onCancel: () => void
 }) {
+  const canManage = useStaffPermission()
+  if (!canManage || action === "resign" && staff.status === "left") return <div className="flex flex-col gap-3"><p role="alert">当前身份无权办理，或该人员已离职。</p><Button variant="outline" onClick={onCancel}>返回详情</Button></div>
   const title = { edit: "编辑资料", number: staff.employeeNo ? "修改或清空工号" : "设置工号", leave: "登记请假", return: "办理销假", resign: "办理离职" }[action]
   return (
     <div className="flex flex-col gap-4">
@@ -72,189 +78,73 @@ function Actions({ onCancel, submitLabel, disabled, danger }: { onCancel: () => 
 }
 
 function EditForm({ staff, onDone, onCancel }: FormProps) {
-  const [f, setF] = useState({
-    department: staff.department,
-    jobTitle: staff.jobTitle,
-    gender: staff.gender,
-    joinedAt: staff.joinedAt ?? "",
-    phone: staff.phone,
-    email: staff.email,
-    englishName: staff.englishName ?? "",
-    educationLevel: staff.educationLevel ?? "未填写",
-    firstWorkAt: staff.firstWorkAt ?? "",
-    educationExperiences: staff.educationExperiences ?? [],
-    workExperiences: staff.workExperiences ?? [],
-    interests: staff.interests ?? [],
-    wechat: staff.wechat ?? "",
-  })
-  const set = <K extends keyof typeof f>(k: K, v: (typeof f)[K]) => setF((p) => ({ ...p, [k]: v }))
-  const emailOk = /^\S+@\S+\.\S+$/.test(f.email.trim())
-  const changed = (Object.keys(f) as (keyof typeof f)[]).filter(
-    (k) => (f[k] || "") !== ((staff[k as keyof StaffProfile] as string | undefined) ?? ""),
-  )
-
-  return (
-    <form
-      className="flex flex-col gap-4"
-      onSubmit={(e) => {
-        e.preventDefault()
-        if (!emailOk || !changed.length) return
-        updateStaff(
-          staff.id,
-          {
-            ...f,
-            joinedAt: f.joinedAt || undefined,
-            englishName: f.englishName.trim() || undefined,
-            educationLevel: f.educationLevel === "未填写" ? undefined : f.educationLevel,
-            firstWorkAt: f.firstWorkAt || undefined,
-            educationExperiences: f.educationExperiences.filter((item) => item.school?.trim() || item.major?.trim() || item.graduation?.trim()),
-            workExperiences: f.workExperiences.filter((item) => item.organization?.trim() || item.role?.trim() || item.start?.trim() || item.end?.trim()),
-            wechat: f.wechat.trim() || undefined,
-            phone: f.phone.trim(),
-            email: f.email.trim(),
-          },
-          `资料更新（${changed.length} 项）`,
-        )
-        onDone("资料已保存")
-      }}
-    >
-      <div className="rounded-lg border border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
-        姓名 <strong className="text-foreground">{staff.name}</strong> · 员工编号{" "}
-        <span className="font-mono text-foreground">{staff.employeeNo}</span>（稳定正式编号，不可在此修改）
-      </div>
-      <div className="grid grid-cols-2 gap-3">
-        <Field label="部门">
-          <select className={inputClass} value={f.department} onChange={(e) => set("department", e.target.value)}>
-            {DEPARTMENTS.map((d) => (
-              <option key={d}>{d}</option>
-            ))}
-          </select>
-        </Field>
-        <Field label="职务">
-          <select className={inputClass} value={f.jobTitle} onChange={(e) => set("jobTitle", e.target.value)}>
-            {JOB_TITLES.map((d) => (
-              <option key={d}>{d}</option>
-            ))}
-          </select>
-        </Field>
-        <Field label="性别">
-          <select
-            className={inputClass}
-            value={f.gender}
-            onChange={(e) => set("gender", e.target.value as StaffProfile["gender"])}
-          >
-            <option>男</option>
-            <option>女</option>
-            <option>未透露</option>
-          </select>
-        </Field>
-        <Field label="首次正式入职">
-          <input type="date" className={inputClass} value={f.joinedAt} onChange={(e) => set("joinedAt", e.target.value)} />
-        </Field>
-        <Field label="手机">
-          <input className={inputClass} value={f.phone} onChange={(e) => set("phone", e.target.value)} />
-        </Field>
-        <Field label="邮箱">
-          <input
-            type="email"
-            className={inputClass}
-            value={f.email}
-            aria-invalid={!emailOk}
-            onChange={(e) => set("email", e.target.value)}
-          />
-        </Field>
-        <Field label="英文名／常用名（可选）">
-          <input className={inputClass} value={f.englishName} onChange={(e) => set("englishName", e.target.value)} />
-        </Field>
-        <Field label="微信号（可选）">
-          <input className={inputClass} value={f.wechat} onChange={(e) => set("wechat", e.target.value)} />
-        </Field>
-        <Field label="学历（可选）">
-          <select className={inputClass} value={f.educationLevel} onChange={(e) => set("educationLevel", e.target.value)}>
-            {["未填写", "高中/中专及以下", "大专", "本科", "硕士研究生", "博士研究生", "其他"].map((item) => <option key={item}>{item}</option>)}
-          </select>
-        </Field>
-        <Field label="首次参加工作年月（可选）" hint="个人第一次参加工作，不用于本校工号。">
-          <input type="month" className={inputClass} value={f.firstWorkAt} onChange={(e) => set("firstWorkAt", e.target.value)} />
-        </Field>
-      </div>
-
-      <ExperienceEditor
-        title="教育经历"
-        items={f.educationExperiences}
-        onChange={(items) => set("educationExperiences", items)}
-        kind="education"
-      />
-      <ExperienceEditor
-        title="过往工作经历"
-        items={f.workExperiences}
-        onChange={(items) => set("workExperiences", items)}
-        kind="work"
-      />
-      {!emailOk ? <p className="text-xs text-destructive">邮箱格式不正确。</p> : null}
-      <p className="text-xs text-muted-foreground">部门、职务变化不会重新编号，也不改变系统角色或已安排的职责。</p>
-      <Actions onCancel={onCancel} submitLabel={changed.length ? `保存 ${changed.length} 项修改` : "无修改"} disabled={!emailOk || !changed.length} />
-    </form>
-  )
-}
-
-function NumberForm({ staff, onDone, onCancel }: FormProps) {
-  const [mode, setMode] = useState<"manual" | "auto" | "clear">(staff.employeeNo ? "manual" : "auto")
-  const [value, setValue] = useState("")
-  const [joinedAt, setJoinedAt] = useState(staff.joinedAt?.slice(0, 7) ?? "")
-  const [note, setNote] = useState("")
-  const check = checkPersonNo(value, "E", joinedAt)
-  const valid = mode === "clear" ? !!staff.employeeNo : mode === "auto" ? !!yyyymmOf(joinedAt) : check.status === "valid"
-  return <form className="space-y-4" onSubmit={(event) => {
+  const initial: StaffFormState = { ...initialStaffForm(), name: staff.name, department: staff.department || null, jobTitle: staff.jobTitle || null, gender: staff.gender, joinedAt: staff.joinedAt ?? "", phone: staff.phone, email: staff.email, englishName: staff.englishName ?? "", educationLevel: staff.educationLevel ?? "未填写", firstWorkAt: staff.firstWorkAt ?? "", educationExperiences: staff.educationExperiences ?? [], workExperiences: staff.workExperiences ?? [], interests: staff.interests ?? [], wechat: staff.wechat ?? "" }
+  const [state, setState] = useState(initial)
+  const set = <K extends keyof StaffFormState>(key: K, value: StaffFormState[K]) => setState((current) => ({ ...current, [key]: value }))
+  const canManage = useStaffPermission()
+  const error = backgroundError(state.firstWorkAt, state.educationExperiences, state.workExperiences)
+  const changed = JSON.stringify({ ...state, touched: false }) !== JSON.stringify(initial)
+  const valid = !!state.name.trim() && (!state.email.trim() || /^\S+@\S+\.\S+$/.test(state.email.trim())) && (!state.joinedAt || !!yyyymmOf(state.joinedAt)) && !error
+  return <form className="flex flex-col gap-4" onSubmit={(event) => {
     event.preventDefault()
-    if (!valid) return
-    const next = mode === "clear" ? "" : mode === "auto" ? nextPersonNo("E", yyyymmOf(joinedAt)!) : value
-    if (next && next === staff.employeeNo) return
-    if (next) registerIssued(next, "E")
-    updateStaff(staff.id, { employeeNo: next, joinedAt: joinedAt || staff.joinedAt }, `${mode === "clear" ? "清空" : staff.employeeNo ? "修改" : "设置"}工号：${staff.employeeNo || "待编号"} → ${next || "待编号"}${note.trim() ? `（${note.trim()}）` : ""}`)
-    onDone(mode === "clear" ? "工号已清空，历史号码仍保留" : "工号已保存")
+    set("touched", true)
+    if (!canManage || !valid || !changed) return
+    updateStaff(staff.id, {
+      name: state.name.trim(), department: state.department ?? "", jobTitle: state.jobTitle ?? "", gender: state.gender === "男" || state.gender === "女" ? state.gender : "未透露",
+      joinedAt: state.joinedAt || undefined, email: state.email.trim(), phone: state.phone.trim(), englishName: state.englishName.trim() || undefined,
+      educationLevel: state.educationLevel === "未填写" ? undefined : state.educationLevel, firstWorkAt: state.firstWorkAt || undefined,
+      educationExperiences: cleanEducation(state.educationExperiences), workExperiences: cleanWork(state.workExperiences), wechat: state.wechat.trim() || undefined,
+      interests: [...new Set([...state.interests, ...state.interestExtra.split(/[,，]/).map((item) => item.trim()).filter(Boolean)])],
+    }, "资料更新")
+    onDone("资料已保存；工号与任职状态保持不变")
   }}>
-    <div className="rounded-lg border border-border bg-muted/30 p-3 text-xs text-muted-foreground">目标人员：<strong className="text-foreground">{staff.name}</strong> · 当前工号 <span className="font-mono text-foreground">{staff.employeeNo || "待编号"}</span></div>
-    <div className="flex flex-wrap gap-2">{(["manual", "auto", ...(staff.employeeNo ? ["clear" as const] : [])] as ("manual" | "auto" | "clear")[]).map((item) => <Button key={item} type="button" size="sm" variant={mode === item ? "default" : "outline"} onClick={() => setMode(item)}>{item === "manual" ? "手工填写" : item === "auto" ? "自动生成" : "清空工号"}</Button>)}</div>
-    {mode === "manual" ? <Field label="新工号"><input className={inputClass} value={value} onChange={(event) => setValue(event.target.value)} placeholder="按当前学校预设填写" />{value && check.status === "invalid" ? <span className="text-xs text-destructive">{check.detail}</span> : null}</Field> : null}
-    {mode === "auto" ? <Field label="首次入职年月"><input type="month" className={inputClass} value={joinedAt} onChange={(event) => setJoinedAt(event.target.value)} /></Field> : null}
-    {mode === "clear" ? <p className="text-xs text-muted-foreground">确认后当前工号变为待编号。原号码继续保留占用，不删除人员、账号、职责或业务记录。</p> : null}
-    <Field label="备注（可选）"><input className={inputClass} value={note} onChange={(event) => setNote(event.target.value)} /></Field>
-    <Actions onCancel={onCancel} submitLabel={mode === "clear" ? "确认清空" : "确认保存"} disabled={!valid} danger={mode === "clear"} />
+    <p className="rounded-lg border border-border bg-muted/30 p-3 text-xs text-muted-foreground">当前工号 <span className="font-mono text-foreground">{staff.employeeNo || "待编号"}</span> · 本次仅保存资料，工号通过单独授权操作维护。</p>
+    <StaffFormFields state={state} set={set} hideNumber />
+    {error ? <p role="alert" className="text-sm text-destructive">{error}</p> : null}
+    <Actions onCancel={onCancel} submitLabel="保存修改" disabled={!canManage || !valid || !changed} />
   </form>
 }
 
-function ExperienceEditor({ title, items, onChange, kind }: { title: string; items: EducationExperience[] | WorkExperience[]; onChange: (items: never[]) => void; kind: "education" | "work" }) {
-  const add = () => onChange([...items, { id: crypto.randomUUID() }] as never[])
-  const patch = (id: string, values: Record<string, string>) => onChange(items.map((item) => item.id === id ? { ...item, ...values } : item) as never[])
-  const remove = (id: string) => onChange(items.filter((item) => item.id !== id) as never[])
-  return (
-    <section className="space-y-2 rounded-lg border border-border p-3">
-      <div className="flex items-center justify-between gap-2">
-        <h4 className="text-[13px] font-semibold">{title}</h4>
-        <Button type="button" size="xs" variant="outline" onClick={add}>添加一条</Button>
-      </div>
-      {items.map((item) => {
-        const education = item as EducationExperience
-        const work = item as WorkExperience
-        return <div key={item.id} className="grid grid-cols-2 gap-2 rounded-md bg-muted/30 p-2">
-          {kind === "education" ? <>
-            <input className={inputClass} value={education.school ?? ""} onChange={(e) => patch(item.id, { school: e.target.value })} placeholder="学校 / 院校" />
-            <input className={inputClass} value={education.major ?? ""} onChange={(e) => patch(item.id, { major: e.target.value })} placeholder="专业" />
-            <input className={inputClass} value={education.graduation ?? ""} onChange={(e) => patch(item.id, { graduation: e.target.value })} placeholder="毕业时间，如 2014 或 2014-06" />
-          </> : <>
-            <input className={inputClass} value={work.organization ?? ""} onChange={(e) => patch(item.id, { organization: e.target.value })} placeholder="工作单位" />
-            <input className={inputClass} value={work.role ?? ""} onChange={(e) => patch(item.id, { role: e.target.value })} placeholder="当时岗位" />
-            <input className={inputClass} value={work.start ?? ""} onChange={(e) => patch(item.id, { start: e.target.value })} placeholder="开始，如 2018-09" />
-            <input className={inputClass} value={work.end ?? ""} onChange={(e) => patch(item.id, { end: e.target.value })} placeholder="结束（可空）" />
-          </>}
-          <button type="button" onClick={() => remove(item.id)} className="w-fit text-xs text-muted-foreground hover:text-destructive">移除</button>
-          {kind === "work" && work.start && work.end && work.end < work.start ? <p className="text-xs text-destructive">结束时间不能早于开始时间。</p> : null}
-        </div>
-      })}
-      {!items.length ? <p className="text-xs text-muted-foreground">尚未填写；可留空。</p> : null}
-    </section>
-  )
+function NumberForm({ staff, onDone, onCancel }: FormProps) {
+  const canManage = useStaffPermission()
+  const demo = useDemo()
+  const [mode, setMode] = useState<"manual" | "auto" | "clear">("manual")
+  const [value, setValue] = useState("")
+  const [joinedAt, setJoinedAt] = useState(staff.joinedAt?.slice(0, 7) ?? "")
+  const [note, setNote] = useState("")
+  const [confirmed, setConfirmed] = useState(false)
+  const [failure, setFailure] = useState("")
+  let error = ""
+  let next = mode === "clear" ? "" : value
+  if (mode === "auto") {
+    try { next = nextPersonNo("E", yyyymmOf(joinedAt) ?? "") } catch (cause) { error = cause instanceof Error ? cause.message : "无法生成工号。" }
+  } else if (mode === "manual") {
+    const check = checkPersonNo(value, "E", staff.joinedAt)
+    error = value === staff.employeeNo ? "新旧工号相同，无需保存。" : check.status === "invalid" ? check.detail : check.status === "valid" && check.monthMismatch ? "工号年月与首次入职年月不一致，请修正工号或先编辑普通资料。" : check.status === "empty" ? "请填写新工号。" : ""
+  }
+  const valid = canManage && !error && (mode !== "clear" || !!staff.employeeNo)
+  const change = () => { setConfirmed(false); setFailure("") }
+  return <form className="flex flex-col gap-4" onSubmit={(event) => {
+    event.preventDefault()
+    if (!valid || !confirmed) return
+    try {
+      if (mode === "manual") { const check = checkPersonNo(value, "E", staff.joinedAt); if (check.status !== "valid" || check.monthMismatch) throw new Error("工号校验未通过，请重新检查。") }
+      if (mode === "auto" && nextPersonNo("E", yyyymmOf(joinedAt)!) !== next) throw new Error("号段已变化，请重新确认新号。")
+      if (next) registerIssued(next, "E", staff.id)
+      updateStaff(staff.id, { employeeNo: next, ...(mode === "auto" && joinedAt !== staff.joinedAt?.slice(0, 7) ? { joinedAt } : {}) }, `${mode === "clear" ? "清空" : staff.employeeNo ? "修改" : "设置"}工号：${staff.employeeNo || "待编号"} → ${next || "待编号"}；操作者 ${PERSONAS[demo.persona].label}；${new Date().toISOString()}${note.trim() ? `；备注：${note.trim()}` : ""}`)
+      onDone(mode === "clear" ? "工号已清空，历史号码仍保留" : "工号已保存，内部ID与业务关系不变")
+    } catch (cause) { setFailure(cause instanceof Error ? cause.message : "保存失败，请重试。"); setConfirmed(false) }
+  }}>
+    <p className="rounded-lg border border-border bg-muted/30 p-3 text-sm">目标人员：<strong>{staff.name}</strong> · 当前工号 <span className="font-mono">{staff.employeeNo || "待编号"}</span></p>
+    <div className="flex flex-wrap gap-2">{(["manual", "auto", ...(staff.employeeNo ? ["clear" as const] : [])] as const).map((item) => <Button key={item} type="button" size="sm" variant={mode === item ? "default" : "outline"} onClick={() => { setMode(item); change() }}>{item === "manual" ? "手工填写" : item === "auto" ? "自动生成" : "清空工号"}</Button>)}</div>
+    {mode === "manual" ? <Field label="新工号"><input className={inputClass} value={value} onChange={(event) => { setValue(event.target.value); change() }} placeholder="如 TG2108E012" /></Field> : null}
+    {mode === "auto" ? <Field label="首次入职年月"><input type="month" className={inputClass} value={joinedAt} onChange={(event) => { setJoinedAt(event.target.value); change() }} /></Field> : null}
+    {error || failure ? <p role="alert" className="text-sm text-destructive">{failure || error}</p> : <p className="text-sm">确认结果：<span className="font-mono">{staff.employeeNo || "待编号"} → {next || "待编号"}</span></p>}
+    <p className="text-xs text-muted-foreground">历史号码继续保留，不删除人员、账号或业务关系；已下载文件不会自动更新。</p>
+    <Field label="备注（可选）"><input className={inputClass} value={note} onChange={(event) => setNote(event.target.value)} /></Field>
+    <label className="flex items-start gap-2 text-sm"><input type="checkbox" checked={confirmed} disabled={!valid} onChange={(event) => setConfirmed(event.target.checked)} />确认对 {staff.name} {mode === "clear" ? "清空工号" : "保存上述工号"}</label>
+    <Actions onCancel={onCancel} submitLabel={mode === "clear" ? "确认清空" : "确认保存"} disabled={!valid || !confirmed} danger={mode === "clear"} />
+  </form>
 }
 
 function LeaveForm({ staff, onDone, onCancel }: FormProps) {
@@ -325,7 +215,8 @@ function ResignForm({ staff, onDone, onCancel }: FormProps) {
   const [disableAccount, setDisableAccount] = useState(staff.accountStatus !== "none")
   const [confirmName, setConfirmName] = useState("")
   const active = staff.duties.filter((d) => d.status !== "ended")
-  const ok = confirmName.trim() === staff.name
+  const canManage = useStaffPermission()
+  const ok = canManage && staff.status !== "left" && !!date && confirmName.trim() === staff.name
   return (
     <form
       className="flex flex-col gap-4"

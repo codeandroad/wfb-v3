@@ -27,6 +27,8 @@ import {
 import { StaffActionPanel, type StaffAction } from "./staff-actions"
 import { useState } from "react"
 import { FormalNoBadge } from "./person-no-field"
+import { useStaffPermission } from "@/lib/school/staff-store"
+import { personNoMonth, yyyymmOf } from "@/lib/school/person-no"
 
 interface Props {
   staff: StaffProfile
@@ -43,6 +45,9 @@ export function StaffDetailSheet({ staff, endedDutyIds, onClose, onOpenDuty, onA
   const { push } = useToast()
   const [tab, setTab] = useState("profile")
   const [action, setAction] = useState<StaffAction | null>(null)
+  const canManage = useStaffPermission()
+  const numberMonth = personNoMonth(staff.employeeNo, "E")
+  const monthMismatch = numberMonth && staff.joinedAt && yyyymmOf(staff.joinedAt) !== numberMonth
 
   const duties = staff.duties.map((d) =>
     endedDutyIds.has(d.id) || staff.status === "left" ? { ...d, status: "ended" as const } : d,
@@ -55,13 +60,13 @@ export function StaffDetailSheet({ staff, endedDutyIds, onClose, onOpenDuty, onA
       open
       onClose={onClose}
       title={staff.name}
-      desc={`${staff.employeeNo || "待编号"} · ${staff.department}／${staff.jobTitle}`}
+      desc={`${staff.employeeNo || "待编号"} · ${[staff.department, staff.jobTitle].filter(Boolean).join("／") || "未填写部门 / 职务"}`}
       width="max-w-xl"
       footer={
         action ? undefined : (
         <div className="flex items-center justify-between gap-2">
           <div className="flex flex-wrap items-center gap-1">
-            <Button variant="ghost" size="sm" onClick={() => setAction("edit")}>
+            <Button variant="ghost" size="sm" disabled={!canManage} onClick={() => canManage && setAction("edit")}>
               <Pencil className="size-3.5" />
               编辑资料
             </Button>
@@ -154,19 +159,19 @@ export function StaffDetailSheet({ staff, endedDutyIds, onClose, onOpenDuty, onA
               <span className="text-xs text-muted-foreground">员工编号</span>
               <span className="font-mono text-[13px] font-semibold tracking-wide">{staff.employeeNo || "待编号"}</span>
               {staff.employeeNo ? <FormalNoBadge /> : null}
-              <Button type="button" size="xs" variant="outline" className="ml-auto" onClick={() => setAction("number")}>
+              <Button type="button" size="xs" variant="outline" className="ml-auto" disabled={!canManage} onClick={() => canManage && setAction("number")}>
                 {staff.employeeNo ? "修改 / 清空" : "设置工号"}
               </Button>
               <span className="basis-full text-xs text-muted-foreground/70">
                 普通资料编辑不会改号；授权人员可通过明确的设置、修改或清空操作维护，历史号码不回收。
               </span>
             </div>
-            <Meta label="部门" value={staff.department} />
-            <Meta label="职务" value={staff.jobTitle} />
+            <Meta label="部门" value={staff.department || "未填写"} muted={!staff.department} />
+            <Meta label="职务" value={staff.jobTitle || "未填写"} muted={!staff.jobTitle} />
             <Meta label="英文名／常用名" value={staff.englishName || "未填写"} muted={!staff.englishName} />
             <Meta label="首次入职年月" value={staff.joinedAt?.slice(0, 7) ?? "未填写"} muted={!staff.joinedAt} />
             <Meta label="性别" value={staff.gender} />
-            <Meta label="学历" value={staff.educationLevel || "未填写"} muted={!staff.educationLevel} />
+            {canManage ? <Meta label="学历" value={staff.educationLevel || "未填写"} muted={!staff.educationLevel} /> : null}
             <Meta label="在职状态" value={STAFF_STATUS_LABEL[staff.status]} />
           </div>
 
@@ -183,7 +188,8 @@ export function StaffDetailSheet({ staff, endedDutyIds, onClose, onOpenDuty, onA
             </div>
           </div>
 
-          <MoreInfo staff={staff} />
+          {monthMismatch ? <p className="text-xs text-muted-foreground">工号年月与首次入职年月不一致；资料已保留，工号不会自动变化。</p> : null}
+          {canManage ? <MoreInfo staff={staff} /> : null}
 
           <div>
             <p className="mb-2 text-[13px] font-semibold">任职资格</p>
@@ -197,7 +203,7 @@ export function StaffDetailSheet({ staff, endedDutyIds, onClose, onOpenDuty, onA
               <p className="text-[13px] text-muted-foreground">当前无任职资格。</p>
             )}
             <p className="mt-2 text-xs text-muted-foreground">
-              人事侧的合法资格，是安排职责的前提；本身不等于已有实际负责对象，也不等于账号已开通。
+              人事侧的合法资格，是安排职责的前提；本身不���于已有实际负责对象，也不等于账号已开通。
             </p>
           </div>
 
@@ -300,7 +306,7 @@ export function StaffDetailSheet({ staff, endedDutyIds, onClose, onOpenDuty, onA
           {staff.status !== "left" ? (
             <div className="mt-4 flex items-center justify-between gap-3 rounded-lg border border-border p-3">
               <div><p className="text-[13px] font-medium">任职管理</p><p className="text-xs text-muted-foreground">低频人事操作；进入入口不会直接办理离职。</p></div>
-              <Button variant="outline" size="sm" className="text-destructive hover:text-destructive" onClick={() => setAction("resign")}>
+              <Button variant="outline" size="sm" disabled={!canManage} onClick={() => canManage && staff.status !== "left" && setAction("resign")}>
                 <LogOut className="size-3.5" />办理离职
               </Button>
             </div>

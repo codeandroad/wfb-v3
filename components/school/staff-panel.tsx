@@ -27,6 +27,7 @@ import { ListToolbar, type FilterGroup, type FilterState } from "./list-toolbar"
 import { StaffCreateModal } from "./staff-create-modal"
 import { StaffDetailSheet } from "./staff-detail-sheet"
 import { useStaffList } from "@/lib/school/staff-store"
+import { historicalNumbers } from "@/lib/school/person-no"
 
 const STAFF_DEPTS = ["数学组", "物理组", "英语组", "教务处", "行政部"]
 const STAFF_TITLES = ["教师", "教务主任", "行政助理"]
@@ -97,7 +98,7 @@ export function StaffPanel() {
     const fAcct = filters.acct ?? []
     const fRole = filters.role ?? []
     return staffList.filter((s) => {
-      const matchQ = !q || s.name.includes(q) || s.employeeNo.includes(q) || (s.username ?? "").includes(q)
+      const matchQ = !q || s.name.includes(q) || s.employeeNo.includes(q) || (s.englishName ?? "").includes(q) || (s.username ?? "").includes(q) || historicalNumbers(s.id).some((no) => no.includes(q))
       const matchStatus = !fStatus.length || fStatus.includes(s.status)
       const matchDuty = !fDuty.length || s.duties.some((d) => fDuty.includes(d.type) && d.status !== "ended")
       const matchDept = !fDept.length || fDept.includes(s.department)

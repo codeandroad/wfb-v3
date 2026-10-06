@@ -34,12 +34,12 @@ export function sampleBuffer(id: string) {
   return b
 }
 
-export function WorkbookFlow({ ref, onHome, onOpenLog }: { ref?: Ref<FlowHandle>; onHome: () => void; onOpenLog: (id: string) => void }) {
+export function WorkbookFlow({ ref, initialFocus, onHome, onOpenLog }: { ref?: Ref<FlowHandle>; initialFocus?: SheetCode[]; onHome: () => void; onOpenLog: (id: string) => void }) {
   const [file, setFile] = useState<ParsedFile | null>(null)
   const [failure, setFailure] = useState<{ name: string; kind: ParseFailure["kind"]; message: string } | null>(null)
   const [loading, setLoading] = useState<string | null>(null)
   const [step, setStep] = useState<FlowStep>("file")
-  const [focus, setFocus] = useState<SheetCode[] | undefined>()
+  const [focus, setFocus] = useState<SheetCode[] | undefined>(initialFocus)
   const [hint, setHint] = useState<string | undefined>()
   const [sheetState, setSheetState] = useState<Partial<Record<SheetCode, SheetState>>>({})
   const [overrides, setOverrides] = useState<Record<string, string>>({})

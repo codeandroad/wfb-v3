@@ -45,7 +45,7 @@ export function SearchSelect({
   const [query, setQuery] = useState("")
   const rootRef = useRef<HTMLDivElement>(null)
 
-  const selected = options.find((o) => o.value === value) ?? null
+  const selected = options.find((o) => o.value === value) ?? (value ? { value, label: value } : null)
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()

@@ -10,6 +10,9 @@ import { buildReportBytes, downloadBytes } from "@/lib/import/workbook-out"
 import { CheckCircle2, CircleAlert, Clock } from "lucide-react"
 import { ExampleTag, Notice, Stat } from "./shared"
 import type { ResultKind } from "./step-confirm"
+import { commitPeople } from "@/lib/import/commit-people"
+import { useStaffPermission } from "@/lib/school/staff-store"
+import { useState } from "react"
 
 export function StepResult({
   file, plan, kind, batchId, onChangeKind, onOpenLog, onRestart, onBackToPreview,
@@ -23,8 +26,10 @@ export function StepResult({
   onRestart: () => void
   onBackToPreview: () => void
 }) {
+  const canManage = useStaffPermission()
+  const [failure, setFailure] = useState("")
   const t = plan.totals
-  const mapping = plan.sheets.flatMap((s) => s.rows.filter((r) => r.numberPreview && r.status !== "excluded").map((r) => ({ s: s.code, id: r.values.id, name: r.values.name, no: r.numberPreview! })))
+  const mapping = plan.sheets.flatMap((s) => s.rows.filter((r) => r.numberPreview && r.status !== "excluded").map((r) => ({ s: s.code, id: r.values.id, name: r.values.name, no: r.numberPreview!, source: r.numberSource, personId: r.personId })))
   const staffNew = plan.sheets.find((s) => s.code === "11" && s.state === "import")?.rows.filter((r) => r.status !== "excluded" && !r.reuse).length ?? 0
   const hasTimetable = plan.sheets.some((s) => s.code === "27" && s.state === "import")
   const report = () => downloadBytes(buildReportBytes(file, plan), `${batchId}_处理报告.xlsx`)
@@ -50,11 +55,15 @@ export function StepResult({
       <Card>
         <CardHeader title={<span className="flex items-center gap-2"><Clock className="size-4 text-[#2a5b6e]" aria-hidden />结果待查询 <ExampleTag /></span>} desc={`批次 ${batchId}`} />
         <div className="flex flex-col gap-3 p-5">
+          {failure ? <Notice tone="danger">{failure}</Notice> : null}
           <Notice tone="info">提交后连接中断，本批结果尚未确认（示例）。请不要重复提交：同一批次查询后会得到同一结果，不会新建批次。</Notice>
           <div className="flex flex-wrap gap-2">
             <Button
               onClick={() => {
-                updateLog(batchId, { status: "done", endedAt: nowText(), result: "查询后确认：完成（结果示例）" })
+                try {
+                  const mappings = commitPeople(plan, batchId, canManage)
+                  updateLog(batchId, { status: "done", endedAt: nowText(), mappings, result: "查询后确认：共享会话模拟完成" })
+                } catch (error) { setFailure(error instanceof Error ? error.message : "查询失败，请重试。"); return }
                 onChangeKind("done")
               }}
             >
@@ -69,7 +78,7 @@ export function StepResult({
 
   return (
     <Card>
-      <CardHeader title={<span className="flex items-center gap-2"><CheckCircle2 className="size-4 text-[#256a49]" aria-hidden />导入完成 <ExampleTag /></span>} desc={`批次 ${batchId} · 未接真实后台，以下为基于本批计划的结果示例，未写入学校`} />
+      <CardHeader title={<span className="flex items-center gap-2"><CheckCircle2 className="size-4 text-[#256a49]" aria-hidden />导入完成 <ExampleTag /></span>} desc={`批次 ${batchId} · 教职工和编号已写入共享会话原型；其他业务关系仍为结果模拟，未接正式后台`} />
       <div className="flex flex-col gap-4 p-5">
         <div className="grid grid-cols-2 gap-2 md:grid-cols-5">
           <Stat label="新增对象" value={t.newObjects} />
@@ -81,7 +90,7 @@ export function StepResult({
 
         {mapping.length ? (
           <section aria-labelledby="map-h" className="flex flex-col gap-2">
-            <h3 id="map-h" className="flex items-center gap-2 text-[13px] font-semibold">编号映射回执 <ExampleTag>示例：真实编号由后端分配</ExampleTag></h3>
+            <h3 id="map-h" className="flex items-center gap-2 text-[13px] font-semibold">编号映射回执 <ExampleTag>共享会话模拟，非正式后台编号</ExampleTag></h3>
             <div className="max-h-64 overflow-auto rounded-lg border border-border">
               <table className="w-full text-[13px]">
                 <thead className="sticky top-0 bg-muted text-xs text-muted-foreground">
@@ -98,7 +107,7 @@ export function StepResult({
                       <td className="px-3 py-1.5">{sheetTitle(m.s)}</td>
                       <td className="px-3 py-1.5 font-mono text-xs">{m.id}</td>
                       <td className="px-3 py-1.5">{m.name}</td>
-                      <td className="px-3 py-1.5 font-mono text-xs">{m.no}</td>
+                      <td className="px-3 py-1.5 text-xs"><span className="font-mono">{m.no}</span><span className="block text-muted-foreground">{m.source} · {m.personId}</span></td>
                     </tr>
                   ))}
                 </tbody>

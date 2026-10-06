@@ -9,7 +9,7 @@ export type SheetCode =
   | "11" | "12" | "13" | "14" | "15" | "16" | "17" | "18" | "19" | "20" | "21"
   | "22" | "23" | "24" | "25" | "26" | "27" | "90" | "91" | "92"
 
-export type FieldKind = "id" | "text" | "date" | "enum" | "ref" | "personNo" | "phone" | "email" | "time"
+export type FieldKind = "id" | "text" | "date" | "partialDate" | "month" | "enum" | "ref" | "personNo" | "phone" | "email" | "time"
 
 export interface FieldDef {
   key: string
@@ -20,6 +20,7 @@ export interface FieldDef {
   options?: string[]
   note?: string
   personType?: "S" | "E"
+  aliases?: string[]
 }
 
 export type GroupId = "base" | "catalog" | "people" | "admin" | "teaching" | "family" | "prep" | "timetable" | "meta"
@@ -101,10 +102,15 @@ export const SHEETS: SheetDef[] = [
   {
     code: "11", name: "教职工", group: "people", role: "object", unit: "名教职工", guard: "不自动开户或赋教师角色；同名不可合并",
     fields: [
-      id("人员标识"), f("name", "姓名", "text", req), f("firstDate", "首次正式入职日期", "date", req), f("termDate", "本次任职日期", "date"),
-      f("no", "员工编号", "personNo", { personType: "E", note: "留空＝预览自动编号（不占号）" }),
+      id("人员标识"), f("name", "姓名", "text", req), f("firstDate", "首次入职年月", "month", { aliases: ["首次正式入职日期", "首次入职日期"], note: "本校首次入职，可空；历史具体日期原样保留" }),
+      f("no", "员工编号", "personNo", { personType: "E", note: "留空默认待编号；明确选择自动生成才发号" }),
+      f("numberIntent", "编号方式", "enum", { options: ["暂不编号", "自动生成", "手工填写"] }),
       f("dept", "部门引用", "ref", { ref: "04" }), f("title", "职务引用", "ref", { ref: "05" }),
       f("email", "邮箱", "email"), f("phone", "电话", "phone"),
+      f("englishName", "英文名/常用名", "text", { aliases: ["英文名", "常用名", "英文名／常用名"] }), f("educationLevel", "学历", "text"),
+      f("school", "毕业学校", "text", { aliases: ["就读院校", "院校"] }), f("major", "专业", "text"), f("graduation", "毕业时间", "partialDate"),
+      f("firstWorkAt", "首次参加工作年月", "partialDate", { aliases: ["首次参加工作时间"] }),
+      f("organization", "过往工作单位", "text"), f("pastRole", "过往岗位", "text"), f("workStart", "过往工作开始", "partialDate"), f("workEnd", "过往工作结束", "partialDate"),
     ],
   },
   {
@@ -113,7 +119,7 @@ export const SHEETS: SheetDef[] = [
   },
   {
     code: "13", name: "学生", group: "people", role: "object", unit: "名学生", guard: "不自动猜生日/国籍或课程路径；行政班关系独立",
-    fields: [id("学生标识"), f("name", "姓名", "text", req), f("firstDate", "首次正式入学日期", "date", req), f("no", "学生编号", "personNo", { personType: "S", note: "留空＝预览自动编号（不占号）" }), f("grade", "年级", "text")],
+    fields: [id("学生标识"), f("name", "姓名", "text", req), f("firstDate", "首次正式入学日期", "date", req), f("no", "学生编号", "personNo", { personType: "S", note: "留空默认待编号；明确选择自动生成才发号" }), f("numberIntent", "编号方式", "enum", { options: ["暂不编号", "自动生成", "手工填写"] }), f("grade", "年级", "text")],
   },
   {
     code: "14", name: "家长监护人", group: "family", role: "object", unit: "位家长/监护人", guard: "一个真实家长可被多名学生引用；不自动开家长账号",

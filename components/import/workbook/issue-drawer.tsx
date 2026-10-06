@@ -45,6 +45,7 @@ export function IssueDrawer({ plan, rowKey, onClose, actions }: { plan: Plan; ro
       document.getElementById(`fix-${row.key}-${issue.field ?? def.fields[0].key}`)?.focus()
     } else if (fix === "auto-no") {
       actions.setValue(row.key, "no", "")
+      actions.setValue(row.key, "numberIntent", "自动生成")
     } else if (fix === "confirm-new") {
       actions.setValue(row.key, NEW_FIELD, "1")
       if (issue.field === "no") actions.setValue(row.key, "no", "")
@@ -162,6 +163,8 @@ export function IssueDrawer({ plan, rowKey, onClose, actions }: { plan: Plan; ro
             </Button>
           </section>
         ) : null}
+
+        {(row.sheet === "11" || row.sheet === "13") && !row.reuse ? <section className="flex flex-col gap-2"><h3 className="text-sm font-semibold">本行编号方式</h3><p className="text-xs text-muted-foreground">留空默认待编号；自动生成只读取本校首次年月。</p><div className="flex flex-wrap gap-2">{["暂不编号", "自动生成"].map((intent) => <Button key={intent} size="sm" variant="outline" onClick={() => { actions.setValue(row.key, "no", ""); actions.setValue(row.key, "numberIntent", intent) }}>{intent === "暂不编号" ? "清空并暂不编号" : "明确自动生成"}</Button>)}</div></section> : null}
 
         <section aria-labelledby="fields-h" className="flex flex-col gap-2">
           <h3 id="fields-h" className="text-[13px] font-semibold">
