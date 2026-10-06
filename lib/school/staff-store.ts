@@ -48,6 +48,7 @@ export type StaffPatch = Partial<
     | "statusNote"
     | "accountStatus"
     | "englishName"
+    | "birthplace"
     | "educationLevel"
     | "firstWorkAt"
     | "educationExperiences"

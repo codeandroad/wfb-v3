@@ -511,6 +511,7 @@ export interface HistoryItem {
 export interface EducationExperience {
   id: string
   school?: string
+  educationLevel?: string
   major?: string
   graduation?: string // YYYY 或 YYYY-MM，保留用户实际知道的精度
 }
@@ -530,7 +531,7 @@ export interface StaffProfile {
   department: string
   jobTitle: string
   gender: "男" | "女" | "未透露"
-  joinedAt?: string // 本校首次入职年月，YYYY-MM 或历史完整日期
+  joinedAt?: string // 本校首次入职日期，YYYY-MM-DD；兼容历史 YYYY-MM
   phone: string
   email: string
   status: StaffStatus
@@ -544,6 +545,7 @@ export interface StaffProfile {
   history: HistoryItem[]
   // 更多资料（可选，个人补充）——按字段权限与个人显示设置展示，列表默认不展示
   englishName?: string
+  birthplace?: string
   educationLevel?: string
   firstWorkAt?: string // 首次参加工作年月；不用于本校工号
   educationExperiences?: EducationExperience[]

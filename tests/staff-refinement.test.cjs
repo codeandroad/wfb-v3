@@ -10,7 +10,7 @@ for (const extension of [".ts", ".tsx"]) require.extensions[extension] = (module
 const data = new Map()
 global.window = { sessionStorage: { getItem: (key) => data.get(key) ?? null, setItem: (key, value) => data.set(key, value) } }
 const { createNumberingLedger, parseNumber, numberingForSchool } = require("../lib/school/numbering-ledger.ts")
-const { backgroundError, cleanEducation, cleanWork, workRangeInvalid } = require("../lib/school/staff-background.ts")
+const { backgroundError, cleanEducation, cleanWork, educationExperiencesOf, workRangeInvalid } = require("../lib/school/staff-background.ts")
 const numbers = require("../lib/school/person-no.ts")
 const { parseFile } = require("../lib/import/parse.ts")
 const { buildPlan, defaultSheetState } = require("../lib/import/validate.ts")
@@ -74,6 +74,16 @@ check("background optional, partial precision and bounded comparison", () => {
   assert.equal(workRangeInvalid("2018", "2017-12"), true)
   assert(backgroundError("1998-13", [], []))
 })
+check("education level belongs to each experience and preserves legacy records", () => {
+  const education = cleanEducation([{ id: "blank" }, { id: "level-only", educationLevel: " 本科 " }])
+  assert.equal(education.length, 1)
+  assert.equal(education[0].educationLevel, "本科")
+  const legacy = educationExperiencesOf({ id: "legacy", educationLevel: "硕士研究生", educationExperiences: [{ id: "past", school: "原型大学" }] })
+  assert.equal(legacy.length, 2)
+  assert.equal(legacy[0].school, "原型大学")
+  assert.equal(legacy[1].educationLevel, "硕士研究生")
+  assert.deepEqual(educationExperiencesOf({ id: "legacy", educationLevel: "硕士研究生", educationExperiences: legacy }), legacy)
+})
 async function filePlan(rows, csv = false) {
   const sheet = XLSX.utils.json_to_sheet(rows)
   const book = XLSX.utils.book_new()
@@ -128,11 +138,14 @@ async function filePlan(rows, csv = false) {
   })
   check("ordinary patch, clearing and history do not resign or lose internal ID", () => {
     const id = "import-test-batch-11-AUTO"
-    updateStaff(id, { joinedAt: "1998-09", educationExperiences: [], employeeNo: "" }, "清空工号")
+    updateStaff(id, { joinedAt: "1998-09-18", birthplace: "广东深圳", educationExperiences: [{ id: "new", educationLevel: "本科" }], employeeNo: "" }, "清空工号")
     const person = getStaffList().find((staff) => staff.id === id)
     assert.equal(person.id, id)
     assert.equal(person.status, "active")
     assert.equal(person.englishName, "Morgan")
+    assert.equal(person.joinedAt, "1998-09-18")
+    assert.equal(person.birthplace, "广东深圳")
+    assert.equal(person.educationExperiences[0].educationLevel, "本科")
     assert.equal(numbers.isIssued("TG2108E002", "E"), true)
     assert(numbers.historicalNumbers(id).includes("TG2108E002"))
   })
