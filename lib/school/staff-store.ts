@@ -4,11 +4,40 @@
 import { useMemo, useSyncExternalStore } from "react"
 import { STAFF, type HistoryItem, type StaffProfile } from "@/lib/demo/staff"
 
+import { useDemo } from "@/lib/demo/store"
+import { registerIssued } from "./person-no"
+
 const STORAGE_KEY = "tgs-proto:staff-patches:v1"
+const CREATED_KEY = "tgs-proto:staff-created:v1"
+let created: StaffProfile[] = []
+
+export function useStaffPermission() {
+  const demo = useDemo()
+  return demo.scenario !== "parent" && (demo.persona === "lin" || demo.persona === "admin")
+}
+
+export function createStaff(profile: StaffProfile): StaffProfile {
+  hydrate()
+  const existing = getStaffList().find((item) => item.id === profile.id)
+  if (existing) return existing
+  if (profile.employeeNo) registerIssued(profile.employeeNo, "E", profile.id)
+  created = [...created, profile]
+  patches = { ...patches }
+  try { window.sessionStorage.setItem(CREATED_KEY, JSON.stringify(created)) } catch { /* session storage may be unavailable */ }
+  listeners.forEach((listener) => listener())
+  return profile
+}
+
+export function getStaffList() {
+  hydrate()
+  return [...STAFF, ...created].map((staff) => applyPatch(staff, patches[staff.id]))
+}
 
 export type StaffPatch = Partial<
   Pick<
     StaffProfile,
+    | "name"
+    | "employeeNo"
     | "department"
     | "jobTitle"
     | "gender"
@@ -19,6 +48,11 @@ export type StaffPatch = Partial<
     | "statusNote"
     | "accountStatus"
     | "englishName"
+    | "educationLevel"
+    | "firstWorkAt"
+    | "educationExperiences"
+    | "workExperiences"
+    | "interests"
     | "wechat"
   >
 > & { extraHistory?: HistoryItem[] }
@@ -33,7 +67,9 @@ function hydrate() {
   hydrated = true
   try {
     const raw = window.sessionStorage.getItem(STORAGE_KEY)
-    if (raw) patches = JSON.parse(raw) as Record<string, StaffPatch>
+    if (raw) patches = Object.fromEntries(Object.entries(JSON.parse(raw) as Record<string, StaffPatch>).map(([id, patch]) => [id, Object.fromEntries(Object.entries(patch).map(([key, value]) => [key, value === null ? undefined : value]))]))
+    const saved = window.sessionStorage.getItem(CREATED_KEY)
+    if (saved) created = JSON.parse(saved) as StaffProfile[]
   } catch {
     /* ignore */
   }
@@ -52,7 +88,7 @@ export function updateStaff(id: string, patch: StaffPatch, historyText?: string)
     : prev.extraHistory
   patches = { ...patches, [id]: { ...prev, ...patch, extraHistory } }
   try {
-    window.sessionStorage.setItem(STORAGE_KEY, JSON.stringify(patches))
+    window.sessionStorage.setItem(STORAGE_KEY, JSON.stringify(patches, (_key, value) => value === undefined ? null : value))
   } catch {
     /* ignore */
   }
@@ -72,5 +108,5 @@ function applyPatch(s: StaffProfile, p?: StaffPatch): StaffProfile {
 
 export function useStaffList(): StaffProfile[] {
   const p = useSyncExternalStore(subscribe, getPatches, () => EMPTY)
-  return useMemo(() => STAFF.map((s) => applyPatch(s, p[s.id])), [p])
+  return useMemo(() => [...STAFF, ...created].map((s) => applyPatch(s, p[s.id])), [p])
 }

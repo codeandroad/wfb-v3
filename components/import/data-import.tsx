@@ -9,7 +9,6 @@ import { useRouter } from "next/navigation"
 import { ImportHub } from "./workbook/import-hub"
 import { useState } from "react"
 import { ParentLinkImport } from "./parent-link-import"
-import { PersonImport } from "./person-import"
 
 export type ImportKind = "students" | "staff" | "parents"
 
@@ -38,7 +37,7 @@ export function DataImport({ initialKind }: { initialKind: ImportKind | null }) 
     )
   }
 
-  if (initialKind === null) return <ImportHub />
+  if (initialKind !== "parents") return <ImportHub key={initialKind ?? "all"} initialFocus={initialKind === "staff" ? ["11"] : initialKind === "students" ? ["13"] : undefined} />
 
   return (
     <div>
@@ -60,9 +59,7 @@ export function DataImport({ initialKind }: { initialKind: ImportKind | null }) 
           />
         }
       />
-      {kind === "students" ? <PersonImport key="S" type="S" /> : null}
-      {kind === "staff" ? <PersonImport key="E" type="E" /> : null}
-      {kind === "parents" ? <ParentLinkImport /> : null}
+      <ParentLinkImport />
     </div>
   )
 }

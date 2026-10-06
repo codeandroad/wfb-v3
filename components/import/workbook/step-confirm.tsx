@@ -7,7 +7,9 @@ import type { ParsedFile } from "@/lib/import/parse"
 import { sheetTitle, TEMPLATE_VERSION } from "@/lib/import/schema"
 import { EXISTING_PREFIX } from "@/lib/import/target-sample"
 import type { Plan } from "@/lib/import/validate"
-import { useState } from "react"
+import { useRef, useState } from "react"
+import { commitPeople } from "@/lib/import/commit-people"
+import { useStaffPermission } from "@/lib/school/staff-store"
 import { ExampleTag, Notice } from "./shared"
 
 export type ResultKind = "done" | "failed" | "pending"
@@ -23,6 +25,9 @@ export function StepConfirm({
   onOpenLog: (id: string) => void
 }) {
   const [kind, setKind] = useState<ResultKind>("done")
+  const submitted = useRef(false)
+  const canManage = useStaffPermission()
+  const [failure, setFailure] = useState("")
   const [stale, setStale] = useState(false)
   const [staleHit, setStaleHit] = useState(false)
   const [selfCheck, setSelfCheck] = useState(false)
@@ -47,12 +52,16 @@ export function StepConfirm({
   const alreadyDone = !!completed
 
   const confirm = () => {
+    if (!canManage || blocked || alreadyDone || !selfCheck || submitted.current) return
     if (stale) {
       setStaleHit(true)
       return
     }
     const id = newBatchId()
-    const mappings = plan.sheets.flatMap((x) => x.rows.filter((r) => r.numberPreview).map((r) => `${r.values.id} → ${r.numberPreview}（示例）`))
+    let mappings: string[] = []
+    try { if (kind === "done") mappings = commitPeople(plan, id, canManage) }
+    catch (error) { setFailure(error instanceof Error ? error.message : "提交失败，请重新校验。"); return }
+    submitted.current = true
     addLog({
       id, type: "import", status: kind === "done" ? "done" : kind === "failed" ? "failed" : "pending",
       title: plan.sheets.filter((x) => x.state === "import").map((x) => x.def.name).slice(0, 4).join("、") + (groups.length > 4 ? " 等" : ""),
@@ -69,6 +78,7 @@ export function StepConfirm({
 
   return (
     <div className="flex flex-col gap-4">
+      {failure ? <Notice tone="danger" title="未提交">{failure}</Notice> : null}
       {staleHit ? (
         <Notice tone="danger" title="旧计划已不可用">
           预览之后目标数据或经办者权限已变化（示例），本计划不能再提交。请返回重新校验生成新计划；不会沿用旧计划部分提交。
@@ -186,7 +196,7 @@ export function StepConfirm({
             <Button variant="outline" onClick={onBack}>
               返回修改
             </Button>
-            <Button disabled={blocked || alreadyDone || !selfCheck} onClick={confirm}>
+            <Button disabled={!canManage || blocked || alreadyDone || !selfCheck} onClick={confirm}>
               确认导入
             </Button>
           </div>

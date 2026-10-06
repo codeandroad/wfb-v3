@@ -122,7 +122,7 @@ export function StepPreview({
                 <span>
                   {autoable.length} 行编号格式/年月有误，可批量改为自动编号（只修编号，不处理其他错误，不适用于已占用或本文件重复的编号）。
                 </span>
-                <Button size="sm" variant="outline" onClick={() => autoable.forEach((r) => setValue(r.key, "no", ""))}>
+                <Button size="sm" variant="outline" onClick={() => autoable.forEach((r) => { setValue(r.key, "no", ""); setValue(r.key, "numberIntent", "自动生成") })}>
                   将这 {autoable.length} 行设为自动编号
                 </Button>
               </div>

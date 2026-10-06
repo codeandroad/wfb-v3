@@ -12,13 +12,11 @@ import {
   INVITE_DEMO_LINK,
   INVITE_DEMO_NO,
   INVITE_VALID_DAYS,
-  STAFF,
   STAFF_STATUS_LABEL,
   SYSTEM_ROLES,
   SYSTEM_ROLE_DESC,
   SYSTEM_ROLE_LABEL,
   accountByStaffId,
-  staffById,
   type DutyKey,
   type EmailDeliveryStatus,
   type StaffProfile,
@@ -41,6 +39,7 @@ import {
 import { useMemo, useState } from "react"
 import { AccountStatusBadge, InfoNote, RoleBadge } from "./duty-bits"
 import { StaffFormFields, useStaffForm } from "./staff-form-fields"
+import { useStaffList } from "@/lib/school/staff-store"
 
 type View = "form" | "addStaff" | "preview" | "result" | "accept" | "duplicate"
 
@@ -63,7 +62,8 @@ export function InviteSheet({
   const [view, setView] = useState<View>("form")
 
   // 受邀人员
-  const presetStaff = presetPerson ? STAFF.find((s) => s.name === presetPerson) : undefined
+  const staffList = useStaffList()
+  const presetStaff = presetPerson ? staffList.find((s) => s.name === presetPerson) : undefined
   const [personName, setPersonName] = useState<string>(presetPerson ?? "")
   const [personStaffId, setPersonStaffId] = useState<string | undefined>(presetStaff?.id)
   const [query, setQuery] = useState("")
@@ -89,7 +89,7 @@ export function InviteSheet({
 
   const staffForm = useStaffForm()
 
-  const matchedStaff: StaffProfile | undefined = personStaffId ? staffById(personStaffId) : undefined
+  const matchedStaff: StaffProfile | undefined = personStaffId ? staffList.find((person) => person.id === personStaffId) : undefined
   const matchedAccount = matchedStaff ? accountByStaffId(matchedStaff.id) : undefined
   const accountEnabled = matchedAccount?.status === "enabled"
   const existingPending = personName ? pendingInviteFor(personName) : null
@@ -150,7 +150,7 @@ export function InviteSheet({
     no: INVITE_DEMO_NO,
     person: personName || "（未选人员）",
     personSub: matchedStaff
-      ? `${matchedStaff.employeeNo} · ${matchedStaff.department}／${matchedStaff.jobTitle}`
+      ? `${matchedStaff.employeeNo || "待编号"} · ${matchedStaff.department || "未填写部门"}／${matchedStaff.jobTitle || "未填写职务"}`
       : "待关联教职工（新邀请）",
     roles,
     zeroRole: effectiveZero,
@@ -181,11 +181,13 @@ export function InviteSheet({
             <Button
               onClick={() => {
                 staffForm.set("touched", true)
-                if (!staffForm.nameValid || !staffForm.noValid) return
-                staffForm.issueNo()
-                setPersonName(staffForm.displayName)
-                setPersonStaffId(undefined)
-                setEmailTo(staffForm.state.email)
+                if (!operatorCanCreateStaff) return
+                const person = staffForm.save()
+                if (!person) return
+                setPersonName(person.name)
+                setPersonStaffId(person.id)
+                if (!emailTo) setEmailTo(person.email)
+                staffForm.reset()
                 setView("form")
               }}
             >
@@ -195,6 +197,7 @@ export function InviteSheet({
         }
       >
         <StaffFormFields state={staffForm.state} set={staffForm.set} />
+        {staffForm.saveError ? <p role="alert" className="mt-3 text-sm text-destructive">{staffForm.saveError}</p> : null}
       </Sheet>
     )
   }
@@ -313,7 +316,7 @@ export function InviteSheet({
   }
 
   /* ---------- 主表单 ---------- */
-  const filteredStaff = STAFF.filter(
+  const filteredStaff = staffList.filter(
     (s) => !query || s.name.includes(query) || s.department.includes(query) || s.employeeNo.includes(query),
   )
 

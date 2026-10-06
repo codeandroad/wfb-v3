@@ -252,7 +252,7 @@ function JobsTab({ canMaintain, scenario }: { canMaintain: boolean; scenario: Sc
             <EmptyState
               icon={<UserSquare2 className="size-6" />}
               title="暂无职务"
-              desc="新增第一个常用职务；少见职务也可在人员表单中按“本次职务”临时填写。"
+              desc="新增第一个常用职务；人员资料使用已有职务选择，不在人员表单中新增职务。"
               action={canMaintain ? <Button size="sm" onClick={() => setEditing("new")}><Plus className="size-3.5" />新增职务</Button> : undefined}
             />
           </div>

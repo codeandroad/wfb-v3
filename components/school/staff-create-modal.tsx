@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { CheckCircle2, IdCard, UserCog } from "lucide-react"
 import { useState } from "react"
 import { FormalNoBadge } from "./person-no-field"
-import { StaffFormFields, initialStaffForm, useStaffForm } from "./staff-form-fields"
+import { StaffFormFields, useStaffForm } from "./staff-form-fields"
 
 /**
  * P04 新增教职工（教职工页入口）。
@@ -26,11 +26,11 @@ export function StaffCreateModal({
 }) {
   const [step, setStep] = useState<"form" | "done">("form")
   const [issuedNo, setIssuedNo] = useState("")
-  const { state, set, setState, nameValid, noValid, issueNo, displayName, jobLabel } = useStaffForm()
+  const { state, set, setState, save, reset, saveError, displayName, jobLabel } = useStaffForm()
   const summaryMeta = [state.department, jobLabel].filter(Boolean).join(" / ") || "未填写部门 / 职务"
 
   function close() {
-    if (step === "done") setState(initialStaffForm())
+    if (step === "done") reset()
     else setState((s) => ({ ...s, touched: false }))
     setStep("form")
     onClose()
@@ -38,8 +38,9 @@ export function StaffCreateModal({
 
   function submit() {
     set("touched", true)
-    if (!nameValid || !noValid) return
-    setIssuedNo(issueNo())
+    const person = save()
+    if (!person) return
+    setIssuedNo(person.employeeNo)
     setStep("done")
   }
 
@@ -50,7 +51,7 @@ export function StaffCreateModal({
         onClose={close}
         width="max-w-lg"
         title="教职工档案已建立（示例）"
-        desc="此为预设结果，未写入真实系统。"
+        desc="已保存到本次会话的共享原型档案，未写入正式后台。"
         footer={<Button onClick={close}>完成</Button>}
       >
         <div className="space-y-4">
@@ -65,12 +66,12 @@ export function StaffCreateModal({
               <dl className="mt-1.5 space-y-0.5 text-muted-foreground">
                 <div className="flex flex-wrap items-center gap-2">
                   <dt className="w-16 shrink-0 text-muted-foreground/70">员工编号</dt>
-                  <dd className="font-mono font-semibold tracking-wide text-foreground">{issuedNo}</dd>
-                  <FormalNoBadge />
+                  <dd className="font-mono font-semibold tracking-wide text-foreground">{issuedNo || "待编号"}</dd>
+                  {issuedNo ? <FormalNoBadge /> : null}
                 </div>
                 <div className="flex gap-2">
                   <dt className="w-16 shrink-0 text-muted-foreground/70">来源</dt>
-                  <dd>{state.customNo ? "手工填写的已有编号" : `按首次正式入职年月 ${state.joinedAt.slice(0, 7)} 自动生成`}</dd>
+                  <dd>{state.numberIntent === "none" ? "暂不编号" : state.numberIntent === "manual" ? "手工填写" : `按首次入职年月 ${state.joinedAt.slice(0, 7)} 自动生成`}</dd>
                 </div>
                 <div className="flex gap-2">
                   <dt className="w-16 shrink-0 text-muted-foreground/70">职责</dt>
@@ -113,7 +114,7 @@ export function StaffCreateModal({
               </Button>
             </div>
             <p className="mt-2.5 text-xs text-muted-foreground/70">
-              安排职责与开通账号是两个独立入口，均以该人物预选进入；不要求列表立即出现新行。
+              安排职责与开通账号是两个独立入口；关闭后可在人员列表重新打开同一份档案。
             </p>
           </div>
         </div>
@@ -138,6 +139,7 @@ export function StaffCreateModal({
       }
     >
       <StaffFormFields state={state} set={set} />
+      {saveError ? <p role="alert" className="mt-3 text-sm text-destructive">{saveError}</p> : null}
     </Sheet>
   )
 }

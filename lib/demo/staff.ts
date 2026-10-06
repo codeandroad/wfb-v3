@@ -508,6 +508,21 @@ export interface HistoryItem {
   text: string
 }
 
+export interface EducationExperience {
+  id: string
+  school?: string
+  major?: string
+  graduation?: string // YYYY 或 YYYY-MM，保留用户实际知道的精度
+}
+
+export interface WorkExperience {
+  id: string
+  organization?: string
+  role?: string
+  start?: string // YYYY 或 YYYY-MM
+  end?: string // YYYY 或 YYYY-MM；空值不表示仍在职
+}
+
 export interface StaffProfile {
   id: string
   name: string
@@ -515,7 +530,7 @@ export interface StaffProfile {
   department: string
   jobTitle: string
   gender: "男" | "女" | "未透露"
-  joinedAt?: string
+  joinedAt?: string // 本校首次入职年月，YYYY-MM 或历史完整日期
   phone: string
   email: string
   status: StaffStatus
@@ -529,10 +544,14 @@ export interface StaffProfile {
   history: HistoryItem[]
   // 更多资料（可选，个人补充）——按字段权限与个人显示设置展示，列表默认不展示
   englishName?: string
+  educationLevel?: string
+  firstWorkAt?: string // 首次参加工作年月；不用于本校工号
+  educationExperiences?: EducationExperience[]
+  workExperiences?: WorkExperience[]
   wechat?: string
   interests?: string[]
-  specialties?: string[]
-}
+  specialties?: string[] // 仅保留历史存储，不再在普通资料采集或展示
+  }
 
 export const STAFF: StaffProfile[] = [
   {
@@ -791,7 +810,7 @@ export const STAFF: StaffProfile[] = [
     accountStatus: "disabled",
     systemRoles: [],
     qualificationNote: "已离职；当前无有效职责，历史任教见任职历史。",
-    statusNote: "账号已停用；职责与历史记录保留，当前不可登录使用。",
+    statusNote: "账号已停用；职责与历史记录保留，当前不可登录使用���",
     history: [
       { date: "2017-09-01", text: "入职 · 数学教学岗" },
       { date: "2024-09-01", text: "历史任教：高一数学（2024–2025 学年）" },
@@ -1182,12 +1201,12 @@ export const ACCOUNTS: AccountRecord[] = [
     sessions: [{ id: "S-10", device: "Safari · iPhone", location: "校外网络", lastActive: "2026-09-18 20:12", current: true }],
     accessExplains: [
       {
-        action: "查看任一业务对象（任课 / 带班 / 治理 / 教务）",
+        action: "查看任一���务对象（任课 / 带班 / 治理 / 教务）",
         scope: "无任何业务对象",
         conditions: [
           { label: "系统角色", value: "四类角色均未持有", ok: false },
           { label: "业务任命", value: "无任何任命", ok: false },
-          { label: "账号自助", value: "可管理自身账号信息", ok: true },
+          { label: "账号自助", value: "���管理自身账号信息", ok: true },
           { label: "账号状态", value: "已启用", ok: true },
         ],
         conclusion: "账号可用于自助，但四角色均为空 → 无任何业务能力",

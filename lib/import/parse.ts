@@ -79,6 +79,7 @@ export class ParseFailure extends Error {
 }
 
 const norm = (s: string) => s.replace(/[\s*＊]/g, "").trim()
+const matchesHeader = (field: FieldDef, label: string) => [field.label, ...(field.aliases ?? [])].some((name) => norm(name) === norm(label))
 
 function matchByName(raw: string): SheetCode | null {
   const n = norm(raw)
@@ -98,9 +99,9 @@ function matchByHeaders(labels: string[]): SheetCode | null {
     if (s.role === "meta" || s.role === "instruction") continue
     const required = s.fields.filter((x) => x.required)
     if (required.length === 0) continue
-    const hit = required.filter((x) => set.has(norm(x.label))).length
+    const hit = required.filter((x) => [...set].some((label) => matchesHeader(x, label))).length
     const score = hit / required.length
-    const allHit = s.fields.filter((x) => set.has(norm(x.label))).length
+    const allHit = s.fields.filter((x) => [...set].some((label) => matchesHeader(x, label))).length
     if (score === 1 && (!best || allHit > best.score)) best = { code: s.code, score: allHit }
   }
   return best?.code ?? null
@@ -209,7 +210,7 @@ function parseSheet(rawName: string, ws: XLSX.WorkSheet, csvFallbackName?: strin
   for (let r = range.s.r; r <= Math.min(range.s.r + 3, range.e.r); r++) {
     const labels = rowLabels(r).map((x) => norm(x.label))
     const candidate = code ?? matchByHeaders(labels)
-    const score = candidate ? SHEET[candidate].fields.filter((x) => labels.includes(norm(x.label))).length : 0
+    const score = candidate ? SHEET[candidate].fields.filter((x) => labels.some((label) => matchesHeader(x, label))).length : 0
     if (score > best) {
       best = score
       headerRow = r
@@ -222,7 +223,7 @@ function parseSheet(rawName: string, ws: XLSX.WorkSheet, csvFallbackName?: strin
   }
   const sheetDef = code ? SHEET[code] : null
   const headers: ParsedHeader[] = headerCells.map((h) => {
-    const field = sheetDef?.fields.find((x) => norm(x.label) === norm(h.label)) ?? null
+    const field = sheetDef?.fields.find((x) => matchesHeader(x, h.label)) ?? null
     return { label: h.label, col: XLSX.utils.encode_col(h.col), field: field?.key ?? null }
   })
 
@@ -236,7 +237,7 @@ function parseSheet(rawName: string, ws: XLSX.WorkSheet, csvFallbackName?: strin
     let any = false
     for (const h of headerCells) {
       const addr = XLSX.utils.encode_cell({ r, c: h.col })
-      const fieldDef = sheetDef?.fields.find((x) => norm(x.label) === norm(h.label)) ?? null
+      const fieldDef = sheetDef?.fields.find((x) => matchesHeader(x, h.label)) ?? null
       const res = readCell(ws[addr], fieldDef)
       const key = fieldDef?.key ?? `?${h.label}`
       values[key] = res.value
