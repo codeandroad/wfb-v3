@@ -27,6 +27,7 @@ import {
 import { StaffActionPanel, type StaffAction } from "./staff-actions"
 import { useState } from "react"
 import { useStaffPermission } from "@/lib/school/staff-store"
+import { educationExperiencesOf } from "@/lib/school/staff-background"
 
 interface Props {
   staff: StaffProfile
@@ -155,9 +156,9 @@ export function StaffDetailSheet({ staff, endedDutyIds, onClose, onOpenDuty, onA
             <Meta label="部门" value={staff.department || "未填写"} muted={!staff.department} />
             <Meta label="职务" value={staff.jobTitle || "未填写"} muted={!staff.jobTitle} />
             <Meta label="英文名／常用名" value={staff.englishName || "未填写"} muted={!staff.englishName} />
-            <Meta label="首次入职年月" value={staff.joinedAt?.slice(0, 7) ?? "未填写"} muted={!staff.joinedAt} />
+            <Meta label="首次入职日期" value={staff.joinedAt || "未填写"} muted={!staff.joinedAt} />
             <Meta label="性别" value={staff.gender} />
-            {canManage ? <Meta label="学历" value={staff.educationLevel || "未填写"} muted={!staff.educationLevel} /> : null}
+            {canManage ? <Meta label="出生地" value={staff.birthplace || "未填写"} muted={!staff.birthplace} /> : null}
             <Meta label="在职状态" value={STAFF_STATUS_LABEL[staff.status]} />
           </div>
 
@@ -340,17 +341,18 @@ function Meta({ label, value, mono, muted }: { label: string; value: string; mon
 }
 
 function MoreInfo({ staff }: { staff: StaffProfile }) {
+  const education = educationExperiencesOf(staff)
   const rows: { label: string; value: string }[] = []
   if (staff.firstWorkAt) rows.push({ label: "首次参加工作年月", value: staff.firstWorkAt })
   if (staff.wechat) rows.push({ label: "微信号", value: staff.wechat })
   if (staff.interests?.length) rows.push({ label: "兴趣爱好", value: staff.interests.join("、") })
-  const hasBackground = !!staff.educationExperiences?.length || !!staff.workExperiences?.length
+  const hasBackground = !!education.length || !!staff.workExperiences?.length
   if (!rows.length && !hasBackground) return null
   return (
     <div className="space-y-3">
       <p className="text-[13px] font-semibold">更多资料</p>
       {rows.length ? <div className="grid grid-cols-2 gap-3 text-[13px]">{rows.map((row) => <Meta key={row.label} label={row.label} value={row.value} />)}</div> : null}
-      {staff.educationExperiences?.length ? <div><p className="text-xs font-medium text-muted-foreground">教育经历</p><div className="mt-1 space-y-1">{staff.educationExperiences.map((item) => <p key={item.id} className="text-[13px]">{[item.school, item.major, item.graduation].filter(Boolean).join(" · ")}</p>)}</div></div> : null}
+      {education.length ? <div className="flex flex-col gap-1"><p className="text-xs font-medium text-muted-foreground">教育经历</p><div className="flex flex-col gap-1">{education.map((item) => <p key={item.id} className="text-[13px]">{[item.educationLevel, item.school, item.major, item.graduation].filter(Boolean).join(" · ")}</p>)}</div></div> : null}
       {staff.workExperiences?.length ? <div><p className="text-xs font-medium text-muted-foreground">过往工作经历</p><div className="mt-1 space-y-1">{staff.workExperiences.map((item) => <p key={item.id} className="text-[13px]">{[item.organization, item.role, [item.start, item.end].filter(Boolean).join("—")].filter(Boolean).join(" · ")}</p>)}</div></div> : null}
       <p className="text-xs text-muted-foreground">背景资料按人员资料权限读取，默认不进入教师主页、普通名单或身份名片。</p>
     </div>

@@ -1,4 +1,10 @@
-import type { EducationExperience, WorkExperience } from "@/lib/demo/staff"
+import type { EducationExperience, StaffProfile, WorkExperience } from "@/lib/demo/staff"
+
+export function educationExperiencesOf(staff: Pick<StaffProfile, "id" | "educationLevel" | "educationExperiences">): EducationExperience[] {
+  const items = staff.educationExperiences ?? []
+  if (!staff.educationLevel || items.some((item) => item.educationLevel === staff.educationLevel)) return items
+  return [...items, { id: `${staff.id}-legacy-education`, educationLevel: staff.educationLevel }]
+}
 
 export function validBackgroundDate(value: string) {
   return !value || /^(?!0000)\d{4}(?:-(?:0[1-9]|1[0-2]))?$/.test(value)
@@ -18,7 +24,7 @@ export function backgroundError(firstWorkAt: string, education: EducationExperie
 }
 
 export function cleanEducation(items: EducationExperience[]) {
-  return items.map((item) => ({ ...item, school: item.school?.trim(), major: item.major?.trim(), graduation: item.graduation?.trim() })).filter((item) => item.school || item.major || item.graduation)
+  return items.map((item) => ({ ...item, educationLevel: item.educationLevel?.trim(), school: item.school?.trim(), major: item.major?.trim(), graduation: item.graduation?.trim() })).filter((item) => item.educationLevel || item.school || item.major || item.graduation)
 }
 export function cleanWork(items: WorkExperience[]) {
   return items.map((item) => ({ ...item, organization: item.organization?.trim(), role: item.role?.trim(), start: item.start?.trim(), end: item.end?.trim() })).filter((item) => item.organization || item.role || item.start || item.end)

@@ -71,7 +71,7 @@ export function StaffCreateModal({
                 </div>
                 <div className="flex gap-2">
                   <dt className="w-16 shrink-0 text-muted-foreground/70">来源</dt>
-                  <dd>{state.numberIntent === "none" ? "暂不编号" : state.numberIntent === "manual" ? "手工填写" : `按首次入职年月 ${state.joinedAt.slice(0, 7)} 自动生成`}</dd>
+                  <dd>{!issuedNo ? "暂不编号" : state.numberIntent === "manual" ? "手工填写" : `按首次入职日期 ${state.joinedAt} 自动生成`}</dd>
                 </div>
                 <div className="flex gap-2">
                   <dt className="w-16 shrink-0 text-muted-foreground/70">职责</dt>

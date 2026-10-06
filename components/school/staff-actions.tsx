@@ -5,12 +5,13 @@ import { useToast } from "@/components/kit"
 import { type StaffProfile } from "@/lib/demo/staff"
 import { checkPersonNo, nextPersonNo, personNoMonth, registerIssued, yyyymmOf } from "@/lib/school/person-no"
 import { updateStaff, useStaffPermission } from "@/lib/school/staff-store"
-import { backgroundError, cleanEducation, cleanWork } from "@/lib/school/staff-background"
+import { backgroundError, cleanEducation, cleanWork, educationExperiencesOf } from "@/lib/school/staff-background"
 import { StaffFormFields, initialStaffForm, type StaffFormState } from "./staff-form-fields"
 import { useDemo } from "@/lib/demo/store"
 import { PERSONAS } from "@/lib/demo/nav"
 import { ArrowLeft } from "lucide-react"
 import { useState } from "react"
+import { cn } from "@/lib/utils"
 
 export type StaffAction = "edit" | "leave" | "return" | "resign"
 
@@ -78,7 +79,7 @@ function Actions({ onCancel, submitLabel, disabled, danger }: { onCancel: () => 
 }
 
 function EditForm({ staff, onDone, onCancel }: FormProps) {
-  const initial: StaffFormState = { ...initialStaffForm(), name: staff.name, department: staff.department || null, jobTitle: staff.jobTitle || null, gender: staff.gender, joinedAt: staff.joinedAt ?? "", phone: staff.phone, email: staff.email, englishName: staff.englishName ?? "", educationLevel: staff.educationLevel ?? "未填写", firstWorkAt: staff.firstWorkAt ?? "", educationExperiences: staff.educationExperiences ?? [], workExperiences: staff.workExperiences ?? [], interests: staff.interests ?? [], wechat: staff.wechat ?? "" }
+  const initial: StaffFormState = { ...initialStaffForm(), name: staff.name, department: staff.department || null, jobTitle: staff.jobTitle || null, gender: staff.gender, joinedAt: staff.joinedAt ?? "", phone: staff.phone, email: staff.email, englishName: staff.englishName ?? "", birthplace: staff.birthplace ?? "", firstWorkAt: staff.firstWorkAt ?? "", educationExperiences: educationExperiencesOf(staff), workExperiences: staff.workExperiences ?? [], interests: staff.interests ?? [], wechat: staff.wechat ?? "" }
   const [state, setState] = useState(initial)
   const [editingNumber, setEditingNumber] = useState(false)
   const { push } = useToast()
@@ -114,22 +115,20 @@ function EditForm({ staff, onDone, onCancel }: FormProps) {
     updateStaff(staff.id, {
       name: state.name.trim(), department: state.department ?? "", jobTitle: state.jobTitle ?? "", gender: state.gender === "男" || state.gender === "女" ? state.gender : "未透露",
       joinedAt: state.joinedAt || undefined, email: state.email.trim(), phone: state.phone.trim(), englishName: state.englishName.trim() || undefined,
-      educationLevel: state.educationLevel === "未填写" ? undefined : state.educationLevel, firstWorkAt: state.firstWorkAt || undefined,
+      birthplace: state.birthplace.trim() || undefined, educationLevel: undefined, firstWorkAt: state.firstWorkAt || undefined,
       educationExperiences: cleanEducation(state.educationExperiences), workExperiences: cleanWork(state.workExperiences), wechat: state.wechat.trim() || undefined,
       interests: [...new Set([...state.interests, ...state.interestExtra.split(/[,，]/).map((item) => item.trim()).filter(Boolean)])],
     }, "资料更新")
     onDone("资料已保存；工号与任职状态保持不变")
   }}>
-    <div className="flex items-center justify-between rounded-lg border border-border p-3">
-      <div className="flex flex-col gap-1">
-        <span className="text-sm text-muted-foreground">员工编号</span>
-        <span className="font-mono text-sm">{staff.employeeNo || "待编号"}</span>
-      </div>
-      <Button type="button" size="sm" variant="outline" disabled={!canManage} onClick={() => setEditingNumber(true)}>
+    <div className="flex flex-wrap items-center gap-3">
+      <span className="text-sm text-muted-foreground">员工编号</span>
+      <span className={cn("text-sm", staff.employeeNo && "font-mono")}>{staff.employeeNo || "待编号"}</span>
+      <Button type="button" size="xs" variant="link" disabled={!canManage} onClick={() => setEditingNumber(true)}>
         {staff.employeeNo ? "修改" : "设置"}
       </Button>
     </div>
-    {monthMismatch ? <p className="text-sm text-muted-foreground">工号年月与首次入职年月不一致；保存资料不会自动改号。</p> : null}
+    {monthMismatch ? <p className="text-sm text-muted-foreground">工号年月与首次入职日期不一致；保存资料不会自动改号。</p> : null}
     <StaffFormFields state={state} set={set} hideNumber />
     {error ? <p role="alert" className="text-sm text-destructive">{error}</p> : null}
     <Actions onCancel={onCancel} submitLabel="保存修改" disabled={!canManage || !valid || !changed} />
@@ -141,7 +140,7 @@ function NumberForm({ staff, onDone, onCancel }: Omit<FormProps, "onDone"> & { o
   const demo = useDemo()
   const [mode, setMode] = useState<"manual" | "auto" | "clear">("manual")
   const [value, setValue] = useState("")
-  const [joinedAt, setJoinedAt] = useState(staff.joinedAt?.slice(0, 7) ?? "")
+  const [joinedAt, setJoinedAt] = useState(staff.joinedAt ?? "")
   const [note, setNote] = useState("")
   const [confirmed, setConfirmed] = useState(false)
   const [failure, setFailure] = useState("")
@@ -151,7 +150,7 @@ function NumberForm({ staff, onDone, onCancel }: Omit<FormProps, "onDone"> & { o
     try { next = nextPersonNo("E", yyyymmOf(joinedAt) ?? "") } catch (cause) { error = cause instanceof Error ? cause.message : "无法生成工号。" }
   } else if (mode === "manual") {
     const check = checkPersonNo(value, "E", staff.joinedAt)
-    error = value === staff.employeeNo ? "新旧工号相同，无需保存。" : check.status === "invalid" ? check.detail : check.status === "valid" && check.monthMismatch ? "工号年月与首次入职年月不一致，请修正工号或先编辑普通资料。" : check.status === "empty" ? "请填写新工号。" : ""
+    error = value === staff.employeeNo ? "新旧工号相同，无需保存。" : check.status === "invalid" ? check.detail : check.status === "valid" && check.monthMismatch ? "工号年月与首次入职日期不一致，请修正工号或先编辑普通资料。" : check.status === "empty" ? "请填写新工号。" : ""
   }
   const valid = canManage && !error && (mode !== "clear" || !!staff.employeeNo)
   const change = () => { setConfirmed(false); setFailure("") }
@@ -162,17 +161,17 @@ function NumberForm({ staff, onDone, onCancel }: Omit<FormProps, "onDone"> & { o
       if (mode === "manual") { const check = checkPersonNo(value, "E", staff.joinedAt); if (check.status !== "valid" || check.monthMismatch) throw new Error("工号校验未通过，请重新检查。") }
       if (mode === "auto" && nextPersonNo("E", yyyymmOf(joinedAt)!) !== next) throw new Error("号段已变化，请重新确认新号。")
       if (next) registerIssued(next, "E", staff.id)
-      updateStaff(staff.id, { employeeNo: next, ...(mode === "auto" && joinedAt !== staff.joinedAt?.slice(0, 7) ? { joinedAt } : {}) }, `${mode === "clear" ? "清空" : staff.employeeNo ? "修改" : "设置"}工号：${staff.employeeNo || "待编号"} → ${next || "待编号"}；操作者 ${PERSONAS[demo.persona].label}；${new Date().toISOString()}${note.trim() ? `；备注：${note.trim()}` : ""}`)
+      updateStaff(staff.id, { employeeNo: next, ...(mode === "auto" && joinedAt !== staff.joinedAt ? { joinedAt } : {}) }, `${mode === "clear" ? "清空" : staff.employeeNo ? "修改" : "设置"}工号：${staff.employeeNo || "待编号"} → ${next || "待编号"}；操作者 ${PERSONAS[demo.persona].label}；${new Date().toISOString()}${note.trim() ? `；备注：${note.trim()}` : ""}`)
       onDone(mode === "clear" ? "工号已清空，历史号码仍保留" : "工号已保存，内部ID与业务关系不变", mode === "auto" ? joinedAt : undefined)
     } catch (cause) { setFailure(cause instanceof Error ? cause.message : "保存失败，请重试。"); setConfirmed(false) }
   }}>
     <p className="rounded-lg border border-border bg-muted/30 p-3 text-sm">目标人员：<strong>{staff.name}</strong> · 当前工号 <span className="font-mono">{staff.employeeNo || "待编号"}</span></p>
     <div className="flex flex-wrap gap-2">{(["manual", "auto", ...(staff.employeeNo ? ["clear" as const] : [])] as const).map((item) => <Button key={item} type="button" size="sm" variant={mode === item ? "default" : "outline"} onClick={() => { setMode(item); change() }}>{item === "manual" ? "手工填写" : item === "auto" ? "自动生成" : "清空工号"}</Button>)}</div>
     {mode === "manual" ? <Field label="新工号"><input className={inputClass} value={value} onChange={(event) => { setValue(event.target.value); change() }} placeholder="如 TG2108E012" /></Field> : null}
-    {mode === "auto" ? <Field label="首次入职年月"><input type="month" className={inputClass} value={joinedAt} onChange={(event) => { setJoinedAt(event.target.value); change() }} /></Field> : null}
+    {mode === "auto" ? <Field label="首次入职日期" hint={joinedAt.length === 7 ? `原记录为 ${joinedAt}；不修改则保留原记录。` : undefined}><input type="date" className={inputClass} value={joinedAt.length === 10 ? joinedAt : ""} onChange={(event) => { setJoinedAt(event.target.value); change() }} /></Field> : null}
     {error || failure ? <p role="alert" className="text-sm text-destructive">{failure || error}</p> : <p className="text-sm">确认结果：<span className="font-mono">{staff.employeeNo || "待编号"} → {next || "待编号"}</span></p>}
     <p className="text-xs text-muted-foreground">历史号码继续保留，不删除人员、账号或业务关系；已下载文件不会自动更新。</p>
-    <Field label="备注（可选）"><input className={inputClass} value={note} onChange={(event) => setNote(event.target.value)} /></Field>
+    <Field label="备注"><input className={inputClass} value={note} onChange={(event) => setNote(event.target.value)} /></Field>
     <label className="flex items-start gap-2 text-sm"><input type="checkbox" checked={confirmed} disabled={!valid} onChange={(event) => setConfirmed(event.target.checked)} />确认对 {staff.name} {mode === "clear" ? "清空工号" : "保存上述工号"}</label>
     <Actions onCancel={onCancel} submitLabel={mode === "clear" ? "确认清空" : "确认保存"} disabled={!valid || !confirmed} danger={mode === "clear"} />
   </form>
@@ -202,11 +201,11 @@ function LeaveForm({ staff, onDone, onCancel }: FormProps) {
         <Field label="开始日期">
           <input type="date" required className={inputClass} value={start} onChange={(e) => setStart(e.target.value)} />
         </Field>
-        <Field label="预计返岗（可选）">
+        <Field label="预计返岗">
           <input type="date" className={inputClass} value={end} min={start} onChange={(e) => setEnd(e.target.value)} />
         </Field>
       </div>
-      <Field label="事由（可选）">
+      <Field label="事由">
         <input className={inputClass} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="如：病假、产假、进修" />
       </Field>
       {invalid ? <p className="text-xs text-destructive">返岗日期不能早于开始日期。</p> : null}
@@ -270,7 +269,7 @@ function ResignForm({ staff, onDone, onCancel }: FormProps) {
         <Field label="离职生效日">
           <input type="date" required className={inputClass} value={date} onChange={(e) => setDate(e.target.value)} />
         </Field>
-        <Field label="原因（可选）">
+        <Field label="原因">
           <input className={inputClass} value={reason} onChange={(e) => setReason(e.target.value)} />
         </Field>
       </div>
