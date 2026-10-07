@@ -2,6 +2,7 @@
 
 | 修订 | 目录 | 状态 |
 | --- | --- | --- |
+| 员工与学生编号、教师资料及侧栏显隐 | [2026-10-07-personnel-numbering-profiles-sidebar.md](2026-10-07-personnel-numbering-profiles-sidebar.md) | **现行设计归档，2026-10-07 整理**：双预设学号／工号与历史保护；员工手填留空待编号、首次入职日期、出生地及学历移入教育经历；编号维护仅在编辑页；离职低频入口；学生行序号与正式学号分离；侧栏展开时右上角折叠、隐藏后主区左上角恢复。含修订顺序、淘汰方案、提交追溯及原型边界，不代表生产后台或全项验收完成。 |
 | 班级与个人报告精细定制 r2 | [2026-10-05-report-customization-r2/IMPLEMENTATION_REPORT.md](2026-10-05-report-customization-r2/IMPLEMENTATION_REPORT.md) | **PARTIAL，未全项验收**：共享语义样式、个人分表参数、本批与单人字段覆盖已接入；含完整原规格、CP01–CP61结果、班级与个人PNG和真实ZIP。单格定位、混合状态片段着色等缺口详见实施说明。 |
 | 发布系统现行设计与实现总览 | [FEEDBACK_PUBLISHING_CURRENT_DESIGN.md](FEEDBACK_PUBLISHING_CURRENT_DESIGN.md) | **2026-10-05 更新，待 Owner 核验**：已补记 r2 后多轮精细定制、日期/表头/列宽、作业条件格式、混合出勤、元信息显隐、教务/主班报告入口、实际授课日归周、免除/恢复审计与教师联动；第 12–17 节记录现行规则和验证；新增整周假期自动免发、集中免除/改期/发布要求、教师跨周档案与汇总，不倒写原始验收结论。 |
 | 发布工作台第一版 r1 | `2026-10-04-feedback-publishing-v1/` | **已实现原型，待 Owner 核验，未全项通过**：同源分类总结、双报告、模板、PNG/ZIP、合成交付及本浏览器受限阅读。当前类型检查、15项逻辑测试、构建通过；逐项 PARTIAL/NOT_RUN 及真实文件证据见 `IMPLEMENTATION_REPORT.md`，不代表生产授权或真实发送就绪。 |
