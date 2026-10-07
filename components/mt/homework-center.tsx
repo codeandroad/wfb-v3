@@ -1,8 +1,8 @@
 "use client"
 
 import { EmptyState, PageHeader } from "@/components/kit"
-import { HomeworkOverview, HomeworkAssignmentCard } from "@/components/mt/homework-dashboard"
-import { AssignForm, HwReview, type AssignMode } from "@/components/mt/homework"
+import { HomeworkOverview } from "@/components/mt/homework-dashboard"
+import { AssignForm, HwListItem, HwReview, type AssignMode } from "@/components/mt/homework"
 import { MtLoading } from "@/components/mt/shared"
 import { Btn, Modal } from "@/components/mt/ui"
 import { permittedTasks, useTeacherId } from "@/lib/mt/derive"
@@ -148,14 +148,11 @@ export function HomeworkCenter() {
             <p className="rounded-lg border border-dashed border-border px-3 py-6 text-center text-xs text-muted-foreground">没有符合条件的作业</p>
           ) : (
             <ul className="flex flex-col gap-1.5">
-              {list.map((a) => {
-                const t = taskById(a.taskId)
-                return (
-                  <li key={a.id}>
-                    <HomeworkAssignmentCard a={a} active={a.id === open?.id} nowTs={nowTs} onClick={() => setParams({ hw: a.id, stu: null })} />
-                  </li>
-                )
-              })}
+              {list.map((a) => (
+                <li key={a.id}>
+                  <HwListItem a={a} active={a.id === open?.id} onClick={() => setParams({ hw: a.id, stu: null })} />
+                </li>
+              ))}
             </ul>
           )}
         </section>
