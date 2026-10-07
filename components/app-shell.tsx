@@ -85,24 +85,38 @@ export function AppShell({ children }: { children: ReactNode }) {
         aria-label="主导航侧栏"
         className={cn("sticky top-0 hidden h-svh w-60 shrink-0 flex-col bg-sidebar text-sidebar-foreground", sidebarOpen && "md:flex")}
       >
-        <Link
-          href="/home"
-          aria-label={`${CURRENT_SCHOOL.nameZh} · 进入系统主页`}
-          className="mx-2 mt-3 mb-2 flex items-center gap-2.5 rounded-lg px-3 py-2.5 transition-colors hover:bg-sidebar-accent/60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sidebar-ring"
-        >
-          <BrandImage
-            src={CURRENT_SCHOOL.brand.crestRed}
-            alt=""
-            className="size-10 shrink-0 object-contain"
-            fallbackClassName="size-10 shrink-0 rounded-lg bg-white/10 text-sidebar-foreground/70"
-          />
-          <div className="min-w-0 leading-tight">
-            <p className="truncate text-[13px] font-semibold text-white">{CURRENT_SCHOOL.nameZh}</p>
-            <p className="truncate text-[11px] text-sidebar-foreground/70">
-              {CURRENT_SCHOOL.code} · 周反馈系统
-            </p>
-          </div>
-        </Link>
+        <div className="mx-2 mt-3 mb-2 flex items-center">
+          <Link
+            href="/home"
+            aria-label={`${CURRENT_SCHOOL.nameZh} · 进入系统主页`}
+            className="flex min-w-0 flex-1 items-center gap-2.5 rounded-lg px-3 py-2.5 transition-colors hover:bg-sidebar-accent/60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sidebar-ring"
+          >
+            <BrandImage
+              src={CURRENT_SCHOOL.brand.crestRed}
+              alt=""
+              className="size-10 shrink-0 object-contain"
+              fallbackClassName="size-10 shrink-0 rounded-lg bg-white/10 text-sidebar-foreground/70"
+            />
+            <div className="min-w-0 leading-tight">
+              <p className="truncate text-[13px] font-semibold text-white">{CURRENT_SCHOOL.nameZh}</p>
+              <p className="truncate text-[11px] text-sidebar-foreground/70">
+                {CURRENT_SCHOOL.code} · 周反馈系统
+              </p>
+            </div>
+          </Link>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            aria-label="折叠左侧栏"
+            title="折叠左侧栏"
+            aria-expanded={sidebarOpen}
+            aria-controls="application-sidebar"
+            onClick={() => setSidebarOpen(false)}
+          >
+            <PanelLeftClose />
+          </Button>
+        </div>
 
         <nav className="flex-1 space-y-0.5 px-3 py-2">
           {items.map((item) => {
@@ -153,19 +167,21 @@ function TopBar({ pathname, sidebarOpen, onToggleSidebar }: { pathname: string; 
   return (
     <header className="sticky top-0 z-30 flex h-14 items-center justify-between gap-3 border-b border-border bg-card/90 px-4 backdrop-blur md:px-8">
       <div className="flex min-w-0 items-center gap-2 text-[13px]">
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="hidden md:inline-flex"
-          aria-label={sidebarOpen ? "折叠左侧栏" : "展开左侧栏"}
-          title={sidebarOpen ? "折叠左侧栏" : "展开左侧栏"}
-          aria-expanded={sidebarOpen}
-          aria-controls="application-sidebar"
-          onClick={onToggleSidebar}
-        >
-          {sidebarOpen ? <PanelLeftClose /> : <PanelLeftOpen />}
-        </Button>
+        {!sidebarOpen ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="hidden md:inline-flex"
+            aria-label="展开左侧栏"
+            title="展开左侧栏"
+            aria-expanded={false}
+            aria-controls="application-sidebar"
+            onClick={onToggleSidebar}
+          >
+            <PanelLeftOpen />
+          </Button>
+        ) : null}
         <span className="hidden text-muted-foreground sm:inline">{SCHOOL_NAME}</span>
         <span className="hidden text-muted-foreground/50 sm:inline">/</span>
         <span className="truncate font-medium text-foreground">{pageTitle(pathname)}</span>
