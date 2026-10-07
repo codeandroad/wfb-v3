@@ -110,6 +110,8 @@ export interface CatalogCourse {
   org: string // 教学组织方式
   structure: string // 考核结构
   officialCode: string // 官方课程代码
+  syllabusVersion?: string
+  sourceUrl?: string
   note: string
 }
 
@@ -218,6 +220,111 @@ export const CATALOG_COURSES: CatalogCourse[] = [
     officialCode: "XEC11 / YEC11",
     note: "4 单元；宏观与微观分列。",
   },
+  {
+    code: "C302",
+    subjectCode: "S003",
+    name: "CAIE 化学",
+    en: "Cambridge International AS & A Level Chemistry",
+    board: "Cambridge International",
+    system: "International AS / A Level",
+    region: "国际版",
+    org: "按 AS / A2 阶段教学",
+    structure: "分阶段试卷制（非独立模块累积）",
+    officialCode: "9701",
+    syllabusVersion: "2025–2027 · Version 1",
+    sourceUrl: "https://www.cambridgeinternational.org/Images/664563-2025-2027-syllabus.pdf",
+    note: "涵盖物理化学、无机化学、有机化学及分析与实验技能。AS 修读并考核 P1、P2、P3；完整 A Level 另需 P4、P5。可按官方规则结转 AS 成绩；各试卷不是可独立 Cash-in 的单元资格。",
+  },
+  {
+    code: "C702",
+    subjectCode: "S007",
+    name: "CAIE 经济",
+    en: "Cambridge International AS & A Level Economics",
+    board: "Cambridge International",
+    system: "International AS / A Level",
+    region: "国际版",
+    org: "按 AS / A2 阶段教学",
+    structure: "分阶段试卷制（非独立模块累积）",
+    officialCode: "9708",
+    syllabusVersion: "2026–2028 · Version 2",
+    sourceUrl: "https://www.cambridgeinternational.org/Images/697423-2026-2028-syllabus.pdf",
+    note: "涵盖资源配置、微观经济、宏观经济、政府干预及国际经济。AS 考核 P1、P2；完整 A Level 另需 P3、P4。P2、P4 均包含数据分析、微观论文和宏观论文；试卷不是独立模块资格。",
+  },
+  {
+    code: "C104",
+    subjectCode: "S001",
+    name: "CAIE IGCSE 数学",
+    en: "Cambridge IGCSE Mathematics",
+    board: "Cambridge International",
+    system: "IGCSE",
+    region: "国际版",
+    org: "整门课程教学（Core / Extended 分层）",
+    structure: "线性制 · 两条分层试卷路径",
+    officialCode: "0580",
+    syllabusVersion: "2025–2027 · Version 3",
+    sourceUrl: "https://www.cambridgeinternational.org/Images/662466-2025-2027-syllabus.pdf",
+    note: "涵盖数、代数与图像、坐标几何、几何、度量、三角、变换与向量、概率及统计。Core 选 P1 + P3（C–G）；Extended 选 P2 + P4（A*–E），两条路径不可混搭。2025 起 P1、P2 为非计算器卷，P3、P4 为计算器卷；无独立模块资格。",
+  },
+  {
+    code: "C105",
+    subjectCode: "S001",
+    name: "CAIE IGCSE 附加数学",
+    en: "Cambridge IGCSE Additional Mathematics",
+    board: "Cambridge International",
+    system: "IGCSE",
+    region: "国际版",
+    org: "整门课程教学",
+    structure: "线性制 · 两份必考试卷",
+    officialCode: "0606",
+    syllabusVersion: "2025–2027 · Version 1",
+    sourceUrl: "https://www.cambridgeinternational.org/Images/662470-2025-2027-syllabus.pdf",
+    note: "在 IGCSE 数学基础上拓展函数、多项式、指数与对数、圆的坐标几何、三角、排列组合、级数、二维向量及微积分。P1 非计算器卷与 P2 计算器卷均必考，各占 50%；等级 A*–E，无 Core / Extended 分层及独立模块资格。",
+  },
+  {
+    code: "C502",
+    subjectCode: "S005",
+    name: "CAIE IGCSE 计算机科学",
+    en: "Cambridge IGCSE Computer Science",
+    board: "Cambridge International",
+    system: "IGCSE",
+    region: "国际版",
+    org: "整门课程教学",
+    structure: "线性制 · 两份必考试卷",
+    officialCode: "0478",
+    syllabusVersion: "2026–2028 · Version 6",
+    sourceUrl: "https://www.cambridgeinternational.org/Images/697167-2026-2028-syllabus.pdf",
+    note: "涵盖计算机系统与算法、编程及逻辑。P1、P2 均为笔试，各占 50%，不允许计算器；P2 含情境编程题，不是上机实操考试。教学应包含编程实践；无预发布材料，等级 A*–G，无独立模块资格。",
+  },
+  {
+    code: "C106",
+    subjectCode: "S001",
+    name: "Edexcel IGCSE 数学 A",
+    en: "Pearson Edexcel International GCSE Mathematics (Specification A)",
+    board: "Pearson Edexcel",
+    system: "International GCSE (9–1)",
+    region: "国际版",
+    org: "整门课程教学（Foundation / Higher 分层）",
+    structure: "线性制 · 同一考季两份试卷",
+    officialCode: "4MA1",
+    syllabusVersion: "2016 规格 · Issue 2 · 2018 起首考",
+    sourceUrl: "https://qualifications.pearson.com/content/dam/pdf/International%20GCSE/Mathematics%20A/2016/Specification%20and%20sample%20assessments/international-gcse-in-mathematics-spec-a.pdf",
+    note: "此目录采用 Mathematics A 的线性版本，不是 Mathematics B（4MB1）或模块化版本（4XMA1）。涵盖数、代数、几何及统计。Foundation 选 1F + 2F（5–1）；Higher 选 1H + 2H（9–4），两卷须在同一考季参加，各占 50%，均可使用计算器；无独立模块资格。",
+  },
+  {
+    code: "C503",
+    subjectCode: "S005",
+    name: "Edexcel IAL 计算机科学",
+    en: "Pearson Edexcel International AS / A Level Computer Science",
+    board: "Pearson Edexcel",
+    system: "International AS / A Level",
+    region: "国际版",
+    org: "分单元教学",
+    structure: "模块化 · 四单元",
+    officialCode: "XCP01 / YCP01",
+    syllabusVersion: "2026 规格 · Issue 1",
+    sourceUrl: "https://qualifications.pearson.com/content/dam/pdf/International%20Advanced%20Level/computer-science/2026/specification-and-sample-assessments/ial-computer-science-specification.pdf",
+    note: "2026 年 9 月首教；IAS 首考 2027 年 5–6 月，完整 IAL 首考 2028 年 5–6 月。IAS 由 U1、U2 组成；IAL 需 U1–U4。官方报考代码以 WCP01/01–04 区分四个单元。U1、U3 为理论考核（纸笔或屏幕），U2、U4 为 Python 3 上机编程；每单元占 IAL 的 25%。",
+  },
 ]
 
 export interface CatalogUnit {
@@ -226,10 +333,10 @@ export interface CatalogUnit {
   en: string
   short: string // 单元简称 P1 / S1
   officialCode: string // 官方单元代码
-  nature: "官方模块" | "校内板块"
-  stage: "IAS" | "IA2"
+  nature: "官方模块" | "官方试卷" | "校内板块"
+  stage: "IAS" | "IA2" | "IGCSE"
   courseCode: string // 关联课程（演示中一对一便于展示）
-  rule: "必修" | "选修"
+  rule: "必修" | "选修" | "路径必修"
   note: string
 }
 
@@ -246,6 +353,31 @@ export const CATALOG_UNITS: CatalogUnit[] = [
   { code: "U401", name: "分子、饮食、运输与健康", en: "Molecules, Diet, Transport and Health", short: "U1", officialCode: "WBI11", nature: "官方模块", stage: "IAS", courseCode: "C401", rule: "必修", note: "IAS 首单元。" },
   { code: "U501", name: "计算机基础理论", en: "Theory Fundamentals", short: "P1", officialCode: "9618/01", nature: "官方模块", stage: "IAS", courseCode: "C501", rule: "必修", note: "AS 理论试卷。" },
   { code: "U990", name: "数学衔接与拓展", en: "Bridging & Enrichment Mathematics", short: "校内", officialCode: "（未设置）", nature: "校内板块", stage: "IAS", courseCode: "C101", rule: "选修", note: "校内示例板块；无官方资格出口，显式标记为校内。" },
+  { code: "U311", name: "化学多项选择", en: "Multiple Choice", short: "P1", officialCode: "9701/1", nature: "官方试卷", stage: "IAS", courseCode: "C302", rule: "必修", note: "AS 内容；75 分钟，40 分。占 AS 的 31%、A Level 的 15.5%。" },
+  { code: "U312", name: "化学 AS 结构化问题", en: "AS Level Structured Questions", short: "P2", officialCode: "9701/2", nature: "官方试卷", stage: "IAS", courseCode: "C302", rule: "必修", note: "AS 内容；75 分钟，60 分。占 AS 的 46%、A Level 的 23%。" },
+  { code: "U313", name: "化学高级实验技能", en: "Advanced Practical Skills", short: "P3", officialCode: "9701/3", nature: "官方试卷", stage: "IAS", courseCode: "C302", rule: "必修", note: "实际实验操作与结构化问题；2 小时，40 分。占 AS 的 23%、A Level 的 11.5%；须具备实验场地与设备。" },
+  { code: "U314", name: "化学 A Level 结构化问题", en: "A Level Structured Questions", short: "P4", officialCode: "9701/4", nature: "官方试卷", stage: "IA2", courseCode: "C302", rule: "必修", note: "完整 A Level 必考，假定具备 AS 知识；2 小时，100 分，占 A Level 的 38.5%。" },
+  { code: "U315", name: "化学实验规划、分析与评价", en: "Planning, Analysis and Evaluation", short: "P5", officialCode: "9701/5", nature: "官方试卷", stage: "IA2", courseCode: "C302", rule: "必修", note: "实验技能笔试，非现场实验操作；75 分钟，30 分，占 A Level 的 11.5%。" },
+  { code: "U711", name: "经济 AS 多项选择", en: "AS Level Multiple Choice", short: "P1", officialCode: "9708/1", nature: "官方试卷", stage: "IAS", courseCode: "C702", rule: "必修", note: "AS 内容；1 小时，30 分。占 AS 的 33%、A Level 的 17%。" },
+  { code: "U712", name: "经济 AS 数据分析与论文", en: "AS Level Data Response and Essays", short: "P2", officialCode: "9708/2", nature: "官方试卷", stage: "IAS", courseCode: "C702", rule: "必修", note: "2 小时，60 分；数据分析、微观论文、宏观论文各 20 分。占 AS 的 67%、A Level 的 33%。" },
+  { code: "U713", name: "经济 A Level 多项选择", en: "A Level Multiple Choice", short: "P3", officialCode: "9708/3", nature: "官方试卷", stage: "IA2", courseCode: "C702", rule: "必修", note: "A Level 内容，假定具备 AS 知识；75 分钟，30 分，占 A Level 的 17%。" },
+  { code: "U714", name: "经济 A Level 数据分析与论文", en: "A Level Data Response and Essays", short: "P4", officialCode: "9708/4", nature: "官方试卷", stage: "IA2", courseCode: "C702", rule: "必修", note: "2 小时，60 分；数据分析、微观论文、宏观论文各 20 分，占 A Level 的 33%。论文为无分小问的完整论述。" },
+  { code: "U141", name: "数学非计算器卷（Core）", en: "Non-calculator (Core)", short: "P1", officialCode: "0580/1", nature: "官方试卷", stage: "IGCSE", courseCode: "C104", rule: "路径必修", note: "选择 Core 路径时与 P3 配对，不能与 Extended 试卷混搭；90 分钟，80 分，占 50%，不允许计算器。" },
+  { code: "U142", name: "数学非计算器卷（Extended）", en: "Non-calculator (Extended)", short: "P2", officialCode: "0580/2", nature: "官方试卷", stage: "IGCSE", courseCode: "C104", rule: "路径必修", note: "选择 Extended 路径时与 P4 配对；2 小时，100 分，占 50%，不允许计算器。" },
+  { code: "U143", name: "数学计算器卷（Core）", en: "Calculator (Core)", short: "P3", officialCode: "0580/3", nature: "官方试卷", stage: "IGCSE", courseCode: "C104", rule: "路径必修", note: "选择 Core 路径时与 P1 配对；90 分钟，80 分，占 50%，须使用科学计算器。" },
+  { code: "U144", name: "数学计算器卷（Extended）", en: "Calculator (Extended)", short: "P4", officialCode: "0580/4", nature: "官方试卷", stage: "IGCSE", courseCode: "C104", rule: "路径必修", note: "选择 Extended 路径时与 P2 配对；2 小时，100 分，占 50%，须使用科学计算器。" },
+  { code: "U151", name: "附加数学非计算器卷", en: "Paper 1 (Non-calculator)", short: "P1", officialCode: "0606/1", nature: "官方试卷", stage: "IGCSE", courseCode: "C105", rule: "必修", note: "2 小时，80 分，占 50%；结构化与非结构化问题，不允许计算器；与 P2 均必考。" },
+  { code: "U152", name: "附加数学计算器卷", en: "Paper 2 (Calculator)", short: "P2", officialCode: "0606/2", nature: "官方试卷", stage: "IGCSE", courseCode: "C105", rule: "必修", note: "2 小时，80 分，占 50%；结构化与非结构化问题，须使用科学计算器；与 P1 均必考。" },
+  { code: "U521", name: "计算机系统", en: "Computer Systems", short: "P1", officialCode: "0478/1", nature: "官方试卷", stage: "IGCSE", courseCode: "C502", rule: "必修", note: "主题 1–6：数据表示、数据传输、硬件、软件、互联网及自动化与新兴技术。105 分钟，75 分，占 50%；笔试，不允许计算器。" },
+  { code: "U522", name: "算法、编程与逻辑", en: "Algorithms, Programming and Logic", short: "P2", officialCode: "0478/2", nature: "官方试卷", stage: "IGCSE", courseCode: "C502", rule: "必修", note: "主题 7–10：算法设计与问题解决、编程、数据库及布尔逻辑。105 分钟，75 分，占 50%；含情境题的笔试，非上机考试，不允许计算器。" },
+  { code: "U161", name: "数学 A 基础卷 1", en: "Paper 1F (Foundation Tier)", short: "1F", officialCode: "4MA1/1F", nature: "官方试卷", stage: "IGCSE", courseCode: "C106", rule: "路径必修", note: "Foundation 路径，与 2F 在同一考季配对；2 小时，100 分，占 50%，可使用计算器。" },
+  { code: "U162", name: "数学 A 基础卷 2", en: "Paper 2F (Foundation Tier)", short: "2F", officialCode: "4MA1/2F", nature: "官方试卷", stage: "IGCSE", courseCode: "C106", rule: "路径必修", note: "Foundation 路径，与 1F 在同一考季配对；2 小时，100 分，占 50%，可使用计算器。" },
+  { code: "U163", name: "数学 A 高阶卷 1", en: "Paper 1H (Higher Tier)", short: "1H", officialCode: "4MA1/1H", nature: "官方试卷", stage: "IGCSE", courseCode: "C106", rule: "路径必修", note: "Higher 路径，与 2H 在同一考季配对，不可与 Foundation 混搭；2 小时，100 分，占 50%，可使用计算器。" },
+  { code: "U164", name: "数学 A 高阶卷 2", en: "Paper 2H (Higher Tier)", short: "2H", officialCode: "4MA1/2H", nature: "官方试卷", stage: "IGCSE", courseCode: "C106", rule: "路径必修", note: "Higher 路径，与 1H 在同一考季配对；2 小时，100 分，占 50%，可使用计算器。" },
+  { code: "U531", name: "计算机科学原理", en: "Principles of Computer Science", short: "U1", officialCode: "WCP01/01", nature: "官方模块", stage: "IAS", courseCode: "C503", rule: "必修", note: "计算机系统、数据表示、网络与加密、数据结构、问题解决及使能技术。90 分钟，80 分；占 IAS 的 50%、IAL 的 25%；纸笔 WCP01/01 或屏幕 WCP01/01C。2027 年 5–6 月首考。" },
+  { code: "U532", name: "实践编程与问题解决", en: "Practical Programming and Problem-solving", short: "U2", officialCode: "WCP01/02", nature: "官方模块", stage: "IAS", courseCode: "C503", rule: "必修", note: "编程、数据组织与处理、最佳实践、计算思维与算法；Python 3 上机考试 WCP01/02。3 小时，80 分；占 IAS 的 50%、IAL 的 25%。2027 年 5–6 月首考。" },
+  { code: "U533", name: "高级计算机科学原理", en: "Advanced Principles of Computer Science", short: "U3", officialCode: "WCP01/03", nature: "官方模块", stage: "IA2", courseCode: "C503", rule: "必修", note: "计算机系统与数据表示、网络安全、编程语言、数据结构、问题解决及新兴技术与专业实践。90 分钟，80 分，占 IAL 的 25%；纸笔 WCP01/03 或屏幕 WCP01/03C。2028 年 5–6 月首考。" },
+  { code: "U534", name: "高级实践编程与问题解决", en: "Advanced Practical Programming and Problem-solving", short: "U4", officialCode: "WCP01/04", nature: "官方模块", stage: "IA2", courseCode: "C503", rule: "必修", note: "高级编程、数据表示与处理、最佳实践、其他编程范式及算法；Python 3 上机考试 WCP01/04。3 小时，80 分，占 IAL 的 25%。2028 年 5–6 月首考。" },
 ]
 
 export function unitsByCourse(courseCode: string) {
@@ -407,7 +539,7 @@ export const TEACHING_CLASSES: TeachingClassRow[] = [
  * 学生资料（列表不显示学号；详情页可控制字段显示）
  * ========================================================== */
 
-// 选课记录：学生在某个教学班内修读某门课程的若干单元
+// 选课记录：学生在某��教学班内修读某门课程的若干单元
 export interface CourseEnrollment {
   teachingClass: string // 教学班正式名
   course: string // 课程显示名
