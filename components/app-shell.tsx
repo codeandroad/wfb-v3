@@ -1,6 +1,7 @@
 "use client"
 
 import { Badge, useToast } from "@/components/kit"
+import { Button } from "@/components/ui/button"
 import { DemoControlButton } from "@/components/demo-control"
 import { moduleEnabled, NAV, navVisible, pageTitle, PERSONAS } from "@/lib/demo/nav"
 import { staffById } from "@/lib/demo/staff"
@@ -27,6 +28,8 @@ import {
   Library,
   Lock,
   LogOut,
+  PanelLeftClose,
+  PanelLeftOpen,
   Upload,
   UserRound,
   Users,
@@ -55,6 +58,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const demo = useDemo()
   const pathname = usePathname()
   const router = useRouter()
+  const [sidebarOpen, setSidebarOpen] = useState(true)
 
   // 家长场景不使用员工外壳
   useEffect(() => {
@@ -76,7 +80,11 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className="flex min-h-svh bg-background">
       {/* 侧栏 */}
-      <aside className="sticky top-0 hidden h-svh w-60 shrink-0 flex-col bg-sidebar text-sidebar-foreground md:flex">
+      <aside
+        id="application-sidebar"
+        aria-label="主导航侧栏"
+        className={cn("sticky top-0 hidden h-svh w-60 shrink-0 flex-col bg-sidebar text-sidebar-foreground", sidebarOpen && "md:flex")}
+      >
         <Link
           href="/home"
           aria-label={`${CURRENT_SCHOOL.nameZh} · 进入系统主页`}
@@ -131,7 +139,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       {/* 主区 */}
       <div className="flex min-w-0 flex-1 flex-col">
-        <TopBar pathname={pathname} />
+        <TopBar pathname={pathname} sidebarOpen={sidebarOpen} onToggleSidebar={() => setSidebarOpen((open) => !open)} />
         <main className="flex-1 px-4 py-6 md:px-8">
           <div className="mx-auto w-full max-w-[1200px]">{children}</div>
         </main>
@@ -140,11 +148,24 @@ export function AppShell({ children }: { children: ReactNode }) {
   )
 }
 
-function TopBar({ pathname }: { pathname: string }) {
+function TopBar({ pathname, sidebarOpen, onToggleSidebar }: { pathname: string; sidebarOpen: boolean; onToggleSidebar: () => void }) {
   const demo = useDemo()
   return (
     <header className="sticky top-0 z-30 flex h-14 items-center justify-between gap-3 border-b border-border bg-card/90 px-4 backdrop-blur md:px-8">
       <div className="flex min-w-0 items-center gap-2 text-[13px]">
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="hidden md:inline-flex"
+          aria-label={sidebarOpen ? "折叠左侧栏" : "展开左侧栏"}
+          title={sidebarOpen ? "折叠左侧栏" : "展开左侧栏"}
+          aria-expanded={sidebarOpen}
+          aria-controls="application-sidebar"
+          onClick={onToggleSidebar}
+        >
+          {sidebarOpen ? <PanelLeftClose /> : <PanelLeftOpen />}
+        </Button>
         <span className="hidden text-muted-foreground sm:inline">{SCHOOL_NAME}</span>
         <span className="hidden text-muted-foreground/50 sm:inline">/</span>
         <span className="truncate font-medium text-foreground">{pageTitle(pathname)}</span>
