@@ -43,19 +43,23 @@
 .homework-cockpit .hw-submitted { background: var(--hw-green); color: var(--primary); border-color: color-mix(in srgb, var(--primary) 25%, var(--card)); }
 .homework-cockpit .hw-late { background: var(--hw-amber-bg); color: var(--hw-amber); border-color: var(--hw-form-border); }
 .homework-cockpit .hw-missing { background: var(--hw-red-bg); color: var(--hw-red); border-color: color-mix(in srgb, var(--hw-red) 25%, var(--card)); }
-.homework-cockpit .hw-manage { background: var(--hw-form-bg); border: 1px solid var(--hw-form-border); border-radius: 12px; padding: 16px; margin: 12px 22px 0; }
-.homework-cockpit .hw-manage input, .homework-cockpit .hw-manage textarea, .homework-cockpit .hw-manage select { background: var(--card); color: var(--foreground); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; min-width: 0; width: 100%; }
-.homework-cockpit .hw-review > div[role='group'] { margin-top: 14px; }
-.homework-cockpit .hw-roster { padding: 18px 22px; }
-.homework-cockpit .hw-roster section[aria-label='批量处理'] { border: 1px solid var(--border); border-radius: 12px; margin-bottom: 12px; }
-.homework-cockpit .hw-roster [aria-label='结果筛选'] { padding: 0 0 12px; border: 0; gap: 8px; }
+.homework-cockpit .hw-manage { background: var(--hw-form-bg); border: 1px solid var(--hw-form-border); border-radius: 8px; padding: 12px; margin: 12px 16px 0; }
+.homework-cockpit .hw-manage input, .homework-cockpit .hw-manage textarea, .homework-cockpit .hw-manage select { background: var(--card); color: var(--foreground); border: 1px solid var(--border); border-radius: 8px; padding: 6px 8px; min-width: 0; width: 100%; }
+.homework-cockpit .hw-roster { padding: 12px 16px; }
+.homework-cockpit .hw-roster section[aria-label='批量处理'] { border: 1px solid var(--border); border-radius: 8px; margin-bottom: 8px; }
+.homework-cockpit .hw-roster [aria-label='结果筛选'] { padding: 0 0 8px; border: 0; gap: 4px; }
 .homework-cockpit .hw-roster [aria-label='结果筛选'] button[aria-pressed='true'] { background: var(--hw-dark); }
-.homework-cockpit .hw-roster > ul > li { padding: 12px 6px; }
-.homework-cockpit .hw-roster select { font-weight: 600; }
+.homework-cockpit .hw-roster > ul > li { padding: 8px 4px; }
+.homework-cockpit .hw-roster select { height: 28px; border-radius: 9999px; padding-inline: 8px; font-size: 14px; font-weight: 500; }
+.homework-cockpit .hw-result-controls { min-width: 0; flex: 1; }
+.homework-cockpit .hw-result-controls select { max-width: 100%; }
 .homework-cockpit .hw-roster input[type='checkbox'] { accent-color: var(--primary); }
+.homework-cockpit .hw-review select:focus-visible, .homework-cockpit .hw-review input:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
 @media (max-width: 640px) {
   .homework-cockpit .hw-roster { padding: 12px; }
   .homework-cockpit .hw-manage { margin-inline: 12px; }
+  .homework-cockpit .hw-roster [aria-label='结果筛选'] > label { width: 100%; margin-left: 0; }
+  .homework-cockpit .hw-roster [aria-label='结果筛选'] input { width: 100%; }
 }
 
 @theme inline {

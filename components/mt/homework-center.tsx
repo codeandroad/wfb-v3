@@ -80,21 +80,23 @@ export function HomeworkCenter() {
 
   return (
     <div className="homework-cockpit mx-auto w-full max-w-[1240px] font-sans">
+      <div className="mb-4 [&>div]:mb-0 [&_h1]:text-lg">
       <PageHeader
         title="作业管理"
         desc="本人有权的教学任务；跨周进行中的作业都在这里，不受反馈周筛选影响。"
         actions={
           <>
-            <Btn onClick={() => startAssign("OFFLINE")} disabled={!tasks.length}>
+            <Btn size="sm" onClick={() => startAssign("OFFLINE")} disabled={!tasks.length}>
               补录线下作业
             </Btn>
-            <Btn variant="primary" onClick={() => startAssign("NEW")} disabled={!tasks.length}>
+            <Btn size="sm" variant="primary" onClick={() => startAssign("NEW")} disabled={!tasks.length}>
               <Plus className="size-4" aria-hidden />
               布置作业
             </Btn>
           </>
         }
       />
+      </div>
 
       {deniedTask || deniedHw ? (
         <p role="alert" className="mb-4 rounded-lg border border-[#eec4bf] bg-[#fbe6e4] px-3 py-2 text-sm text-[#9a2b22]">
@@ -137,7 +139,7 @@ export function HomeworkCenter() {
         </label>
       </div>
 
-      <div className="grid items-start gap-3.5 lg:grid-cols-[330px_minmax(0,1fr)]">
+      <div className="grid items-start gap-4 lg:grid-cols-[17rem_minmax(0,1fr)]">
         <section aria-label="作业列表" className="flex flex-col gap-1.5">
           <p className="text-xs text-muted-foreground">
             {list.length} 份作业{status !== "all" ? `（共 ${mine.length} 份）` : ""}
