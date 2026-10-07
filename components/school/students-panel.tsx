@@ -129,7 +129,7 @@ export function StudentsPanel() {
         if (f.teachingClass?.length && !s.courses.some((c) => f.teachingClass.includes(c.course))) return false
         return true
       }),
-    [q, filters],
+    [allStudents, q, filters],
   )
 
   const filtering = rows.length !== allStudents.length
@@ -175,7 +175,8 @@ export function StudentsPanel() {
           <table className="w-full min-w-[560px] text-left text-[13px]">
             <thead className="bg-muted/50 text-xs text-muted-foreground">
               <tr>
-                <th className="px-5 py-2.5 font-medium">姓名</th>
+                <th scope="col" className="w-16 px-3 py-2.5 text-center font-medium">序号</th>
+                <th scope="col" className="px-3 py-2.5 font-medium">姓名</th>
                 <th className="px-3 py-2.5 font-medium">行政班</th>
                 {listColumns.map((c) => (
                   <th key={c.key} className="px-3 py-2.5 font-medium">
@@ -189,22 +190,15 @@ export function StudentsPanel() {
             <tbody>
               {rows.map((s, index) => (
                 <tr key={s.id} className="border-t border-border">
-                  <td className="px-5 py-3">
-                    <div className="flex items-center gap-2.5">
-                      <span
-                        aria-label={`序号 ${index + 1}`}
-                        className="flex size-8 shrink-0 items-center justify-center rounded-md bg-secondary text-xs font-semibold tabular-nums text-secondary-foreground"
-                      >
-                        {String(index + 1).padStart(2, "0")}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => setActive(s)}
-                        className="font-medium text-foreground hover:text-primary hover:underline"
-                      >
-                        {s.name}
-                      </button>
-                    </div>
+                  <td className="px-3 py-3 text-center tabular-nums text-muted-foreground">{index + 1}</td>
+                  <td className="px-3 py-3">
+                    <button
+                      type="button"
+                      onClick={() => setActive(s)}
+                      className="font-medium text-foreground hover:text-primary hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                    >
+                      {s.name}
+                    </button>
                   </td>
                   <td className="px-3 py-3 text-muted-foreground">{s.adminClass}</td>
                   {listColumns.map((c) => (
