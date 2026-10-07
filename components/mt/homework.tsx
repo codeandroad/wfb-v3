@@ -90,7 +90,7 @@ export function HwResultControls({ a, sid, showName, cockpit = false }: { a: Ass
   const qValue = r?.noGrade ? "__NO__" : (r?.quality ?? "")
 
   return (
-    <div className="flex flex-col gap-1.5">
+    <div className="hw-result-controls flex flex-col gap-1.5">
       <div className="flex flex-wrap items-center gap-1.5">
         {showName ? <span className="mr-1 min-w-24 text-sm font-medium">{nameOf(sid)}</span> : null}
         {inactive ? (
@@ -524,19 +524,18 @@ export function HwReview({
   const disabledWhy = !rev ? "这份作业的评价标准待核对，只能登记提交" : !lvl ? "请先选择等级" : ""
 
   return (
-    <Card className={cockpit ? "hw-review overflow-hidden rounded-2xl [&_select]:min-h-8 [&_select]:rounded-full [&_select]:px-3 [&_select]:text-sm [&_button]:text-sm" : "overflow-hidden"}>
-      <div className={cockpit ? "flex flex-col gap-3 border-b border-border p-5 [&_h3]:text-base [&_p]:text-sm" : "flex flex-col gap-2 border-b border-border px-4 py-3"}>
-        <div className={cockpit ? 'grid items-center gap-5 xl:grid-cols-[minmax(0,1fr)_240px]' : 'flex flex-wrap items-start justify-between gap-2'}>
+    <Card className="hw-review overflow-hidden rounded-xl">
+      <div className="flex flex-col gap-2 border-b border-border px-4 py-3">
+        <div className="flex flex-wrap items-start justify-between gap-2">
           <div className="min-w-0">
-            {cockpit && <p className="text-muted-foreground">{taskById(a.taskId) ? formalTaskName(taskById(a.taskId)!) : '教学任务'} · {a.category ?? '未分类'}</p>}
-            <h3 className="text-pretty font-semibold">{a.title}</h3>
+            {cockpit && <p className="text-sm text-muted-foreground">{taskById(a.taskId) ? formalTaskName(taskById(a.taskId)!) : '教学任务'} · {a.category ?? '未分类'}</p>}
+            <h3 className="text-pretty text-sm font-semibold">{a.title}</h3>
             <p className="text-xs text-muted-foreground">
               默认{a.defaultRequirement === "REQUIRED" ? "必做" : "选做"} · 截止 {deadlineText(a.deadline)}
               {a.offline ? ` · 线下补录（原布置 ${fmtMD(dateOfClock(a.issuedAt))}）` : ` · 布置于 ${clockLabel(a.issuedAt)}`}
             </p>
-            {cockpit && a.instructions && <p className="mt-3 rounded-lg border border-border bg-muted/30 px-3 py-2 text-pretty leading-relaxed">{a.instructions}</p>}
           </div>
-          <div className={cockpit ? 'flex flex-col gap-2 [&>button]:w-full' : 'flex flex-wrap items-center gap-1.5'}>
+          <div className="flex flex-wrap items-center gap-1.5">
             {life !== "ACTIVE" ? <Badge tone="neutral">{LIFECYCLE_LABEL[life]}</Badge> : null}
             {manageHref ? (
               <Link href={manageHref} className="inline-flex h-7 items-center gap-1 rounded-lg border border-input bg-card px-2.5 text-xs hover:bg-muted">
@@ -551,15 +550,15 @@ export function HwReview({
           </div>
         </div>
         {!cockpit && <HwProgressLine a={a} />}
-        {!cockpit && a.instructions ? <p className="rounded-lg bg-muted/40 p-3 text-pretty text-sm leading-relaxed">{a.instructions}</p> : null}
+        {a.instructions ? <p className="rounded-lg border border-border bg-muted/30 px-3 py-2 text-pretty text-sm leading-relaxed">{a.instructions}</p> : null}
         {cockpit && <HomeworkMetrics a={a} nowTs={nowTs} />}
       </div>
       {cockpit && manage && !manageHref && <ManagePanel editor a={a} onCopy={onCopy} onCancel={()=>setManage(false)} />}
-      {cockpit && <div className="flex gap-1 border-b border-border px-4" role="group" aria-label="作业详情视图">{([{key:"roster",label:"批改名单"},{key:"stats",label:"数据统计"},{key:"info",label:"作业设置"}] as const).map(t => <button key={t.key} type="button" aria-pressed={view === t.key} onClick={() => setView(t.key)} className={`border-b-2 px-4 py-3 text-sm ${view === t.key ? "border-primary font-semibold text-primary" : "border-transparent text-muted-foreground"}`}>{t.label}</button>)}</div>}
+      {cockpit && <div className="flex gap-1 border-b border-border px-4" role="group" aria-label="作业详情视图">{([{key:"roster",label:"批改名单"},{key:"stats",label:"数据统计"},{key:"info",label:"作业设置"}] as const).map(t => <button key={t.key} type="button" aria-pressed={view === t.key} onClick={() => setView(t.key)} className={`border-b-2 px-3 py-2 text-sm ${view === t.key ? "border-primary font-semibold text-primary" : "border-transparent text-muted-foreground"}`}>{t.label}</button>)}</div>}
       {!cockpit && manage && !manageHref ? <ManagePanel a={a} onCopy={onCopy} /> : null}
       {cockpit && view === "info" && <ManagePanel a={a} onCopy={onCopy} />}
       {cockpit && view === "stats" && <HomeworkStatistics a={a} nowTs={nowTs} />}
-      <div className={cockpit ? 'hw-roster' : undefined} hidden={cockpit && view !== "roster"}>
+      <div className="hw-roster" hidden={cockpit && view !== "roster"}>
       {life === "WITHDRAWN" ? (
         <p className="border-b border-border px-4 py-2.5 text-xs text-muted-foreground">作业已撤回：结果保留可查，不能再登记或批量处理。</p>
       ) : (
@@ -704,11 +703,11 @@ export function HwReview({
                 />
               ) : null}
               <div className="flex min-w-0 flex-1 flex-col gap-0.5 sm:flex-row sm:items-start sm:gap-3">
-                <span className={cockpit ? "flex w-40 shrink-0 items-center gap-2 text-sm" : "w-28 shrink-0 pt-1 text-sm"}>
-                  {cockpit && <span aria-hidden className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 font-semibold text-primary">{nameOf(sid)?.slice(0,1)}</span>}
+                <span className="flex w-36 shrink-0 items-center gap-2 text-sm">
+                  <span aria-hidden className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary/10 font-semibold text-primary">{nameOf(sid)?.slice(0,1)}</span>
                   <span>{nameOf(sid)}<span className="block text-sm text-muted-foreground">{homeroomName(studentById(sid)?.homeroom_id ?? "")}</span></span>
                 </span>
-                <HwResultControls a={a} sid={sid} cockpit={cockpit} />
+                <HwResultControls a={a} sid={sid} cockpit />
               </div>
             </li>
           ))}
@@ -909,7 +908,7 @@ export function HomeworkPanel({ tw, focusId }: { tw: TaskWeek; focusId?: string 
     )
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[17rem_1fr]">
+    <div className="homework-cockpit grid items-start gap-4 font-sans lg:grid-cols-[17rem_minmax(0,1fr)]">
       <nav aria-label="作业" className="flex flex-col gap-3">
         {(["THIS", "PAST_OPEN", "LATER"] as HwBucket[]).map((b) =>
           groups[b].length ? (
@@ -949,7 +948,7 @@ export function HwListItem({ a, active, onClick, sub }: { a: Assignment; active:
       type="button"
       onClick={onClick}
       aria-current={active}
-      className={`w-full rounded-lg border px-3 py-2 text-left ${active ? "border-primary bg-accent" : "border-border bg-card hover:border-primary/50"}`}
+      className={`w-full rounded-xl border bg-card px-3 py-2 text-left text-card-foreground ${active ? "border-primary ring-1 ring-primary" : "border-border hover:border-primary/50"}`}
     >
       <span className="line-clamp-2 block text-sm font-medium">{a.title}</span>
       {sub ? <span className="block truncate text-[11px] text-muted-foreground">{sub}</span> : null}
@@ -959,8 +958,8 @@ export function HwListItem({ a, active, onClick, sub }: { a: Assignment; active:
       </span>
       <span className="mt-1 flex flex-wrap gap-1 text-[11px]">
         <span className="text-muted-foreground">{p.E ? `核对 ${p.checked}/${p.E}` : "无需核对"}</span>
-        {p.ungraded ? <span className="rounded bg-[#f6ead2] px-1 text-[#7a4f0e]">待评价 {p.ungraded}</span> : null}
-        {due ? <span className="rounded bg-[#f6ead2] px-1 text-[#7a4f0e]">到期待核对 {due}</span> : null}
+        {p.ungraded ? <span className="hw-amber rounded px-1">待评价 {p.ungraded}</span> : null}
+        {due ? <span className="hw-amber rounded px-1">到期待核对 {due}</span> : null}
         {p.review ? <span className="rounded bg-muted px-1">安排待核对 {p.review}</span> : null}
       </span>
     </button>
