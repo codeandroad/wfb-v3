@@ -17,6 +17,24 @@ import { ListToolbar, type FilterGroup, type FilterState } from "./list-toolbar"
 
 type CatTab = "subjects" | "courses" | "units"
 
+const UNIT_STAGE_OPTIONS = [
+  { value: "IAS", label: "AS / IAS" },
+  { value: "IA2", label: "A2 / IA2" },
+  { value: "IGCSE", label: "IGCSE" },
+] satisfies { value: CatalogUnit["stage"]; label: string }[]
+
+const UNIT_NATURE_OPTIONS = [
+  { value: "官方模块", label: "官方模块" },
+  { value: "官方试卷", label: "官方试卷" },
+  { value: "校内板块", label: "校内板块" },
+] satisfies { value: CatalogUnit["nature"]; label: string }[]
+
+const UNIT_RULE_OPTIONS = [
+  { value: "必修", label: "必修" },
+  { value: "路径必修", label: "路径必修" },
+  { value: "选修", label: "选修" },
+] satisfies { value: CatalogUnit["rule"]; label: string }[]
+
 // 生成下一个可用条目代码，如 S011 / C902 / U911
 function nextCode(prefix: string, existing: { code: string }[]) {
   const nums = existing
@@ -71,7 +89,7 @@ export function CatalogPanel() {
       ) : null}
 
       <p className="text-xs text-muted-foreground">
-        目录取自导入工作簿 v3.0 的真实结构，节选为演示子集。文件内 S/C/U 标记仅在目录内连线，不是学校永久代码或数据库
+        目录沿用导入工作簿 v3.0 的结构，并补充官方大纲信息。官方试卷用于展示考核组成，不代表独立模块资格；路径必修指选定分层路径后必考。文件内 S/C/U 标记仅在目录内连线，不是学校永久代码或数据库
         ID；此处的增删改仅在本次演示中生效，不代表本校已批准开设。
       </p>
     </div>
@@ -430,9 +448,20 @@ function CoursesList({
               <Meta label="教学组织" value={active.org} />
               <Meta label="考核结构" value={active.structure} />
               <Meta label="官方代码" value={active.officialCode} mono />
+              {active.syllabusVersion ? <Meta label="大纲版本" value={active.syllabusVersion} /> : null}
             </div>
-            <div className="rounded-lg bg-muted/50 p-3 text-[12.5px] leading-relaxed text-muted-foreground">
-              {active.note}
+            <div className="flex flex-col gap-2 rounded-lg bg-muted/50 p-3 text-sm leading-relaxed text-muted-foreground">
+              <p>{active.note}</p>
+              {active.sourceUrl ? (
+                <a
+                  href={active.sourceUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-fit text-primary underline underline-offset-4"
+                >
+                  查看官方大纲（PDF，新窗口）
+                </a>
+              ) : null}
             </div>
             <div>
               <p className="mb-2 flex items-center gap-1.5 text-[13px] font-semibold">
@@ -652,18 +681,27 @@ function blankCourse(subjects: CatalogSubject[]): Omit<CatalogCourse, "code"> {
 
 function UnitRow({ u }: { u: CatalogUnit }) {
   return (
-    <div className="flex items-center gap-3 rounded-lg border border-border p-3">
-      <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-accent text-xs font-semibold text-primary">
-        {u.short}
-      </span>
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-[13px] font-medium">{u.name}</p>
-        <p className="truncate text-xs text-muted-foreground">{u.en}</p>
+    <div className="flex flex-col gap-2 rounded-lg border border-border p-3">
+      <div className="flex items-start gap-3">
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-accent text-sm font-semibold text-primary">
+          {u.short}
+        </span>
+        <div className="flex min-w-0 flex-1 flex-col gap-1">
+          <p className="text-pretty text-sm font-medium">{u.name}</p>
+          <p className="text-pretty text-sm leading-relaxed text-muted-foreground">{u.en}</p>
+        </div>
+        <div className="flex shrink-0 flex-col items-end gap-1">
+          <Badge tone={u.rule === "选修" ? "neutral" : "primary"}>{u.rule}</Badge>
+          <span className="text-sm text-muted-foreground">
+            {UNIT_STAGE_OPTIONS.find((option) => option.value === u.stage)?.label}
+          </span>
+        </div>
       </div>
-      <div className="flex shrink-0 flex-col items-end gap-1">
-        <Badge tone={u.rule === "必修" ? "primary" : "neutral"}>{u.rule}</Badge>
-        <span className="text-xs text-muted-foreground">{u.stage}</span>
+      <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+        <span className="font-mono">{u.officialCode}</span>
+        <Badge tone={u.nature === "校内板块" ? "warning" : "info"}>{u.nature}</Badge>
       </div>
+      <p className="text-pretty text-sm leading-relaxed text-muted-foreground">{u.note}</p>
     </div>
   )
 }
@@ -690,18 +728,12 @@ function UnitsList({
       {
         key: "stage",
         label: "阶段",
-        options: [
-          { value: "IAS", label: "IAS" },
-          { value: "IA2", label: "IA2" },
-        ],
+        options: UNIT_STAGE_OPTIONS,
       },
       {
         key: "nature",
         label: "性质",
-        options: [
-          { value: "官方模块", label: "官方模块" },
-          { value: "校内板块", label: "校内板块" },
-        ],
+        options: UNIT_NATURE_OPTIONS,
       },
       {
         key: "course",
@@ -779,9 +811,11 @@ function UnitsList({
                   </td>
                   <td className="px-3 py-3 font-mono text-xs text-muted-foreground">{u.officialCode}</td>
                   <td className="px-3 py-3">
-                    <Badge tone={u.nature === "官方模块" ? "info" : "warning"}>{u.nature}</Badge>
+                    <Badge tone={u.nature === "校内板块" ? "warning" : "info"}>{u.nature}</Badge>
                   </td>
-                  <td className="px-3 py-3 text-muted-foreground">{u.stage}</td>
+                  <td className="px-3 py-3 text-muted-foreground">
+                    {UNIT_STAGE_OPTIONS.find((option) => option.value === u.stage)?.label}
+                  </td>
                   <td className="px-3 py-3 text-muted-foreground">{course?.name ?? "—"}</td>
                   <td className="px-5 py-3">
                     <RowActions onEdit={() => setEditing(u)} onDelete={() => setDel(u)} />
@@ -865,7 +899,7 @@ function UnitForm({
       open={open}
       onClose={onClose}
       title={initial ? "编辑单元" : "新增单元"}
-      desc="单元关联到某一课程；校内板块无官方资格出口，请显式标记。"
+      desc="单元关联到课程；官方试卷不等于独立模块资格。路径必修指选定分层路径后必须参加。"
       width="max-w-lg"
       footer={
         <>
@@ -918,35 +952,26 @@ function UnitForm({
             <Input value={f.officialCode} onChange={(e) => set("officialCode", e.target.value)} placeholder="9709/07" />
           </Field>
           <Field label="阶段">
-            <Segmented<"IAS" | "IA2">
+            <Segmented<CatalogUnit["stage"]>
               value={f.stage}
               onChange={(v) => set("stage", v)}
-              options={[
-                { value: "IAS", label: "IAS" },
-                { value: "IA2", label: "IA2" },
-              ]}
+              options={UNIT_STAGE_OPTIONS}
             />
           </Field>
         </div>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid gap-4">
           <Field label="性质">
-            <Segmented<"官方模块" | "校内板块">
+            <Segmented<CatalogUnit["nature"]>
               value={f.nature}
               onChange={(v) => set("nature", v)}
-              options={[
-                { value: "官方模块", label: "官方模块" },
-                { value: "校内板块", label: "校内板块" },
-              ]}
+              options={UNIT_NATURE_OPTIONS}
             />
           </Field>
           <Field label="修读性质">
-            <Segmented<"必修" | "选修">
+            <Segmented<CatalogUnit["rule"]>
               value={f.rule}
               onChange={(v) => set("rule", v)}
-              options={[
-                { value: "必修", label: "必修" },
-                { value: "选修", label: "选修" },
-              ]}
+              options={UNIT_RULE_OPTIONS}
             />
           </Field>
         </div>
