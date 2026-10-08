@@ -188,6 +188,8 @@ export interface RoutineOp {
 }
 
 export interface MtBiz {
+  researchAdoptions?: import('@/lib/research/model').Adoption[]
+  teachingContent?: Record<string, import('@/lib/research/model').TeachingContent[]>
   publicationPolicies?: import('./publication-policy').PublicationPolicy[]
   publicationWaivers?: import('./publication-tracking').PublicationWaiver[]
   publicationChecks?: import('./publication-tracking').PublicationCheck[]
@@ -250,6 +252,7 @@ export interface BatchCand {
 export const scopePrefs = (teacherId: string) => `prefs:${teacherId}`
 
 export interface HwDraft {
+  questionSources?: import('@/lib/research/model').PreparedQuestion[]
   teacherId: string
   taskId: string
   mode: "NEW" | "OFFLINE" | "COPY"

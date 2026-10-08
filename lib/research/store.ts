@@ -1,54 +1,73 @@
 "use client"
 
 import { useSyncExternalStore } from "react"
-import { CATALOG_COURSES } from "@/lib/demo/school"
+import { getStaffList } from "@/lib/school/staff-store"
+import { getCatalog } from "@/lib/school/catalog-store"
+import { PERIODS } from "@/lib/timetable/data"
+import { emptyDocument, emptyItem, type Actor, type Document, type ResearchState } from "./model"
+import { applyResearchCommand, type Command } from "./commands"
+import { researchSeed } from "./seed"
+export * from "./model"
+export type { Command } from "./commands"
 
-export const groups = [{ id: "math", name: "数学组", subject: "S001" }, { id: "physics", name: "物理组", subject: "S002" }]
-// Explicit prototype appointments; department labels and teaching assignments never grant access.
-export const appointments = [
-  { staff: "u-lin", group: "math", role: "组长", start: "2026-09-01", end: "2027-07-31" },
-  { staff: "u-lin", group: "physics", role: "成员", start: "2026-09-01", end: "2027-07-31" },
-  { staff: "u-chen", group: "physics", role: "组长", start: "2026-09-01", end: "2027-07-31" },
-  { staff: "u-zhou", group: "math", role: "成员", start: "2026-09-01", end: "2027-07-31" },
-  { staff: "u-wang", group: "math", role: "成员", start: "2026-09-01", end: "2027-07-31" },
-  { staff: "u-zhou", group: "physics", role: "成员", start: "2025-09-01", end: "2026-07-31" },
-]
-export function membership(staff: string, group: string, date: string) {
-  return appointments.find(a => a.staff === staff && a.group === group && a.start <= date && date <= a.end)
+export function schoolPeriodMinutes(): number | null {
+  const minutes = [...new Set(PERIODS.map(p => { const [a,b] = p.start.split(":").map(Number); const [c,d] = p.end.split(":").map(Number); return (c*60+d)-(a*60+b) }))]
+  return minutes.length === 1 && minutes[0] > 0 ? minutes[0] : null
 }
-export function schoolScopes(staff: string): string[] {
-  return staff === "u-lin" ? ["math", "physics"] : staff === "u-xu" ? ["math"] : []
-}
-export type Item = { id: string; title: string; body: string; source: string; minutes: number | null; fixed: boolean; week: string; section: string }
-export type Document = { id: string; kind: "大纲" | "计划" | "资源" | "练习组合"; title: string; owner: string; course: string; version: number; source: string; notes: string; budget: number | null; reserve: number; period: number | null; items: Item[] }
-export type Task = { id: string; title: string; group: string; parent: string; owner: string; due: string; mode: "牵头提交" | "成员各自提交"; status: "待承接" | "进行中" | "已提交"; result?: Document; discussion: { author: string; text: string }[] }
-export type ResearchState = { documents: Document[]; tasks: Task[] }
-const sampleItems: Item[] = [{ id: "r1", title: "二次函数的表示与图像", body: "演示学校自编要求：比较解析式、表格与图像三种表示；通过配方解释顶点的位置，说明开口方向与系数的关系。\n公式：y = a(x − h)² + k（a ≠ 0）。\nNotes：要求学生说明推理过程，而非仅记忆图像。此段不是考试局官方原文；尚未整理其他章节及官方考核权重。", source: "学校自编演示 · 第1章 §1.1 · v1", minutes: null, fixed: false, week: "", section: "函数" }]
-const seed: ResearchState = {
-  documents: [{ id: "syllabus-demo", kind: "大纲", title: "函数教学要求 · 共建示例", owner: "math", course: "C101", version: 1, source: "学校自编演示；非官方大纲", notes: "先修：代数式变形。考核结构、组合及权重尚未整理，不据此计算成绩。", budget: null, reserve: 0, period: null, items: sampleItems }, { id: "plan-demo", kind: "计划", title: "函数入门 · 教学计划", owner: "math", course: "C101", version: 1, source: "syllabus-demo@1 / r1", notes: "独立备课，不预设教学班或具体日期。", budget: 120, reserve: 15, period: null, items: sampleItems.map(i => ({ ...i, minutes: 60 })) }],
-  tasks: groups.map(g => ({ id: `task-${g.id}`, title: "学期教学内容整理", group: g.id, parent: "school-task-1", owner: "", due: "2026-11-01", mode: "牵头提交", status: "待承接", discussion: [] })),
-}
-const key = "tgs:research-prototype:v1"
-let state: ResearchState = seed
+const KEY = "tgs:research-prototype:v2"
+const LEGACY_KEY = "tgs:research-prototype:v1"
+const seed = researchSeed(schoolPeriodMinutes())
+let state = seed
 let hydrated = false
+let status = { error: "", memoryDraft: false }
 const listeners = new Set<() => void>()
-function snapshot() {
+
+function normalizeDocument(value: Partial<Document> & { id: string }): Document {
+  const defaults = emptyDocument(value.id,value.kind ?? "计划",value.title ?? "未命名内容",value.owner ?? "",value.author ?? "u-lin",value.course ?? "",schoolPeriodMinutes())
+  return { ...defaults,...value,items: (value.items ?? []).map(i => ({ ...emptyItem(i.id),...i, weeks: Array.isArray(i.weeks) ? i.weeks : [], references: Array.isArray(i.references) ? i.references : [], notes: i.notes ?? ((i as unknown as { week?: string }).week ? `原版周次备注：${(i as unknown as { week: string }).week}；尚未映射具体分钟。` : "") })) }
+}
+export function migrateResearch(value: unknown): ResearchState {
+  const data = value as Partial<ResearchState>
+  if (!data || !Array.isArray(data.documents) || !Array.isArray(data.tasks)) throw new Error("教研存储无法读取。原数据未清空，请保留并检查存储格式。")
+  if (data.schema === 2) return { ...seed,...data,documents: data.documents.map(normalizeDocument) }
+  const documents = data.documents.map(normalizeDocument)
+  for (const doc of seed.documents) if (!documents.some(d => d.id === doc.id)) documents.push(structuredClone(doc))
+  const legacyTasks = data.tasks as unknown as { id: string; group: string; parent: string; title: string; owner: string; due: string; status: string; mode: string; result?: Document; discussion?: { author: string; text: string }[] }[]
+  const tasks = legacyTasks.map(t => ({ ...seed.tasks.find(x => x.group === t.group)!, id: t.id, group: t.group, title: t.title, owner: t.owner, due: t.due, mode: t.mode as ResearchState["tasks"][number]["mode"], schoolTaskId: t.parent || null, status: t.status as ResearchState["tasks"][number]["status"], outcomes: t.result ? [{ id: `migrated-${t.id}`, kind: "document" as const, entityId: t.result.id, title: t.result.title, version: t.result.version, document: normalizeDocument(t.result), submittedBy: t.owner, submittedAt: "旧版提交（日期未记录）" }] : [] }))
+  return { ...seed,documents,revisions: { ...seed.revisions,...Object.fromEntries(documents.map(d => [`${d.id}@${d.version}`,structuredClone(d)])) }, tasks, discussions: legacyTasks.flatMap(t => (t.discussion ?? []).map((d,i) => ({ id: `migrated-${t.id}-${i}`, target: `task:${t.id}`, author: d.author, body: d.text, at: "旧版讨论（日期未记录）" }))) }
+}
+export function getResearch(): ResearchState {
   if (!hydrated && typeof window !== "undefined") {
     hydrated = true
-    try { const raw = localStorage.getItem(key); if (raw) { const data = JSON.parse(raw); if (Array.isArray(data.documents) && Array.isArray(data.tasks)) state = data } } catch { /* Keep the seed readable; saves report storage failures. */ }
+    try { const raw = window.localStorage.getItem(KEY) ?? window.localStorage.getItem(LEGACY_KEY); if (raw) state = migrateResearch(JSON.parse(raw)) }
+    catch (error) { status = { error: error instanceof Error ? error.message : "浏览器存储读取失败，未替换原数据。", memoryDraft: false } }
   }
   return state
 }
-export function saveResearch(next: ResearchState) {
-  localStorage.setItem(key, JSON.stringify(next))
-  state = next
-  listeners.forEach(l => l())
+function emit() { listeners.forEach(l => l()) }
+function persist(next: ResearchState, retainDraft = false) {
+  try { window.localStorage.setItem(KEY,JSON.stringify(next)); state = next; status = { error: "",memoryDraft: false }; emit(); return true }
+  catch { if (retainDraft) state = next; status = { error: "保存失败：本机存储不可用或空间不足。未完成文本保留在当前页面内存中，请不要关闭页面，恢复后重试。",memoryDraft: retainDraft }; emit(); return false }
 }
-export function useResearch() {
-  return useSyncExternalStore(l => { listeners.add(l); return () => { listeners.delete(l) } }, snapshot, () => seed)
+export function saveResearch(next: ResearchState) { if (!persist(next)) throw new Error(status.error) }
+export function researchCommand(actor: Actor, command: Command): { ok: true } | { ok: false; error: string } {
+  const current = getResearch()
+  const people = getStaffList()
+  const me = people.find(p => p.id === actor.staff)
+  const liveActor = { ...actor,enabled: actor.enabled && !!me && me.status !== "left" && me.accountStatus === "enabled" }
+  try {
+    const next = applyResearchCommand(current,liveActor,command,getCatalog(),id => people.some(p => p.id === id && p.status !== "left" && p.accountStatus === "enabled"))
+    if (!persist(next,command.type === "draft-document" || command.type === "form-draft")) return { ok: false,error: status.error }
+    return { ok: true }
+  } catch(error) { return { ok: false,error: error instanceof Error ? error.message : "操作失败，请重新核对。" } }
 }
-export function coursesFor(group: string) { return CATALOG_COURSES.filter(c => c.subjectCode === groups.find(g => g.id === group)?.subject) }
-export function totals(doc: Document) {
-  const allocated = doc.items.reduce((n, i) => n + (i.minutes ?? 0), 0)
-  return { allocated, remainder: doc.budget === null ? null : doc.budget - doc.reserve - allocated }
+export function retryResearchSave() { return persist(state) }
+function subscribe(listener: () => void) {
+  listeners.add(listener)
+  const storage = (event: StorageEvent) => { if (event.key === KEY && event.newValue) { hydrated = false; getResearch(); emit() } }
+  window.addEventListener("storage",storage)
+  return () => { listeners.delete(listener); window.removeEventListener("storage",storage) }
 }
+export function useResearch() { return useSyncExternalStore(subscribe,getResearch,() => seed) }
+const serverStatus = { error: "",memoryDraft: false }
+export function useResearchStatus() { return useSyncExternalStore(subscribe,() => status,() => serverStatus) }
