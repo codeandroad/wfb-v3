@@ -41,7 +41,8 @@ export type Activity = {
   lesson: { taskId: string; lessonId: string; date: string; period: number; label: string; room: string | null } | null;
   materials: { documentId: string; version: number }[]; conclusion: string; share: Access;
   responses: Record<string, "参加" | "无法参加">; attendance: Record<string, "到场" | "未到场">;
-  criterionId: string | null; trials: { id: string; answer: string; notes: string; decisions: Record<string, string> }[]; version: number;
+  criterionId: string | null; criterionVersion?: number; criterionSnapshot?: Criterion;
+  trials: { id: string; answer: string; notes: string; decisions: Record<string, string> }[]; version: number;
 }
 export type Notice = { id: string; group: string; title: string; body: string; recipients: string[]; requiresAck: boolean; acknowledged: string[]; author: string; at: string }
 export type SupportIssue = { id: string; group: string; title: string; body: string; response: string; status: "待协调" | "已回复"; author: string }
@@ -56,12 +57,14 @@ export type Criterion = {
 export type ResearchState = {
   schema: 2; documents: Document[]; revisions: Record<string, Document>; drafts: Record<string, DraftDocument>;
   appointments: Appointment[]; grants: SchoolGrant[]; schoolTasks: SchoolTask[]; tasks: Task[]; activities: Activity[];
-  discussions: Discussion[]; notices: Notice[]; issues: SupportIssue[]; criteria: Criterion[]; forms: Record<string, unknown>;
+  discussions: Discussion[]; notices: Notice[]; issues: SupportIssue[]; criteria: Criterion[];
+  criterionRevisions?: Record<string, Criterion>; forms: Record<string, unknown>;
 }
 export type CatalogState = { subjects: CatalogSubject[]; courses: CatalogCourse[]; units: CatalogUnit[]; settings: Record<string, { active: boolean; groupIds: string[] }> }
-export type PreparedQuestion = { id: string; title: string; text: string; stem: string; printedPage: string; filePage: string; question: string; subquestion: string; maxScore: number | null; scoring: string; answer: Item["answer"]; source: SourceRef; references: SourceRef[] }
-export type TestConversion = { criterionId: string; version: number; title: string; source: string; testName: string; assignmentId: string; participantIds: string[]; thresholds: { minimum: number; code: string }[]; adoptedAt: string }
-export type TeachingContent = { id: string; title: string; text: string; source: SourceRef | null; references: SourceRef[]; at: string; confirmedBy: string; planItemId?: string }
+export type QuestionScoringBasis = { criterionId: string; version: number; title: string; source: string; maxScore: number | null; scoring: string; adoptedAt: string }
+export type PreparedQuestion = { id: string; title: string; text: string; notes?: string; scoringBasis?: QuestionScoringBasis; stem: string; printedPage: string; filePage: string; question: string; subquestion: string; maxScore: number | null; scoring: string; answer: Item["answer"]; source: SourceRef; references: SourceRef[] }
+export type TestConversion = { criterionId: string; version: number; title: string; source: string; testName: string; assignmentId: string; participantIds: string[]; thresholds: { minimum: number; code: string }[]; levels?: Criterion["levels"]; adoptedAt: string }
+export type TeachingContent = { id: string; title: string; text: string; source: SourceRef | null; references: SourceRef[]; at: string; confirmedBy: string; planItemId?: string; revision?: number }
 export type Adoption = { id: string; documentId: string; version: number; taskId: string; itemIds: string[]; adoptedAt: string; items: Item[]; unitIds: string[] }
 
 export function activeAt(start: string, end: string | null, date: string) { return start <= date && (!end || end >= date) }
@@ -87,7 +90,7 @@ export function canReadDocument(state: ResearchState, actor: Actor, doc: Documen
   return canUseAccess(state, actor, doc.owner, doc.share, !doc.restricted)
 }
 export function canEditDocument(state: ResearchState, actor: Actor, doc: Document) {
-  return actor.enabled && (doc.owner === actor.staff || canEditGroup(state, actor, doc.owner))
+  return canReadDocument(state, actor, doc) && (doc.owner === actor.staff || canEditGroup(state, actor, doc.owner))
 }
 export function referenceReadable(state: ResearchState, actor: Actor, ref: SourceRef, personalOwner?: string) {
   const source = state.documents.find(d => d.id === ref.documentId) ?? state.revisions[`${ref.documentId}@${ref.version}`]
@@ -99,6 +102,36 @@ export function itemReadable(state: ResearchState, actor: Actor, item: Item, per
   return item.references.every(ref => referenceReadable(state, actor, ref, personalOwner))
 }
 export function visibleItems(state: ResearchState, actor: Actor, doc: Document) { return doc.items.filter(i => itemReadable(state, actor, i, doc.owner)) }
+export function canRetainItem(state: ResearchState, actor: Actor, item: Item, owner?: string, visited = new Set<string>()): boolean {
+  if (!itemReadable(state, actor, item, owner)) return false
+  return item.references.every(ref => {
+    const source = state.documents.find(d => d.id === ref.documentId)
+    if (!source || source.restricted || source.copyPolicy !== "retain" || !ref.retainText) return false
+    const key = `${ref.documentId}@${ref.version}:${ref.itemId}`
+    if (visited.has(key)) return false
+    const revision = state.revisions[`${ref.documentId}@${ref.version}`] ?? (source.version === ref.version ? source : null)
+    const original = revision?.items.find(i => i.id === ref.itemId)
+    return !!original && canRetainItem(state, actor, original, owner, new Set([...visited, key]))
+  })
+}
+export function canReadCriterion(state: ResearchState, actor: Actor, criterion: Criterion): boolean {
+  if (!canViewGroup(state, actor, criterion.group)) return false
+  if (!criterion.documentId) return true
+  const document = state.documents.find(d => d.id === criterion.documentId)
+  const item = document?.items.find(i => i.id === criterion.itemId)
+  return !!document && canReadDocument(state, actor, document) && (!criterion.itemId || !!item && itemReadable(state, actor, item, document.owner))
+}
+export function validateCriterion(criterion: Criterion) {
+  if (!criterion.title.trim() || criterion.title.length > 120) throw new Error("依据名称须为 1–120 字。")
+  const levels = criterion.levels
+  if (new Set(levels.map(l => l.id)).size !== levels.length || new Set(levels.map(l => l.code)).size !== levels.length || levels.some(l => !l.id || !l.code.trim() || !l.label.trim())) throw new Error("等级标识、代码和含义须完整，代码不能重复。")
+  if (levels.some(l => l.code === "A" && l.label !== "优秀")) throw new Error("A 沿用既有“优秀”语义，不是 GPA。")
+  if (["课堂表现方案", "作业质量方案"].includes(criterion.kind) && (levels.length < 2 || !criterion.dimensions.length || criterion.dimensions.some(d => !d.name.trim()))) throw new Error("课堂／作业方案须至少有一个评价维度和两个有含义的选项。")
+  if (criterion.maxScore !== null && (!Number.isFinite(criterion.maxScore) || criterion.maxScore < 0)) throw new Error("题目满分须为非负有限数；未知与 0 分分别保存。")
+  if (criterion.kind === "题目评分依据" && (!criterion.documentId || !criterion.itemId)) throw new Error("请明确关联题目或小题。")
+  if (new Set(criterion.thresholds.map(t => t.minimum)).size !== criterion.thresholds.length || new Set(criterion.thresholds.map(t => t.code)).size !== criterion.thresholds.length || criterion.thresholds.some(t => !Number.isFinite(t.minimum) || t.minimum < 0 || !levels.some(l => l.code === t.code))) throw new Error("分数线须为非负有限数且不重复，并关联明确等级。")
+  if (criterion.kind === "单次考核等级换算" && criterion.thresholds.length && (!criterion.testName.trim() || !criterion.source.trim())) throw new Error("有分数线时须填写明确考核及真实依据，不推定官方规则。")
+}
 export function referenceFor(doc: Document, item: Item, actor?: Actor): SourceRef {
   return { documentId: doc.id, version: doc.version, itemId: item.id, title: doc.title, locator: [item.source, item.printedPage && `印刷页 ${item.printedPage}`, item.filePage && `文件页 ${item.filePage}`, item.question && `题 ${item.question}${item.subquestion}`].filter(Boolean).join(" · "), retainText: !doc.restricted && doc.copyPolicy === "retain", ...(actor ? { retainedBy: actor.staff } : {}) }
 }
@@ -202,10 +235,10 @@ export function validateDocument(doc: Document) {
 export function copyDocument(state: ResearchState, actor: Actor, doc: Document, id: string, kind = doc.kind, itemIds = doc.items.map(i => i.id)): Document {
   if (!canReadDocument(state,actor,doc)) throw new Error("已失去来源访问权，不能复制。")
   const items = selectItems(doc,itemIds)
-  if (doc.restricted || doc.copyPolicy !== "retain" || items.some(i => !itemReadable(state,actor,i,doc.owner))) throw new Error("来源仅允许受限引用，不能保存为脱离授权的个人副本。")
+  if (doc.restricted || doc.copyPolicy !== "retain" || items.some(i => !canRetainItem(state,actor,i,doc.owner))) throw new Error("来源仅允许受限引用，不能保存为脱离授权的个人副本。")
   const selected = new Set(items.map(i => i.id))
   return { ...structuredClone(doc), id, kind, owner: actor.staff, author: actor.staff, title: `${doc.title} · ${kind === doc.kind ? "个人版" : "选用计划"}`, version: 1, share: emptyAccess(actor.staff), archived: false, files: [],
-    items: items.map(i => ({ ...structuredClone(i), parentId: i.parentId && selected.has(i.parentId) ? i.parentId : null, references: [...i.references,referenceFor(doc,i,actor)] })), ...(kind === "计划" && doc.kind !== "计划" ? { budget: null, reserve: 0, assessments: [], paths: [], items: items.map(i => ({ ...structuredClone(i), parentId: i.parentId && selected.has(i.parentId) ? i.parentId : null, minutes: null, fixed: false, weeks: [], references: [...i.references,referenceFor(doc,i,actor)] })) } : {}) }
+    items: items.map(i => ({ ...structuredClone(i), parentId: i.parentId && selected.has(i.parentId) ? i.parentId : null, references: [...i.references.map(ref => ({ ...ref,retainedBy: actor.staff })),referenceFor(doc,i,actor)] })), ...(kind === "计划" && doc.kind !== "计划" ? { budget: null, reserve: 0, assessments: [], paths: [], items: items.map(i => ({ ...structuredClone(i), parentId: i.parentId && selected.has(i.parentId) ? i.parentId : null, minutes: null, fixed: false, weeks: [], references: [...i.references.map(ref => ({ ...ref,retainedBy: actor.staff })),referenceFor(doc,i,actor)] })) } : {}) }
 }
 export function ownTodos(state: ResearchState, actor: Actor, group: string) {
   const rows = state.tasks.filter(t => t.group === group && !["已完成","已提交","待验收"].includes(t.status) && (t.owner === actor.staff || t.mode === "成员各自提交" && t.submitters.includes(actor.staff) && !t.outcomes.some(o => o.submittedBy === actor.staff)))

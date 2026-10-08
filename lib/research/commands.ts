@@ -1,11 +1,11 @@
-import { activeAt, canEditDocument, canEditGroup, canLeadGroup, canReadActivity, canReadDocument, canViewGroup, copyDocument, coursesFor, groups, itemReadable, membership, schoolScopes, scopeValid, validateDocument, type Actor, type Activity, type Appointment, type CatalogState, type Criterion, type Discussion, type Document, type Notice, type Outcome, type ResearchState, type SchoolTask, type SupportIssue, type Task } from "./model"
+import { activeAt, canEditDocument, canEditGroup, canLeadGroup, canReadActivity, canReadCriterion, canReadDocument, canRetainItem, copyDocument, coursesFor, groups, itemReadable, schoolScopes, scopeValid, validateCriterion, validateDocument, type Actor, type Activity, type Appointment, type CatalogState, type Criterion, type Discussion, type Document, type Notice, type Outcome, type ResearchState, type SchoolTask, type SupportIssue, type Task } from "./model"
 
 export type Command =
   | { type: "form-draft"; key: string; value: unknown }
   | { type: "create-document"; document: Document }
   | { type: "draft-document"; document: Document; baseVersion: number }
   | { type: "save-document"; document: Document; baseVersion: number }
-  | { type: "copy-document"; id: string; sourceId: string; kind?: Document["kind"]; itemIds?: string[] }
+  | { type: "copy-document"; id: string; sourceId: string; sourceVersion?: number; kind?: Document["kind"]; itemIds?: string[] }
   | { type: "discard-draft"; id: string }
   | { type: "save-task"; task: Task }
   | { type: "accept-task"; id: string; owner: string; collaborators: string[]; submitters: string[]; mode: Task["mode"] }
@@ -73,9 +73,11 @@ export function applyResearchCommand(state: ResearchState, actor: Actor, command
     }
     case "discard-draft": next.drafts = { ...state.drafts }; delete next.drafts[`${actor.staff}|${command.id}`]; break
     case "copy-document": {
-      const source = state.documents.find(d => d.id === command.sourceId)
-      requireCondition(source,"来源不存在。")
-      const d = copyDocument(state,actor,source,command.id,command.kind,command.itemIds)
+      const current = state.documents.find(d => d.id === command.sourceId)
+      requireCondition(current && canReadDocument(state,actor,current),"来源不存在或当前无权读取。")
+      const source = command.sourceVersion ? state.revisions[`${current.id}@${command.sourceVersion}`] : current
+      requireCondition(source,"指定来源版本不存在，不回退到新版本。")
+      const d = copyDocument(state,actor,{ ...source,share: current.share,restricted: current.restricted,copyPolicy: current.copyPolicy },command.id,command.kind,command.itemIds)
       return applyResearchCommand(state,actor,{ type: "create-document", document: d },catalog,accountEnabled)
     }
     case "save-task": {
@@ -107,7 +109,7 @@ export function applyResearchCommand(state: ResearchState, actor: Actor, command
       const request = command.outcome; let outcome: Outcome
       if (request.kind === "document") {
         const d = state.documents.find(x => x.id === request.entityId)
-        requireCondition(d && d.version === request.version && canReadDocument(state,actor,d) && !d.restricted && d.copyPolicy === "retain" && d.items.every(i => itemReadable(state,actor,i,d.owner)),"成果来源不可用、已更新或包含受限内容，请重新核对。")
+        requireCondition(d && d.version === request.version && canReadDocument(state,actor,d) && !d.restricted && d.copyPolicy === "retain" && d.items.every(i => canRetainItem(state,actor,i,d.owner)),"成果来源不可用、已更新或包含不能转交的受限内容，请重新核对。")
         const snapshot = { ...structuredClone(d), files: [] }
         outcome = { ...request, title: d.title, document: snapshot, submittedBy: actor.staff, submittedAt: actor.date }
       } else {
@@ -123,7 +125,7 @@ export function applyResearchCommand(state: ResearchState, actor: Actor, command
     }
     case "complete-task": {
       const t = state.tasks.find(x => x.id === command.id)
-      requireCondition(t && canEditGroup(state,actor,t.group) && t.owner === actor.staff && !t.schoolTaskId && !t.requirements.trim() && t.mode === "牵头提交","学校任务或有明确交付要求的事项须引用成果；普通无交付事项可直接完成。")
+      requireCondition(t && t.status === "进行中" && canEditGroup(state,actor,t.group) && t.owner === actor.staff && !t.schoolTaskId && !t.requirements.trim() && t.mode === "牵头提交","学校任务或有明确交付要求的事项须引用成果；普通无交付事项可直接完成。")
       next.tasks = state.tasks.map(x => x.id === t.id ? { ...t,status: t.acceptance ? "待验收" : "已完成" } : x)
       break
     }
@@ -135,20 +137,28 @@ export function applyResearchCommand(state: ResearchState, actor: Actor, command
     }
     case "school-task": {
       const t = command.task
-      requireCondition(t.title.trim() && t.groups.length && t.groups.every(g => schoolScopes(state,actor,true).includes(g)),"只能向获授权统筹的科组下发任务。")
-      requireCondition(command.groupTasks.length === t.groups.length && command.groupTasks.every(g => g.schoolTaskId === t.id && t.groups.includes(g.group)),"各组承接来源不一致。")
+      requireCondition(t.title.trim() && t.groups.length && new Set(t.groups).size === t.groups.length && t.groups.every(g => schoolScopes(state,actor,true).includes(g)),"只能向获授权统筹的科组下发任务。")
+      requireCondition(!state.schoolTasks.some(s => s.id === t.id),"学校事项已存在，不能重复下发。")
+      requireCondition(command.groupTasks.length === t.groups.length && new Set(command.groupTasks.map(g => g.group)).size === t.groups.length && new Set(command.groupTasks.map(g => g.id)).size === t.groups.length && command.groupTasks.every(g => g.schoolTaskId === t.id && t.groups.includes(g.group) && !g.parent && !state.tasks.some(x => x.id === g.id) && g.status === "待承接" && !g.outcomes.length && g.acceptance === t.acceptance && g.requirements === t.requirements && g.due === t.due),"各组承接来源或交付要求不一致。")
       next.schoolTasks = [...state.schoolTasks,{ ...t,createdBy: actor.staff }]; next.tasks = [...state.tasks,...command.groupTasks]
       break
     }
     case "save-activity": {
       const a = command.activity; const prev = state.activities.find(x => x.id === a.id)
       requireCondition(canEditGroup(state,actor,a.group) && (!prev || prev.owner === actor.staff || canLeadGroup(state,actor,a.group)),"只能维护本人负责或组长有权管理的活动。")
-      requireCondition(a.title.trim() && a.start && a.end && a.start < a.end,"请填写主题及正确活动时间。")
+      requireCondition(!prev || prev.group === a.group && prev.owner === a.owner && prev.version === a.version,"活动归属不可变，已有修订时请重新核对。")
+      requireCondition(prev || a.owner === actor.staff,"新活动负责人须为本人。")
+      requireCondition(a.title.trim() && Number.isFinite(Date.parse(a.start)) && Number.isFinite(Date.parse(a.end)) && a.start < a.end,"请填写主题及正确活动时间。")
+      requireCondition(a.participants.length > 0 && new Set(a.participants).size === a.participants.length,"请核对明确邀请的参与者。")
       requireCondition(a.type === "示范课" ? a.lesson !== null : a.lesson === null,"真实示范课须关联既有课次；其他活动不得生成课堂事实。")
       requireCondition(!a.course || coursesFor(catalog,a.group).some(c => c.code === a.course),"活动课程不属于本组。")
       requireCondition(!a.taskId || state.tasks.some(t => t.id === a.taskId && t.group === a.group),"活动只能关联本组事项。")
       requireCondition(a.materials.every(ref => { const d = state.documents.find(x => x.id === ref.documentId); return d && canReadDocument(state,actor,d) && d.version === ref.version }),"材料没有当前读取权限或已更新。")
-      next.activities = prev ? state.activities.map(x => x.id === a.id ? { ...a,version: prev.version+1 } : x) : [...state.activities,a]
+      const criterion = a.criterionId ? state.criteria.find(c => c.id === a.criterionId) : null
+      requireCondition(!a.criterionId || a.type === "评分校准" && criterion && criterion.group === a.group && canReadCriterion(state,actor,criterion),"校准依据不在可读取的本组范围。")
+      requireCondition(a.type !== "评分校准" || criterion && a.trials.length > 0,"评分校准须明确关联依据和少量匿名示例。")
+      const updated: Activity = { ...a,responses: prev?.responses ?? {},attendance: prev?.attendance ?? {},version: prev ? prev.version+1 : 1,...(criterion ? { criterionVersion: criterion.version,criterionSnapshot: structuredClone(criterion) } : { criterionVersion: undefined,criterionSnapshot: undefined }) }
+      next.activities = prev ? state.activities.map(x => x.id === a.id ? updated : x) : [...state.activities,updated]
       break
     }
     case "respond-activity": {
@@ -164,6 +174,7 @@ export function applyResearchCommand(state: ResearchState, actor: Actor, command
     case "trial-activity": {
       const a = state.activities.find(x => x.id === command.id)
       requireCondition(a && a.type === "评分校准" && a.participants.includes(actor.staff) && a.trials.some(t => t.id === command.trial),"只能对本人受邀的校准活动示例试评。")
+      requireCondition(command.decision.trim() && command.decision.length <= 3000,"请填写 1–3000 字的真实试评与分歧说明。")
       next.activities = state.activities.map(x => x.id === a.id ? { ...a,trials: a.trials.map(t => t.id === command.trial ? { ...t,decisions: { ...t.decisions,[actor.staff]: command.decision } } : t) } : x); break
     }
     case "discussion": {
@@ -184,17 +195,22 @@ export function applyResearchCommand(state: ResearchState, actor: Actor, command
       requireCondition(n && n.requiresAck && n.recipients.includes(actor.staff) && canEditGroup(state,actor,n.group),"此通知无需确认或不在接收范围。")
       next.notices = state.notices.map(x => x.id === n.id ? { ...n,acknowledged: [...new Set([...n.acknowledged,actor.staff])] } : x); break
     }
-    case "support": requireCondition(canEditGroup(state,actor,command.issue.group),"无权提出本组协调事项。"); next.issues = [...state.issues,{ ...command.issue,author: actor.staff }]; break
+    case "support": requireCondition(canEditGroup(state,actor,command.issue.group) && command.issue.title.trim() && command.issue.body.trim(),"请填写本组协调事项及具体问题。"); requireCondition(!state.issues.some(i => i.id === command.issue.id),"协调事项已提交。"); next.issues = [...state.issues,{ ...command.issue,response: "",status: "待协调",author: actor.staff }]; break
     case "respond-support": {
       const i = state.issues.find(x => x.id === command.id); requireCondition(i && schoolScopes(state,actor,true).includes(i.group),"没有该组学校协调权限。")
+      requireCondition(command.response.trim(),"请填写明确的协调回复。")
       next.issues = state.issues.map(x => x.id === i.id ? { ...i,response: command.response,status: "已回复" } : x); break
     }
     case "criterion": {
       const c = command.criterion; const prev = state.criteria.find(x => x.id === c.id)
-      requireCondition(canEditGroup(state,actor,c.group) && c.title.trim(),"无权维护评价依据或名称为空。")
-      requireCondition(c.levels.every(l => l.code !== "A" || l.label === "优秀"),"A 沿用既有“优秀”语义，不是 GPA。")
-      requireCondition(c.thresholds.every(t => Number.isFinite(t.minimum) && t.minimum >= 0 && c.levels.some(l => l.code === t.code)),"换算需使用有效分数及现有等级字典。")
-      next.criteria = prev ? state.criteria.map(x => x.id === c.id ? { ...c,version: prev.version+1 } : x) : [...state.criteria,c]; break
+      requireCondition(canEditGroup(state,actor,c.group) && (!prev || canReadCriterion(state,actor,prev)),"无权维护此评价依据。")
+      requireCondition(!prev || c.group === prev.group && c.kind === prev.kind && c.version === prev.version,"依据归属与用途不可变；已有新修订时请重新核对。")
+      requireCondition(canReadCriterion(state,actor,c),"关联题目或评分材料没有当前读取权。")
+      validateCriterion(c)
+      const updated = { ...structuredClone(c),version: prev ? prev.version+1 : 1 }
+      next.criteria = prev ? state.criteria.map(x => x.id === c.id ? updated : x) : [...state.criteria,updated]
+      next.criterionRevisions = { ...state.criterionRevisions,...(prev ? { [`${prev.id}@${prev.version}`]: structuredClone(prev) } : {}),[`${updated.id}@${updated.version}`]: structuredClone(updated) }
+      break
     }
     case "appointment": {
       const a = command.appointment

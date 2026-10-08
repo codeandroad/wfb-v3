@@ -1,15 +1,21 @@
 "use client"
 
 import Link from "next/link"
+import { useState } from "react"
+import { Button } from "@/components/ui/button"
+import { CriterionEditor } from "./criterion-editor"
+import { CriterionAdoption } from "./criterion-adoption"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty"
 import { useResearchContext } from "@/lib/research/context"
-import { canReadDocument, canViewGroup, itemReadable, type Criterion } from "@/lib/research/model"
+import { canEditGroup, canReadCriterion, canReadDocument, canViewGroup, itemReadable, type Criterion } from "@/lib/research/model"
 import { documentHref, Panel, RichText } from "./primitives"
 
 export function CriterionBoard({ group }: { group: string }) {
   const { state, actor } = useResearchContext()
+  const [editing, setEditing] = useState<string | null>(null)
+  const editable = canEditGroup(state, actor, group)
   const criteria = canViewGroup(state, actor, group)
     ? state.criteria.filter(criterion => criterion.group === group)
     : []
@@ -22,7 +28,9 @@ export function CriterionBoard({ group }: { group: string }) {
           课堂表现、作业质量、题目评分和单次考核换算分别保留。A 沿用既有“优秀”语义，不是 GPA；组内推荐不会自动改写教师已记录的评价或成绩。
         </AlertDescription>
       </Alert>
-      {criteria.map(criterion => <CriterionDetails key={criterion.id} criterion={criterion} />)}
+      {editable && !editing && <Button className="self-start" onClick={() => setEditing("new")}>共建新的评价依据</Button>}
+      {editable && editing && <CriterionEditor key={editing} group={group} criterion={criteria.find(c => c.id === editing)} onClose={() => setEditing(null)} />}
+      {criteria.map(criterion => <CriterionDetails key={criterion.id} criterion={criterion} onEdit={editable && canReadCriterion(state, actor, criterion) ? () => setEditing(criterion.id) : undefined} />)}
       {!criteria.length && (
         <Empty className="border">
           <EmptyHeader>
@@ -35,7 +43,7 @@ export function CriterionBoard({ group }: { group: string }) {
   )
 }
 
-function CriterionDetails({ criterion }: { criterion: Criterion }) {
+function CriterionDetails({ criterion, onEdit }: { criterion: Criterion; onEdit?: () => void }) {
   const { state, actor } = useResearchContext()
   const document = state.documents.find(doc => doc.id === criterion.documentId)
   const item = document?.items.find(entry => entry.id === criterion.itemId)
@@ -91,6 +99,8 @@ function CriterionDetails({ criterion }: { criterion: Criterion }) {
               <RichText text={criterion.scoring || "尚未整理得分点，不自动推定评分规则。"} />
             </section>
           )}
+          {onEdit && <Button variant="outline" className="self-start" onClick={onEdit}>修订此依据（不更改已采用版本）</Button>}
+          <CriterionAdoption criterion={criterion} />
           {criterion.kind === "单次考核等级换算" && (
             <section className="flex flex-col gap-3" aria-label="单次考核换算范围">
               <h3 className="font-semibold">单次考核与分数线</h3>
