@@ -509,7 +509,7 @@ export function homeroomName(id: string): string {
 /** 标准正式身份：班级 + 规范分工（整科无分工） */
 export function formalTaskName(t: STask): string {
   const n = normativeLabel(t)
-  return n ? `${classOf(t).name} · ${n}` : `${classOf(t).name}（整科）`
+  return n ? `${classOf(t).name} · ${n}` : classOf(t).name
 }
 
 export interface Membership {

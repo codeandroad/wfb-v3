@@ -419,7 +419,7 @@ export function DivisionForm({
         <div className="flex gap-1.5">
           {(
             [
-              ["INHERIT", `继承本班有效名单（${roster.length} 人）`],
+              ["INHERIT", `继承���班有效名单（${roster.length} 人）`],
               ["EXPLICIT_SUBSET", "明确子集"],
             ] as const
           ).map(([v, l]) => (
@@ -965,7 +965,7 @@ function SelectedSummary({
             const t = byKey.get(k)
             if (!t) invalid = "目标已失效，请移除"
             else {
-              label = `${t.className}｜${t.divisionLabel}`
+              label = t.kind === "RESP" ? `${t.className} · ${t.divisionLabel}` : t.className
               const ev = evaluateTarget(teaching, t, teacherId, period)
               if (ev.state === "self") invalid = ev.reason
               else if (ev.state === "others") note = `与 ${ev.names.join("、")} 共同任教`

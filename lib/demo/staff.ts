@@ -184,7 +184,7 @@ export const DUTY_TYPES: DutyTypeDef[] = [
     key: "timetable_mgmt",
     label: "课表管理",
     role: "TEACHING_MANAGER",
-    blurb: "维护并发布本校学校课表，处理全校性的调课与停课安排。",
+    blurb: "维护并发布本校学校课表，处理全校性的调课与停课安排���",
     scopeKind: "本校学校课表（节次、课次安排、调课 / 停课）",
     canDo: [
       "维护学校课表的节次与课次安排",
@@ -545,6 +545,7 @@ export interface StaffProfile {
   history: HistoryItem[]
   // 更多资料（可选，个人补充）——按字段权限与个人显示设置展示，列表默认不展示
   englishName?: string
+  birthMonth?: string
   birthplace?: string
   educationLevel?: string
   firstWorkAt?: string // 首次参加工作年月；不用于本校工号
@@ -1198,7 +1199,7 @@ export const ACCOUNTS: AccountRecord[] = [
     accessTone: "neutral",
     systemRoles: [],
     lastLogin: "2026-09-18 20:12",
-    note: "四个系统角色皆空、且以账号自助为唯一来源的示例：可登录并管理自身账号，但没有任何业务能力（不任课、不带班、不治理、不教务）。",
+    note: "四个系统角色皆空、且以账号自助为唯一来源的示例：可���录并管理自身账号，但没有任何业务能力（不任课、不带班、不治理、不教务）。",
     history: [{ date: "2026-09-05", text: "账号创建（仅自助，无业务角色）" }],
     sessions: [{ id: "S-10", device: "Safari · iPhone", location: "校外网络", lastActive: "2026-09-18 20:12", current: true }],
     accessExplains: [
@@ -1522,7 +1523,7 @@ export const INVITE_RECORDS: InviteRecord[] = [
     events: [
       { time: "09-21 10:00", text: "有权管理员生成邀请" },
       { time: "09-21 10:02", text: "邮件已发送（示例）" },
-      { time: "09-22 09:15", text: "受邀人接受并设置登录名、激活账号（示例）" },
+      { time: "09-22 09:15", text: "受��人接受并设置登录名、激活账号（示例）" },
     ],
     note: "已接受：链接 / 邀请码再使用只显示既有结果，不新建第二个账号。",
   },
@@ -1628,7 +1629,7 @@ export const ASSOCIATION_CASES: AssociationCase[] = [
       { label: "既有账号", value: "该档案暂无在用账号", state: "match" },
       { label: "登录名", value: "受邀人尚未设置", state: "review" },
     ],
-    advisory: "各项一致，建议在受邀人接受并设置登录名后确认关联；确认为人工动作，系统不自动完成。",
+    advisory: "各项一致，建议在受邀人接受并设置登录名后确认关联；确认为人工动��，系统不自动完成。",
   },
   {
     id: "assoc-conflict",

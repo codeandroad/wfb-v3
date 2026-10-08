@@ -79,7 +79,7 @@ function Actions({ onCancel, submitLabel, disabled, danger }: { onCancel: () => 
 }
 
 function EditForm({ staff, onDone, onCancel }: FormProps) {
-  const initial: StaffFormState = { ...initialStaffForm(), name: staff.name, department: staff.department || null, jobTitle: staff.jobTitle || null, gender: staff.gender, joinedAt: staff.joinedAt ?? "", phone: staff.phone, email: staff.email, englishName: staff.englishName ?? "", birthplace: staff.birthplace ?? "", firstWorkAt: staff.firstWorkAt ?? "", educationExperiences: educationExperiencesOf(staff), workExperiences: staff.workExperiences ?? [], interests: staff.interests ?? [], wechat: staff.wechat ?? "" }
+  const initial: StaffFormState = { ...initialStaffForm(), name: staff.name, department: staff.department || null, jobTitle: staff.jobTitle || null, gender: staff.gender, joinedAt: staff.joinedAt ?? "", phone: staff.phone, email: staff.email, englishName: staff.englishName ?? "", birthMonth: staff.birthMonth ?? "", birthplace: staff.birthplace ?? "", firstWorkAt: staff.firstWorkAt ?? "", educationExperiences: educationExperiencesOf(staff), workExperiences: staff.workExperiences ?? [], interests: staff.interests ?? [], wechat: staff.wechat ?? "" }
   const [state, setState] = useState(initial)
   const [editingNumber, setEditingNumber] = useState(false)
   const { push } = useToast()
@@ -115,7 +115,7 @@ function EditForm({ staff, onDone, onCancel }: FormProps) {
     updateStaff(staff.id, {
       name: state.name.trim(), department: state.department ?? "", jobTitle: state.jobTitle ?? "", gender: state.gender === "男" || state.gender === "女" ? state.gender : "未透露",
       joinedAt: state.joinedAt || undefined, email: state.email.trim(), phone: state.phone.trim(), englishName: state.englishName.trim() || undefined,
-      birthplace: state.birthplace.trim() || undefined, educationLevel: undefined, firstWorkAt: state.firstWorkAt || undefined,
+      birthMonth: state.birthMonth || undefined, birthplace: state.birthplace.trim() || undefined, educationLevel: undefined, firstWorkAt: state.firstWorkAt || undefined,
       educationExperiences: cleanEducation(state.educationExperiences), workExperiences: cleanWork(state.workExperiences), wechat: state.wechat.trim() || undefined,
       interests: [...new Set([...state.interests, ...state.interestExtra.split(/[,，]/).map((item) => item.trim()).filter(Boolean)])],
     }, "资料更新")
