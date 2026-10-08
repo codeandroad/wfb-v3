@@ -1,11 +1,12 @@
-import { activeAt, canEditDocument, canEditGroup, canLeadGroup, canReadActivity, canReadCriterion, canReadDocument, canRetainItem, copyDocument, coursesFor, groups, itemReadable, schoolScopes, scopeValid, validateCriterion, validateDocument, type Actor, type Activity, type Appointment, type CatalogState, type Criterion, type Discussion, type Document, type Notice, type Outcome, type ResearchState, type SchoolTask, type SupportIssue, type Task } from "./model"
+import { lessonsOfWeek, taskById, weekOfDate } from "@/lib/mt/model"
+import { activeAt, canEditDocument, canEditGroup, canLeadGroup, canReadActivity, canReadCriterion, canReadDocument, canRetainItem, copyDocument, courseTaskMap, coursesFor, groups, itemReadable, schoolScopes, scopeValid, validateCriterion, validateDocument, type Actor, type Activity, type Appointment, type CatalogState, type Criterion, type Discussion, type Document, type Notice, type Outcome, type ResearchState, type SchoolTask, type SupportIssue, type Task } from "./model"
 
 export type Command =
   | { type: "form-draft"; key: string; value: unknown }
   | { type: "create-document"; document: Document }
   | { type: "draft-document"; document: Document; baseVersion: number }
   | { type: "save-document"; document: Document; baseVersion: number }
-  | { type: "copy-document"; id: string; sourceId: string; sourceVersion?: number; kind?: Document["kind"]; itemIds?: string[] }
+  | { type: "copy-document"; id: string; sourceId: string; sourceVersion?: number; kind?: Document["kind"]; itemIds?: string[]; period?: number | null }
   | { type: "discard-draft"; id: string }
   | { type: "save-task"; task: Task }
   | { type: "accept-task"; id: string; owner: string; collaborators: string[]; submitters: string[]; mode: Task["mode"] }
@@ -38,6 +39,7 @@ export function applyResearchCommand(state: ResearchState, actor: Actor, command
       requireCondition(!state.documents.some(x => x.id === d.id),"内容已存在，请勿重复创建。")
       requireCondition(d.author === actor.staff && (d.owner === actor.staff || coursesFor(catalog,d.owner).some(c => c.code === d.course)),"组内资料只能关联本组负责的有效课程。")
       requireCondition(scopeValid(d,catalog),"课程／单元关联无效；整科范围不需要默认单元。")
+      requireCondition(d.items.every(i => i.unitIds.every(id => catalog.units.some(u => u.code === id && u.courseCode === d.course))),"项目含其他课程的同名单元，不能保存。")
       validateDocument(d)
       next.documents = [...state.documents,structuredClone(d)]
       next.revisions = { ...state.revisions, [`${d.id}@${d.version}`]: structuredClone(d) }
@@ -78,6 +80,7 @@ export function applyResearchCommand(state: ResearchState, actor: Actor, command
       const source = command.sourceVersion ? state.revisions[`${current.id}@${command.sourceVersion}`] : current
       requireCondition(source,"指定来源版本不存在，不回退到新版本。")
       const d = copyDocument(state,actor,{ ...source,share: current.share,restricted: current.restricted,copyPolicy: current.copyPolicy },command.id,command.kind,command.itemIds)
+      if (d.kind === "计划" && d.period === null && command.period !== undefined) d.period = command.period
       return applyResearchCommand(state,actor,{ type: "create-document", document: d },catalog,accountEnabled)
     }
     case "save-task": {
@@ -104,7 +107,7 @@ export function applyResearchCommand(state: ResearchState, actor: Actor, command
     }
     case "submit-task": {
       const t = state.tasks.find(x => x.id === command.id)
-      requireCondition(t && canEditGroup(state,actor,t.group) && t.status === "进行中","任务尚未承接或已提交。")
+      requireCondition(t && canEditGroup(state,actor,t.group) && t.status === "进行中","任务���未承接或已提交。")
       requireCondition(t.mode === "牵头提交" ? t.owner === actor.staff : t.submitters.includes(actor.staff),"协作人不自动成为独立提交人。")
       const request = command.outcome; let outcome: Outcome
       if (request.kind === "document") {
@@ -125,7 +128,7 @@ export function applyResearchCommand(state: ResearchState, actor: Actor, command
     }
     case "complete-task": {
       const t = state.tasks.find(x => x.id === command.id)
-      requireCondition(t && t.status === "进行中" && canEditGroup(state,actor,t.group) && t.owner === actor.staff && !t.schoolTaskId && !t.requirements.trim() && t.mode === "牵头提交","学校任务或有明确交付要求的事项须引用成果；普通无交付事项可直接完成。")
+      requireCondition(t && t.status === "进行中" && canEditGroup(state,actor,t.group) && t.owner === actor.staff && !t.schoolTaskId && !t.requirements.trim() && t.mode === "牵头提交","学校任务或有明确交付要求的事项��引用成果；普通无交付事项可直接完成。")
       next.tasks = state.tasks.map(x => x.id === t.id ? { ...t,status: t.acceptance ? "待验收" : "已完成" } : x)
       break
     }
@@ -151,6 +154,11 @@ export function applyResearchCommand(state: ResearchState, actor: Actor, command
       requireCondition(a.title.trim() && Number.isFinite(Date.parse(a.start)) && Number.isFinite(Date.parse(a.end)) && a.start < a.end,"请填写主题及正确活动时间。")
       requireCondition(a.participants.length > 0 && new Set(a.participants).size === a.participants.length,"请核对明确邀请的参与者。")
       requireCondition(a.type === "示范课" ? a.lesson !== null : a.lesson === null,"真实示范课须关联既有课次；其他活动不得生成课堂事实。")
+      if (a.lesson) {
+        const linked = lessonsOfWeek("BASE",weekOfDate(a.lesson.date),[a.lesson.taskId]).find(l => l.id === a.lesson!.lessonId)
+        const task = taskById(a.lesson.taskId)
+        requireCondition(linked && task && linked.actual_date === a.lesson.date && linked.period.number === a.lesson.period && courseTaskMap[a.course] === task.course_id && a.start === `${linked.actual_date}T${linked.period.start}` && a.end === `${linked.actual_date}T${linked.period.end}` && a.lesson.room === linked.room,"关联课次不存在、已调整或不属所选课程。请重新核对已有课表，不会另造课次或修改上课时间。")
+      }
       requireCondition(!a.course || coursesFor(catalog,a.group).some(c => c.code === a.course),"活动课程不属于本组。")
       requireCondition(!a.taskId || state.tasks.some(t => t.id === a.taskId && t.group === a.group),"活动只能关联本组事项。")
       requireCondition(a.materials.every(ref => { const d = state.documents.find(x => x.id === ref.documentId); return d && canReadDocument(state,actor,d) && d.version === ref.version }),"材料没有当前读取权限或已更新。")

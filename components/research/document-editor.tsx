@@ -16,7 +16,7 @@ import { PlanAllocation } from "./plan-allocation"
 import { SourcePicker } from "./source-picker"
 
 export function DocumentEditor({ document: saved,readonly = false,onCreated }: { document: Document; readonly?: boolean; onCreated: (id: string) => void }) {
-  const { state,actor,command } = useResearchContext()
+  const { state,actor,command,period } = useResearchContext()
   const params = useSearchParams()
   const ui = useResearchForm(`editor:${saved.id}`,{ mode: "read",query: "",selected: [] as string[] })
   const [error,setError] = useState("")
@@ -35,7 +35,7 @@ export function DocumentEditor({ document: saved,readonly = false,onCreated }: {
   function select(id: string,checked: boolean) { const range = selectItems(doc,[id]).map(i => i.id); ui.set({ selected: checked ? [...new Set([...selected,...range])] : selected.filter(x => !range.includes(x)) }) }
   function copy(kind?: Document["kind"],itemIds?: string[]) {
     const id = crypto.randomUUID()
-    const result = command({ type: "copy-document",sourceId: saved.id,sourceVersion: saved.version,id,kind,itemIds })
+    const result = command({ type: "copy-document",sourceId: saved.id,sourceVersion: saved.version,id,kind,itemIds,period })
     if (!result.ok) setError(result.error); else onCreated(id)
   }
   const viewingEdit = editable && ui.value.mode === "edit"

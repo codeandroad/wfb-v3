@@ -2,6 +2,12 @@
 
 import { Badge, Card, EmptyState } from "@/components/kit"
 import { HomeworkMetrics, HomeworkStatistics } from "@/components/mt/homework-dashboard"
+import { HomeworkQuestionPreview, HomeworkQuestionScores, HomeworkSourceDetails, TestGradeReference } from "@/components/research/homework-content"
+import { useResearchContext } from "@/lib/research/context"
+import { getResearch } from "@/lib/research/store"
+import { homeworkQuestionInstructions, validatePreparedQuestions } from "@/lib/research/homework"
+import { isTeachingActor } from "@/lib/research/teaching"
+import type { PreparedQuestion } from "@/lib/research/model"
 import { SaveState } from "@/components/mt/shared"
 import { Btn, Modal, inputCls } from "@/components/mt/ui"
 import {
@@ -192,6 +198,8 @@ export function HwResultControls({ a, sid, showName, cockpit = false }: { a: Ass
       </div>
       {block ? <p className="text-[11px] text-[#8a5a12]">{block}</p> : null}
       {more ? <ResultMore a={a} sid={sid} req={req} disabled={!!block} /> : null}
+      <HomeworkQuestionScores assignment={a} studentId={sid} />
+      <TestGradeReference assignment={a} studentId={sid} />
     </div>
   )
 }
@@ -551,6 +559,7 @@ export function HwReview({
         </div>
         {!cockpit && <HwProgressLine a={a} />}
         {a.instructions ? <p className="rounded-lg border border-border bg-muted/30 px-3 py-2 text-pretty text-sm leading-relaxed">{a.instructions}</p> : null}
+        <HomeworkSourceDetails assignment={a} />
         {cockpit && <HomeworkMetrics a={a} nowTs={nowTs} />}
       </div>
       {cockpit && manage && !manageHref && <ManagePanel editor a={a} onCopy={onCopy} onCancel={()=>setManage(false)} />}
@@ -980,7 +989,7 @@ export function AssignForm({
   preparedContent,
   onDone,
 }: {
-  preparedContent?: { title: string; instructions: string }
+  preparedContent?: { title: string; instructions: string; questionSources?: PreparedQuestion[] }
   task: Pick<STask, "id" | "teacher_id">
   sourceDate?: string | null
   mode?: AssignMode
@@ -990,6 +999,7 @@ export function AssignForm({
   const mt = useMt()
   const w = useHomeworkWriters()
   const teacherId = useTeacherId() ?? task.teacher_id
+  const { actor } = useResearchContext()
   const draftKey = `${teacherId}|${task.id}|${mode}${copyFrom ? `|${copyFrom.id}` : ""}`
   const draft = mode === "COPY" ? undefined : mt.biz.hwDrafts?.[draftKey]
   const today = dateOfClock(mt.biz.clock)
@@ -1009,14 +1019,16 @@ export function AssignForm({
   const [useCurrentScheme, setUseCurrentScheme] = useState(true)
   const rosterDate = mode === "OFFLINE" && origDate ? origDate : today
   const roster = membersOn(mt.biz.memberships[task.id] ?? [], rosterDate)
-  const [excluded, setExcluded] = useState<Set<string>>(new Set())
+  const [excluded, setExcluded] = useState<Set<string>>(() => new Set(draft?.excludedStudentIds ?? []))
+  const [questions, setQuestions] = useState<PreparedQuestion[]>(() => structuredClone(draft ? draft.questionSources ?? [] : copyFrom?.questionSources ?? preparedContent?.questionSources ?? []))
+  const [useSavedQuestionVersions, setUseSavedQuestionVersions] = useState(draft?.useSavedQuestionVersions ?? false)
   const [err, setErr] = useState("")
   const [busy, setBusy] = useState(false)
-  const dirty = useRef(false)
+  const dirty = useRef(!!preparedContent && !draft)
 
   const persistDraft = () => {
     if (!dirty.current || mode === "COPY") return
-    const d: HwDraft = { teacherId, taskId: task.id, mode, title, instructions, requirement: req, deadline: dl === "DEFAULT" ? `DAYS:${daysRaw}` : dl, originalDate: origDate, sourceDate: sourceDate ?? null }
+    const d: HwDraft = { teacherId, taskId: task.id, mode, title, instructions, requirement: req, deadline: dl === "DEFAULT" ? `DAYS:${daysRaw}` : dl, originalDate: origDate, sourceDate: sourceDate ?? null, questionSources: structuredClone(questions), excludedStudentIds: [...excluded], useSavedQuestionVersions }
     w.saveDraft(draftKey, d)
   }
   const edit = <T,>(set: (v: T) => void) => (v: T) => {
@@ -1024,6 +1036,18 @@ export function AssignForm({
     set(v)
   }
 
+  const additionalQuestions = preparedContent?.questionSources?.filter(question => !questions.some(saved => saved.id === question.id)) ?? []
+  const appendPrepared = () => {
+    const target = taskById(task.id)
+    if (!target || !isTeachingActor(actor, teacherId)) return setErr("当前不是本人合法任教身份，不能转交题目。")
+    const issue = validatePreparedQuestions(getResearch(), actor, target, additionalQuestions)
+    if (issue) return setErr(issue)
+    dirty.current = true
+    setQuestions(previous => [...previous, ...structuredClone(additionalQuestions)])
+    setInstructions(previous => [previous, homeworkQuestionInstructions(additionalQuestions)].filter(Boolean).join("\n\n"))
+    setUseSavedQuestionVersions(false)
+    setErr("")
+  }
   const recipients = roster.filter((s) => !excluded.has(s))
   const previewDeadline =
     dl === "DEFAULT" ? (days === null ? null : deadlineInDays(mt.biz.clock, days)) : dl === "NONE" ? null : fromLocalInput(dl)
@@ -1044,6 +1068,12 @@ export function AssignForm({
       if (existing) {
         newId = existing.id
         return s
+      }
+      if (questions.length) {
+        const target = taskById(task.id)
+        if (!target || !isTeachingActor(actor, teacherId) || target.teacher_id !== teacherId || s.revoked.includes(target.id)) return { error: "本人任教授权已变化，草稿保留，不能转交所选题目。" }
+        const issue = validatePreparedQuestions(getResearch(), actor, target, questions, useSavedQuestionVersions)
+        if (issue) return { error: issue }
       }
       const valid = new Set(membersOn(s.memberships[task.id] ?? [], mode === "OFFLINE" ? origDate : dateOfClock(s.clock)))
       const finalList = recipients.filter((x) => valid.has(x))
@@ -1069,6 +1099,7 @@ export function AssignForm({
         status: "ACTIVE",
         scoreEnabled: copyFrom?.scoreEnabled ?? false,
         copiedFrom: copyFrom?.id ?? null,
+        ...(questions.length ? { questionSources: structuredClone(questions) } : {}),
         ...(mode === "OFFLINE" ? { offline: { registeredAt: s.clock } } : {}),
         // 首次布置绑定当时有效的作业默认方案；补录无依据时留空为“标准待核对”
         schemeRevId: mode === "OFFLINE" && !useCurrentScheme ? null : homeworkRevForTask(s.schemes, task.id, task.teacher_id, s.clock).revId,
@@ -1102,7 +1133,7 @@ export function AssignForm({
         </div>
       ) : null}
       {copyFrom ? <p className="text-xs text-muted-foreground">复制题目内容自「{copyFrom.title}」；不复制提交、成绩、免做、延期或结束状态。</p> : null}
-      <input className={inputCls} placeholder="作业��题" value={title} onChange={(e) => edit(setTitle)(e.target.value)} aria-label="作业��题" />
+      <input className={inputCls} placeholder="作业标题" value={title} onChange={(e) => edit(setTitle)(e.target.value)} aria-label="作业标题" />
       <textarea
         className={inputCls}
         rows={3}
@@ -1111,6 +1142,21 @@ export function AssignForm({
         onChange={(e) => edit(setInstructions)(e.target.value)}
         aria-label="作业要求"
       />
+      {additionalQuestions.length > 0 && (
+        <div className="flex flex-col gap-2 text-sm">
+          <p className="text-muted-foreground">原草稿正文、标题和名单优先恢复，没有被选题覆盖。可明确追加此次 {additionalQuestions.length} 题；追加只补充正文与结构化来源。</p>
+          <Btn size="sm" onClick={appendPrepared}>明确追加此次所选题目（保留原草稿）</Btn>
+        </div>
+      )}
+      {questions.length > 0 && (
+        <>
+          <HomeworkQuestionPreview questions={questions} />
+          <label className="flex items-start gap-2 text-sm">
+            <input type="checkbox" checked={useSavedQuestionVersions} onChange={e => edit(setUseSavedQuestionVersions)(e.target.checked)} />
+            已核对上述保存正文；若来源修订、归档或不再开放，我明确沿用本人合法保留的版本，不替换为新版，也不绕过受限答案授权。
+          </label>
+        </>
+      )}
       <div className="flex flex-wrap items-center gap-2 text-xs">
         <select aria-label="默认要求" className={sel} value={req} onChange={(e) => edit(setReq)(e.target.value as "REQUIRED")}>
           <option value="REQUIRED">必做</option>
@@ -1128,7 +1174,7 @@ export function AssignForm({
           value={dl === "DEFAULT" || dl === "NONE" ? dl : "CUSTOM"}
           onChange={(e) => edit(setDl)(e.target.value === "CUSTOM" ? toLocalInput(previewDeadline ?? defaultDeadline(mt.biz.clock)) : e.target.value)}
         >
-          {mode !== "OFFLINE" ? <option value="DEFAULT">截止：N 天后��束</option> : null}
+          {mode !== "OFFLINE" ? <option value="DEFAULT">截止：N 天后结束</option> : null}
           <option value="CUSTOM">{mode === "OFFLINE" ? "原截止时间" : "指定截止"}</option>
           <option value="NONE">{mode === "OFFLINE" ? "原截止未知／无截止" : "不设截止"}</option>
         </select>
@@ -1180,7 +1226,7 @@ export function AssignForm({
                   const n = new Set(excluded)
                   if (e.target.checked) n.delete(sid)
                   else n.add(sid)
-                  setExcluded(n)
+                  edit(setExcluded)(n)
                 }}
               />
               {nameOf(sid)}
