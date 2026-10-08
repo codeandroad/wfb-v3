@@ -977,8 +977,10 @@ export function AssignForm({
   sourceDate,
   mode = "NEW",
   copyFrom,
+  preparedContent,
   onDone,
 }: {
+  preparedContent?: { title: string; instructions: string }
   task: Pick<STask, "id" | "teacher_id">
   sourceDate?: string | null
   mode?: AssignMode
@@ -993,8 +995,8 @@ export function AssignForm({
   const today = dateOfClock(mt.biz.clock)
 
   const [token] = useState(() => `AS_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`)
-  const [title, setTitle] = useState(draft?.title ?? copyFrom?.title ?? "")
-  const [instructions, setInstructions] = useState(draft?.instructions ?? copyFrom?.instructions ?? "")
+  const [title, setTitle] = useState(draft?.title ?? copyFrom?.title ?? preparedContent?.title ?? "")
+  const [instructions, setInstructions] = useState(draft?.instructions ?? copyFrom?.instructions ?? preparedContent?.instructions ?? "")
   const [req, setReq] = useState<"REQUIRED" | "OPTIONAL">(draft?.requirement ?? copyFrom?.defaultRequirement ?? "REQUIRED")
   // DEFAULT = 实际布置成功时的学校自然日 + N 天结束；NONE = 明确无截止；其它为手填
   const prefs = useTeacherPrefs(teacherId)
@@ -1126,7 +1128,7 @@ export function AssignForm({
           value={dl === "DEFAULT" || dl === "NONE" ? dl : "CUSTOM"}
           onChange={(e) => edit(setDl)(e.target.value === "CUSTOM" ? toLocalInput(previewDeadline ?? defaultDeadline(mt.biz.clock)) : e.target.value)}
         >
-          {mode !== "OFFLINE" ? <option value="DEFAULT">截止：N 天后结束</option> : null}
+          {mode !== "OFFLINE" ? <option value="DEFAULT">截止：N 天后��束</option> : null}
           <option value="CUSTOM">{mode === "OFFLINE" ? "原截止时间" : "指定截止"}</option>
           <option value="NONE">{mode === "OFFLINE" ? "原截止未知／无截止" : "不设截止"}</option>
         </select>
