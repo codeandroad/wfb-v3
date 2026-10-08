@@ -1,4 +1,5 @@
 import { CatalogPanel } from "@/components/school/catalog-panel"
+import { SchoolResearchPanel } from "@/components/research/school-panel"
 import { CURRENT_TERM_LABEL } from "@/lib/demo/school"
 
 export default function CatalogPage() {
@@ -9,6 +10,7 @@ export default function CatalogPage() {
         <h1 className="mt-1 text-[22px] font-semibold leading-tight text-foreground">课程目录</h1>
       </div>
       <CatalogPanel />
+      <SchoolResearchPanel />
     </div>
   )
 }
