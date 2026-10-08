@@ -343,6 +343,7 @@ function Meta({ label, value, mono, muted }: { label: string; value: string; mon
 function MoreInfo({ staff }: { staff: StaffProfile }) {
   const education = educationExperiencesOf(staff)
   const rows: { label: string; value: string }[] = []
+  if (staff.birthMonth) rows.push({ label: "出生年月", value: staff.birthMonth })
   if (staff.firstWorkAt) rows.push({ label: "首次参加工作年月", value: staff.firstWorkAt })
   if (staff.wechat) rows.push({ label: "微信号", value: staff.wechat })
   if (staff.interests?.length) rows.push({ label: "兴趣爱好", value: staff.interests.join("、") })

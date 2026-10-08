@@ -30,6 +30,7 @@ export interface StaffFormState {
   phone: string
   englishName: string
   gender: string
+  birthMonth: string
   birthplace: string
   firstWorkAt: string
   educationExperiences: EducationExperience[]
@@ -43,7 +44,7 @@ export interface StaffFormState {
 export function initialStaffForm(): StaffFormState {
   return {
     name: "", numberIntent: "manual", customNo: "", department: null, jobTitle: null, joinedAt: "", email: "", phone: "",
-    englishName: "", gender: "未填写", birthplace: "", firstWorkAt: "", educationExperiences: [], workExperiences: [],
+    englishName: "", gender: "未填写", birthMonth: "", birthplace: "", firstWorkAt: "", educationExperiences: [], workExperiences: [],
     wechat: "", interests: [], interestExtra: "", touched: false,
   }
 }
@@ -75,7 +76,7 @@ export function useStaffForm(initial?: Partial<StaffFormState>) {
         id: `u-${crypto.randomUUID()}`, name: state.name.trim(), employeeNo, department: state.department ?? "", jobTitle: state.jobTitle ?? "",
         joinedAt: state.joinedAt || undefined, phone: state.phone.trim(), email: state.email.trim(), englishName: state.englishName.trim() || undefined,
         gender: state.gender === "男" || state.gender === "女" ? state.gender : "未透露", birthplace: state.birthplace.trim() || undefined,
-        firstWorkAt: state.firstWorkAt || undefined, educationExperiences: cleanEducation(state.educationExperiences), workExperiences: cleanWork(state.workExperiences),
+        birthMonth: state.birthMonth || undefined, firstWorkAt: state.firstWorkAt || undefined, educationExperiences: cleanEducation(state.educationExperiences), workExperiences: cleanWork(state.workExperiences),
         wechat: state.wechat.trim() || undefined, interests: [...new Set([...state.interests, ...state.interestExtra.split(/[,，]/).map((item) => item.trim()).filter(Boolean)])],
         status: "active", accountStatus: "none", systemRoles: [], duties: [], history: [],
       })
@@ -95,9 +96,10 @@ export function StaffFormFields({ state, set, hideNumber = false }: { state: Sta
 
   return <div className="flex flex-col gap-4">
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-      <Field label="姓名" required error={nameMissing ? "请输入姓名。" : undefined} className="sm:col-span-2">
-        <Input value={state.name} onChange={(event) => set("name", event.target.value)} placeholder="如 王老师" aria-invalid={nameMissing} />
+      <Field label="姓名" required error={nameMissing ? "请输入姓名。" : undefined}>
+        <Input aria-label="姓名" value={state.name} onChange={(event) => set("name", event.target.value)} placeholder="如 王老师" aria-invalid={nameMissing} />
       </Field>
+      <Field label="性别"><Select aria-label="性别" value={state.gender} onChange={(event) => set("gender", event.target.value)}><option value="未填写">未填写</option><option value="男">男</option><option value="女">女</option><option value="未透露">未透露</option></Select></Field>
       <Field label="英文名 / 常用名">
         <Input value={state.englishName} onChange={(event) => set("englishName", event.target.value)} placeholder="辅助称呼与检索" />
       </Field>
@@ -130,7 +132,7 @@ export function StaffFormFields({ state, set, hideNumber = false }: { state: Sta
       </button>
       {showMore ? <div className="flex flex-col gap-5 border-t border-border p-3">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Field label="性别"><Select value={state.gender} onChange={(event) => set("gender", event.target.value)}>{["未填写", "男", "女"].map((item) => <option key={item}>{item}</option>)}</Select></Field>
+          <Field label="出生年月"><Input aria-label="出生年月" type="month" value={state.birthMonth} onChange={(event) => set("birthMonth", event.target.value)} /></Field>
           <Field label="出生地"><Input aria-label="出生地" value={state.birthplace} onChange={(event) => set("birthplace", event.target.value)} placeholder="如 广东深圳" /></Field>
           <Field label="首次参加工作年月" hint="个人第一次参加工作，不用于本校工号。"><Input value={state.firstWorkAt} onChange={(event) => set("firstWorkAt", event.target.value)} placeholder="如 1998 或 1998-09" /></Field>
           <Field label="微信号"><Input value={state.wechat} onChange={(event) => set("wechat", event.target.value)} /></Field>
