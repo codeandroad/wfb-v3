@@ -1,40 +1,52 @@
 "use client"
 
 import { useState } from "react"
-import { Plus } from "lucide-react"
+import { MapPin, Plus } from "lucide-react"
 import { Modal } from "@/components/kit"
 import { Button } from "@/components/ui/button"
 import { FieldGroup } from "@/components/ui/field"
+import { ClassCard, WeekGrid } from "@/components/timetable/week-grid"
 import { useResearchContext } from "@/lib/research/context"
 import { activeAt, canLeadGroup, type Task } from "@/lib/research/model"
-import { addDays, fmtDate, PERIODS, WEEKDAYS } from "@/lib/timetable/data"
+import { fmtDate, periodById, WEEKDAYS, type ProjectedEntry } from "@/lib/timetable/data"
+import { cn } from "@/lib/utils"
 import { RField, RSelect } from "./primitives"
 
-export function ScheduleDays({ group, week }: { group: string; week: string }) {
+export function ScheduleDays({ group, week, entries }: { group: string; week: string; entries: ProjectedEntry[] }) {
   const { state, actor } = useResearchContext()
   const leader = canLeadGroup(state, actor, group)
   const [date, setDate] = useState<string | null>(null)
   return <>
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4" data-testid="research-day-cards">
-      {WEEKDAYS.map(day => {
-        const dayDate = addDays(week, day.n - 1)
-        const slots = (state.groupSchedules ?? []).filter(s => s.group === group && s.weekday === day.n).sort((a, b) => PERIODS.findIndex(p => p.id === a.periodId) - PERIODS.findIndex(p => p.id === b.periodId))
+    <div className="overflow-x-auto" data-testid="research-day-cards">
+      <WeekGrid className="min-w-[640px]" weekStart={week} entries={entries} compact canonical renderDay={({ weekday, date: dayDate, entries: dayEntries, stopped }) => {
         const tasks = state.tasks.filter(t => t.group === group && t.scheduleDate === dayDate)
-        const content = <>
-          <span className="flex items-center justify-between gap-2"><span className="font-semibold">{day.label} · {fmtDate(dayDate)}</span><span className="text-muted-foreground">{slots.length} 节</span></span>
-          <span className="flex flex-col gap-2">
-            {slots.map(s => { const p = PERIODS.find(p => p.id === s.periodId); return <span key={s.id} className="flex flex-col"><span className="font-medium">{s.title} · {p?.label}</span><span className="text-muted-foreground">{p?.start}–{p?.end} · {s.room || "地点待定"}</span></span> })}
-            {!slots.length && <span className="text-muted-foreground">无固定教研课次</span>}
+        const courses = new Map<string, ProjectedEntry[]>()
+        for (const entry of dayEntries) {
+          const key = JSON.stringify([entry.className, entry.room, entry.makeupFrom])
+          const course = courses.get(key)
+          if (course) course.push(entry)
+          else courses.set(key, [entry])
+        }
+        const merged: ProjectedEntry = { key: `${group}:day:${dayDate}`, weekday, date: dayDate, periodId: "", className: "当日教研", subject: "教研", room: null, kind: "activity", teacherId: `research:${group}`, makeupFrom: dayEntries.find(entry => entry.makeupFrom)?.makeupFrom }
+        const dayLabel = WEEKDAYS.find(day => day.n === weekday)?.label ?? ""
+        return <ClassCard entry={merged} canonical meta={{ voided: stopped && !!dayEntries.length && !tasks.length }} ariaLabel={`${dayLabel} ${dayDate} 教研日卡，${leader ? "添加教研事项" : "只读"}`} onClick={leader ? () => setDate(dayDate) : undefined}>
+          <span className="flex min-w-0 flex-col gap-2 text-sm leading-relaxed">
+            {[...courses].map(([key, lessons]) => <span key={key} className={cn("flex flex-col gap-1", stopped && !lessons[0].makeupFrom && "opacity-60")}>
+              <span className="break-words font-semibold">{lessons[0].className}</span>
+              {lessons.map(lesson => { const period = periodById(lesson.periodId); return <span key={lesson.key} className="opacity-80">{period ? `${period.label} · ${period.start}–${period.end}` : lesson.periodId}</span> })}
+              <span className="inline-flex items-center gap-1 opacity-80"><MapPin className="size-4 shrink-0" aria-hidden />{lessons[0].room || "地点待定"}</span>
+              {lessons[0].makeupFrom && <span>补 {fmtDate(lessons[0].makeupFrom)} 课表</span>}
+              {stopped && !lessons[0].makeupFrom && <span>停课／调休（本日不授课）</span>}
+            </span>)}
+            {!dayEntries.length && <span className="opacity-70">无固定教研课次</span>}
+            <span className="flex flex-col gap-1">
+              {tasks.map(task => <span key={task.id} className="break-words">{task.title} · {task.status}</span>)}
+              {!tasks.length && <span className="opacity-70">暂无当天事项</span>}
+            </span>
+            {leader && <span className="flex items-center gap-1"><Plus className="size-4 shrink-0" aria-hidden />添加教研事项</span>}
           </span>
-          <span className="flex flex-col gap-1 border-t pt-3">
-            {tasks.map(t => <span key={t.id} className="break-words">{t.title} · {t.status}</span>)}
-            {!tasks.length && <span className="text-muted-foreground">暂无当天事项</span>}
-          </span>
-          {leader && <span className="flex items-center gap-1 text-primary"><Plus className="size-4" />点击添加教研事项</span>}
-        </>
-        const cardClass = "flex min-w-0 flex-col gap-3 rounded-lg border border-border bg-background p-4 text-left text-sm leading-relaxed text-foreground"
-        return leader ? <button type="button" key={day.n} data-day={dayDate} aria-label={`${day.label} ${dayDate} 教研日卡，添加教研事项`} className={`${cardClass} cursor-pointer transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring`} onClick={() => setDate(dayDate)}>{content}</button> : <article key={day.n} data-day={dayDate} aria-label={`${day.label} ${dayDate} 教研日卡，只读`} className={cardClass}>{content}</article>
-      })}
+        </ClassCard>
+      }} />
     </div>
     {date && leader && <DayTaskDialog key={`${group}:${date}`} group={group} date={date} onClose={() => setDate(null)} />}
   </>

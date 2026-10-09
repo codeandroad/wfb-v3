@@ -67,6 +67,25 @@ test("group timetable is shared, leader-only, group-scoped and rejects occupied 
   assert.doesNotMatch(fs.readFileSync(path.join(root, "components/research/overview.tsx"), "utf8"), /需要学校支持的事项/)
 })
 
+test("compact period timetable remains alongside same-style daily timetable in both view and edit modes", () => {
+  const schedule = fs.readFileSync(path.join(root, "components/research/group-schedule.tsx"), "utf8")
+  const days = fs.readFileSync(path.join(root, "components/research/schedule-days.tsx"), "utf8")
+  const grid = fs.readFileSync(path.join(root, "components/timetable/week-grid.tsx"), "utf8")
+  assert.match(schedule, /data-testid="research-period-grid"/)
+  assert.match(schedule, /entries=\{entries\} compact canonical editing=\{canEdit\}/)
+  assert.match(schedule, /<ScheduleDays group=\{group\} week=\{week\} entries=\{entries\} \/>/)
+  assert.doesNotMatch(schedule, /\{!?canEdit && <(?:div[^>]*><WeekGrid|ScheduleDays)/)
+  assert.ok(schedule.indexOf('data-testid="research-period-grid"') < schedule.indexOf("<ScheduleDays"))
+  assert.match(days, /<WeekGrid[^>]*weekStart=\{week\} entries=\{entries\} compact canonical renderDay=/)
+  assert.match(days, /<ClassCard entry=\{merged\} canonical/)
+  assert.match(days, /onClick=\{leader \? \(\) => setDate\(dayDate\) : undefined\}/)
+  assert.match(days, /t\.group === group && t\.scheduleDate === dayDate/)
+  assert.doesNotMatch(days, /grid-cols-|const cardClass/)
+  assert.match(grid, /data-layout=\{renderDay \? "days" : "periods"\}/)
+  assert.match(grid, /renderEntries\.filter\(entry => entry\.date === day\.date\)\.sort/)
+  assert.equal((grid.match(/children \?\? inner/g) || []).length, 2)
+})
+
 test("day-card tasks are dated, leader-only and remain shared without repeating next week", () => {
   const task = { ...seed().tasks.find(t => t.group === "math"), id: "day-task", parent: null, schoolTaskId: null, title: "日卡研讨事项", scheduleDate: "2026-10-13", owner: "u-zhou", collaborators: [], submitters: [], mode: "牵头提交", course: "", status: "进行中", outcomes: [] }
   const state = command(seed(), { type: "save-task", task })
