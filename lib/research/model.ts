@@ -32,6 +32,7 @@ export type Discussion = { id: string; target: string; author: string; body: str
 export type SchoolTask = { id: string; title: string; groups: string[]; due: string; requirements: string; acceptance: boolean; createdBy: string; createdAt: string }
 export type Task = {
   id: string; title: string; group: string; parent: string | null; schoolTaskId: string | null; course: string; owner: string; collaborators: string[];
+  scheduleDate?: string;
   submitters: string[]; due: string; mode: "牵头提交" | "成员各自提交"; requirements: string; acceptance: boolean;
   status: "待承接" | "进行中" | "已提交" | "待验收" | "已完成"; outcomes: Outcome[]; acceptedNote: string;
 }

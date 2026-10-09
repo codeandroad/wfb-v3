@@ -85,7 +85,7 @@ export function applyResearchCommand(state: ResearchState, actor: Actor, command
       if (d.share.audience !== saved.share.audience || JSON.stringify(d.share) !== JSON.stringify(saved.share)) {
         requireCondition(d.owner === actor.staff || canLeadGroup(state,actor,d.owner),"组内共享范围由当前有效组长维护。")
         requireCondition(!d.restricted || JSON.stringify(d.share) === JSON.stringify(saved.share),"受限答案／未公开试卷不能通过编辑解除限制。")
-        requireCondition(d.items.every(i => i.references.every(ref => { const source = state.documents.find(x => x.id === ref.documentId); return source && !source.restricted && (d.share.audience === "owner" || source.share.audience === "school" || d.share.audience === "group" && source.owner === d.owner || d.share.audience === "specified" && source.share.audience === "specified" && d.share.staff.every(id => source.share.staff.includes(id)) && d.share.groups.every(id => source.share.groups.includes(id))) })),"共享会扩大受限来源的可见范围，请先取得来源授权或移除该引用。")
+        requireCondition(d.items.every(i => i.references.every(ref => { const source = state.documents.find(x => x.id === ref.documentId); return source && !source.restricted && (d.share.audience === "owner" || source.share.audience === "school" || d.share.audience === "group" && source.owner === d.owner || d.share.audience === "specified" && source.share.audience === "specified" && d.share.staff.every(id => source.share.staff.includes(id)) && d.share.groups.every(id => source.share.groups.includes(id))) })),"共享会扩大受限���源的可见范围，请先取得来源授权或移除该引用。")
       }
       validateDocument(d)
       const updated = { ...structuredClone(d), version: saved.version+1 }
@@ -108,6 +108,10 @@ export function applyResearchCommand(state: ResearchState, actor: Actor, command
       const t = command.task; const prev = state.tasks.find(x => x.id === t.id)
       requireCondition(canEditGroup(state,actor,t.group) && (!prev || prev.owner === actor.staff || canLeadGroup(state,actor,t.group)),"无权维护该事项分工。")
       requireCondition(!prev || prev.group === t.group && prev.schoolTaskId === t.schoolTaskId && prev.parent === t.parent,"不能改变任务来源关系。")
+      if (t.scheduleDate || prev?.scheduleDate) {
+        requireCondition(canLeadGroup(state,actor,t.group), "只有当前有效教研组长可以维护日卡教研事项。")
+        requireCondition(!!t.scheduleDate && /^\d{4}-\d{2}-\d{2}$/.test(t.scheduleDate) && Number.isFinite(Date.parse(`${t.scheduleDate}T00:00:00Z`)) && new Date(`${t.scheduleDate}T00:00:00Z`).toISOString().slice(0,10) === t.scheduleDate, "请选择有效事项安排日期。")
+      }
       requireCondition(t.title.trim(),"请填写任务名称。")
       requireCondition(!t.schoolTaskId || state.schoolTasks.some(s => s.id === t.schoolTaskId && s.groups.includes(t.group)),"学校任务来源无效。")
       requireCondition(!t.parent || state.tasks.some(p => p.id === t.parent && p.group === t.group && p.schoolTaskId === t.schoolTaskId),"分工须关联本组同一事项。")
