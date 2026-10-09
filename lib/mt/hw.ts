@@ -217,9 +217,9 @@ export const BUCKET_LABEL: Record<HwBucket, string> = { THIS: "本期应完成",
  * 写入守卫（单条）
  * ========================================================== */
 
-export type HwPatch = Partial<Pick<HwResult, "submission" | "submissionConfirmed" | "quality" | "score" | "noGrade" | "participating" | "extDeadline" | "review" | "note" | "memo" | "reason">>
+export type HwPatch = Partial<Pick<HwResult, "submission" | "submissionConfirmed" | "quality" | "score" | "noGrade" | "participating" | "extDeadline" | "review" | "note" | "memo" | "reason" | "questionScores">>
 
-const TRACKED: HwField[] = ["submission", "quality", "score", "noGrade", "participating"]
+const TRACKED: HwField[] = ["submission", "quality", "score", "noGrade", "participating", "questionScores"]
 
 function bump(r: HwResult, f: HwField) {
   r.rev = { ...(r.rev ?? {}), [f]: (r.rev?.[f] ?? 0) + 1 }
@@ -231,6 +231,8 @@ function voidQuality(r: HwResult, at: string, why: string) {
   if (r.quality) parts.push(`质量 ${r.quality}`)
   if (r.score !== null && r.score !== undefined) parts.push(`分数 ${r.score}`)
   if (r.noGrade) parts.push("明确不评价")
+  const questionScores = Object.entries(r.questionScores ?? {}).filter(([,score]) => score !== null)
+  if (questionScores.length) parts.push(`逐题分数 ${questionScores.map(([id,score]) => `${id}＝${score}`).join("；")}`)
   if (!parts.length) return
   r.history = [...(r.history ?? []), { at, what: why, from: parts.join("、") }]
   if (r.quality) {
@@ -244,6 +246,10 @@ function voidQuality(r: HwResult, at: string, why: string) {
   if (r.noGrade) {
     r.noGrade = false
     bump(r, "noGrade")
+  }
+  if (questionScores.length) {
+    r.questionScores = {}
+    bump(r, "questionScores")
   }
   r.qualitySource = undefined
 }
@@ -286,8 +292,15 @@ export function applyHwPatch(
   if (req === "EXEMPT" && reqBefore !== "EXEMPT") voidQuality(r, ctx.at, "改为确认免做")
   if (req === "OPTIONAL" && r.participating === false && before.participating !== false) voidQuality(r, ctx.at, "改为选做未参与")
 
+  if (patch.questionScores) {
+    for (const [id,score] of Object.entries(patch.questionScores)) {
+      const question = a.questionSources?.find(q => q.id === id)
+      const maxScore = question?.scoringBasis ? question.scoringBasis.maxScore : question?.maxScore
+      if (!question || score !== null && (!Number.isFinite(score) || score < 0 || maxScore != null && score > maxScore)) return { error: "题目标识或分数无效，未评须留空，0 分须明确填写，得分不能超过已保存满分" }
+    }
+  }
   // 等级 / 分数 / 不评价只能写给真实提交的有效对象
-  const writingGrade = (patch.quality ?? null) !== null || (patch.score ?? null) !== null || patch.noGrade === true
+  const writingGrade = (patch.quality ?? null) !== null || (patch.score ?? null) !== null || patch.noGrade === true || Object.values(patch.questionScores ?? {}).some(score => score !== null)
   if (writingGrade) {
     if (req === "EXEMPT") return { error: "确认免做的学生不能获得作业等级或分数" }
     if (req === "OPTIONAL" && r.participating === false) return { error: "选做未参与的学生不能获得作业等级或分数" }

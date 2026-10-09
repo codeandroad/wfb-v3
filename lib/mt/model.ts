@@ -226,7 +226,7 @@ export type VariantId = "BASE" | "ADJACENT_LESSONS" | "SEPARATED_LESSONS" | "MID
 
 export const VARIANTS: { id: VariantId; label: string; desc: string }[] = [
   { id: "BASE", label: "基线（第5周 · 9/30 18:00）", desc: "10个本人课次，56条已发生日记录" },
-  { id: "ADJACENT_LESSONS", label: "连堂：计算机周三第1+2节", desc: "课��11张，日记录不翻倍" },
+  { id: "ADJACENT_LESSONS", label: "连堂：计算机周三第1+2节", desc: "课����11张，日记录不翻倍" },
   { id: "SEPARATED_LESSONS", label: "不连续：P1周一第3、5节", desc: "两张卡、各自时间" },
   { id: "MIDDAY_PARTIAL", label: "部分当天：连堂 + 9/30 08:45", desc: "第一课已结束、第二课未开始" },
 ]
@@ -653,7 +653,7 @@ export const ATT_LABEL: Record<Attendance, string> = {
 export const GRADE_DICT: { v: string; label: string }[] = [
   { v: "A", label: "A 优秀" },
   { v: "B", label: "B 良好" },
-  { v: "C", label: "C 合格" },
+  { v: "C", label: "C ���格" },
   { v: "D", label: "D 待改进" },
 ]
 
@@ -1143,6 +1143,7 @@ export function seedLessonOverrides(): Record<string, DisplayPref> {
 export type Requirement = "REQUIRED" | "OPTIONAL" | "EXEMPT"
 export type Submission = "ON_TIME" | "LATE" | "SUBMITTED" | "MISSING"
 export interface HwResult {
+  questionScores?: Record<string, number | null>
   participating?: boolean // 选做：是否参与；未知为 undefined
   submission: Submission | null
   /** 未交是否已核实；未核实的“疑似未交”不能作为已证实负面结果 */
@@ -1167,7 +1168,7 @@ export interface HwResult {
   /** 退出有效状态的旧结果（不物理删除） */
   history?: HwHistory[]
 }
-export type HwField = "submission" | "quality" | "score" | "noGrade" | "participating"
+export type HwField = "submission" | "quality" | "score" | "noGrade" | "participating" | "questionScores"
 export interface HwHistory {
   at: string
   what: string
@@ -1193,6 +1194,10 @@ export interface HwBatch {
   undone?: { restored: number; kept: number; at: string }
 }
 export interface Assignment {
+  questionSources?: import('@/lib/research/model').PreparedQuestion[]
+  questionScoringHistory?: { questionId: string; basis: import('@/lib/research/model').QuestionScoringBasis }[]
+  gradeConversion?: import('@/lib/research/model').TestConversion
+  gradeConversionHistory?: import('@/lib/research/model').TestConversion[]
   category?: "课后作业" | "课堂练习" | "模考" | "论文"
   id: string
   taskId: string
@@ -1285,6 +1290,12 @@ export function assignmentWeek(a: Assignment): number {
  * ========================================================== */
 
 export interface PlanItem {
+  researchSource?: import('@/lib/research/model').SourceRef
+  sourceReferences?: import('@/lib/research/model').SourceRef[]
+  plannedDates?: { date: string; minutes: number }[]
+  unmappedMinutes?: number | null
+  relativeWeeks?: import('@/lib/research/model').WeekAllocation[]
+  actualMinutes?: number | null
   id: string
   title: string
   points: string[]

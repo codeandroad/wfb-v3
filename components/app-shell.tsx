@@ -263,6 +263,8 @@ function PersonalMenu() {
           {homepage && me ? (
             <MenuRow icon={<House className="size-4" />} label="我的教师主页" onClick={() => go(`/people/${me.id}`)} />
           ) : null}
+          <MenuRow icon={<BookOpen className="size-4" />} label="我的教学资料" onClick={() => go("/research?space=personal")} />
+          <MenuRow icon={<Library className="size-4" />} label="校内共享资料" onClick={() => go("/research?space=shared")} />
           <MenuRow
             icon={<LogOut className="size-4" />}
             label="退出登录"

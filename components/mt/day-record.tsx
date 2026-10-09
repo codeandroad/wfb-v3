@@ -7,6 +7,7 @@ import { PhrasePicker, ReasonField } from "@/components/mt/phrase-picker"
 import { PublishPanel } from "@/components/mt/publish-panel"
 import { RoutineDialog } from "@/components/mt/routine-dialog"
 import { DayQuickActions } from "@/components/mt/day-quick-actions"
+import { TeachingContentPicker } from "@/components/research/teaching-picker"
 import { RegradeControl } from "./regrade-control"
 import { AttSelect, GradeSelect, MtLoading, SaveState } from "@/components/mt/shared"
 import { StudentDetailBody } from "@/components/mt/student-drawer"
@@ -324,7 +325,7 @@ export function DayRecordDialog({
                   <table className="w-full min-w-[720px] text-sm">
                     <thead>
                       <tr className="border-b border-border text-left text-xs text-muted-foreground">
-                        <th className="py-2 pr-3 font-medium">学生</th>
+                        <th className="py-2 pr-3 font-medium">��生</th>
                         <th className="py-2 pr-3 font-medium">出勤</th>
                         <th className="py-2 pr-3 font-medium">本日评价</th>
                         <th className="py-2 font-medium">亮点 / 备注</th>
@@ -339,6 +340,7 @@ export function DayRecordDialog({
                   {!rows.length ? <p className="py-6 text-center text-sm text-muted-foreground">没有符合条件的学生。</p> : null}
                 </div>
                 <DaySummary key={`${task.id}|${date}`} initial={daySummary} commit={(v) => tx.setDaySummary(task.id, date, v)} />
+                <TeachingContentPicker key={`actual:${task.id}|${date}`} task={task} date={date} />
               </>
             )}
           </>

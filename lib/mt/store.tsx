@@ -188,6 +188,8 @@ export interface RoutineOp {
 }
 
 export interface MtBiz {
+  researchAdoptions?: import('@/lib/research/model').Adoption[]
+  teachingContent?: Record<string, import('@/lib/research/model').TeachingContent[]>
   publicationPolicies?: import('./publication-policy').PublicationPolicy[]
   publicationWaivers?: import('./publication-tracking').PublicationWaiver[]
   publicationChecks?: import('./publication-tracking').PublicationCheck[]
@@ -250,6 +252,9 @@ export interface BatchCand {
 export const scopePrefs = (teacherId: string) => `prefs:${teacherId}`
 
 export interface HwDraft {
+  questionSources?: import('@/lib/research/model').PreparedQuestion[]
+  excludedStudentIds?: string[]
+  useSavedQuestionVersions?: boolean
   teacherId: string
   taskId: string
   mode: "NEW" | "OFFLINE" | "COPY"
@@ -1402,6 +1407,19 @@ export function useHomeworkWriters() {
               if ("error" in out) return out
               return { ...x, results: { ...x.results, [sid]: out.r } }
             }),
+        })
+      },
+      setQuestionScore(a: Assignment, sid: string, questionId: string, score: number | null) {
+        mt.save({
+          field: `hw:${a.id}:${sid}:question:${questionId}`, scope: scopes(a, sid), label: "可选逐题评分", value: score, taskId: a.taskId,
+          run: s => patchA(s, a.id, x => {
+            const current = x.questionSources?.find(q => q.id === questionId)?.scoringBasis
+            const expected = a.questionSources?.find(q => q.id === questionId)?.scoringBasis
+            if (current?.criterionId !== expected?.criterionId || current?.version !== expected?.version) return { error: "单题评分依据已有更新，请重新核对后录入，旧输入未覆盖。" }
+            const patch = { questionScores: { ...x.results[sid]?.questionScores, [questionId]: score } }
+            const out = applyHwPatch(x, sid, patch, { nowTs: Date.parse(s.clock), at: s.clock })
+            return "error" in out ? out : { ...x, results: { ...x.results, [sid]: out.r } }
+          }),
         })
       },
       setRequirement(a: Assignment, sid: string, req: Requirement, reason?: string) {

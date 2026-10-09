@@ -89,7 +89,7 @@ export function saveScheme(
     return { biz: { ...biz, seq: biz.seq + 1, schemes: { ...st, revs: { ...st.revs, [rev.id]: rev } } }, revId: rev.id, changed: true }
   }
   const n = (last?.n ?? 0) + 1
-  const rev: SchemeRev = { id: `${schemeId}@${n}`, schemeId, n, ...d, at }
+  const rev: SchemeRev = { id: `${schemeId}@${n}`, schemeId, n, ...d, at, ...(last?.researchBasis ? { researchBasis: structuredClone(last.researchBasis) } : {}) }
   return {
     biz: {
       ...biz,

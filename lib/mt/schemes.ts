@@ -16,6 +16,7 @@ export interface Level {
   guide: string
 }
 export interface SchemeRev {
+  researchBasis?: import('@/lib/research/model').Criterion
   id: string
   schemeId: string
   n: number
