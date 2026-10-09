@@ -3,7 +3,8 @@ import type { CatalogCourse, CatalogSubject, CatalogUnit } from "@/lib/demo/scho
 export type Actor = { staff: string; date: string; enabled: boolean }
 export type Group = { id: string; name: string; subject: string }
 export const groups: Group[] = [{ id: "math", name: "数学组", subject: "S001" }, { id: "physics", name: "物理组", subject: "S002" }]
-export type Appointment = { id: string; staff: string; group: string; role: "组长" | "成员" | "维护者"; start: string; end: string | null }
+export const appointmentRoles = ["组长", "成员", "维护者"] as const
+export type Appointment = { id: string; staff: string; group: string; role: (typeof appointmentRoles)[number]; start: string; end: string | null }
 export type SchoolGrant = { staff: string; group: string; mode: "查看" | "统筹"; start: string; end: string | null }
 export type Access = { audience: "owner" | "group" | "school" | "specified"; groups: string[]; staff: string[] }
 export type SourceRef = { documentId: string; version: number; itemId: string; title: string; locator: string; retainedBy?: string; retainText: boolean }
@@ -71,6 +72,24 @@ export type TeachingContent = { id: string; title: string; text: string; source:
 export type Adoption = { id: string; documentId: string; version: number; taskId: string; itemIds: string[]; adoptedAt: string; items: Item[]; unitIds: string[] }
 
 export function activeAt(start: string, end: string | null, date: string) { return start <= date && (!end || end >= date) }
+export function appointmentDateValid(value: string) {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value) || value.startsWith("0000")) return false
+  const date = new Date(`${value}T00:00:00Z`)
+  return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value
+}
+export function sameAppointment(a: Appointment, b: Appointment) {
+  return a.id === b.id && a.staff === b.staff && a.group === b.group && a.role === b.role && a.start === b.start && a.end === b.end
+}
+export function appointmentValidationError(state: ResearchState, appointment: Appointment) {
+  const a = appointment
+  if (typeof a.id !== "string" || !a.id.trim() || typeof a.staff !== "string" || !a.staff.trim() || !groups.some(group => group.id === a.group)) return "请选择有效人员与科组。"
+  if (!appointmentRoles.includes(a.role)) return "请选择有效的科组任命角色。"
+  if (!appointmentDateValid(a.start) || a.end !== null && (!appointmentDateValid(a.end) || a.end < a.start)) return "任期日期无效：请填写真实日期，结束日期不得早于开始日期。"
+  const previous = state.appointments.find(item => item.id === a.id)
+  if (previous && (previous.staff !== a.staff || previous.group !== a.group)) return "任命对象不可通过修订变更；请另行新增任命。"
+  if (a.role === "组长" && state.appointments.some(item => item.id !== a.id && item.group === a.group && item.role === "组长" && (!item.end || item.end >= a.start) && (!a.end || a.end >= item.start))) return "该任期与已有组长重叠，请先结束原任命。结束日期含当日，新任期须从次日或之后开始。"
+  return ""
+}
 export function membership(state: ResearchState, staff: string, group: string, date: string) {
   return state.appointments.filter(a => a.staff === staff && a.group === group && activeAt(a.start, a.end, date)).sort((a,b) => (a.role === "组长" ? -1 : b.role === "组长" ? 1 : a.role === "维护者" ? -1 : 1))[0]
 }

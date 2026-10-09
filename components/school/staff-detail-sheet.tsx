@@ -28,6 +28,7 @@ import { StaffActionPanel, type StaffAction } from "./staff-actions"
 import { useState } from "react"
 import { useStaffPermission } from "@/lib/school/staff-store"
 import { educationExperiencesOf } from "@/lib/school/staff-background"
+import { StaffAppointmentsPanel } from "./staff-appointments-panel"
 
 interface Props {
   staff: StaffProfile
@@ -60,7 +61,7 @@ export function StaffDetailSheet({ staff, endedDutyIds, onClose, onOpenDuty, onA
       desc={`${staff.employeeNo || "待编号"} · ${[staff.department, staff.jobTitle].filter(Boolean).join("／") || "未填写部门 / 职务"}`}
       width="max-w-xl"
       footer={
-        action ? undefined : (
+        action || tab === "appointments" ? undefined : (
         <div className="flex items-center justify-between gap-2">
           <div className="flex flex-wrap items-center gap-1">
             <Button variant="ghost" size="sm" disabled={!canManage} onClick={() => canManage && setAction("edit")}>
@@ -144,6 +145,7 @@ export function StaffDetailSheet({ staff, endedDutyIds, onClose, onOpenDuty, onA
           tabs={[
             { value: "profile", label: "资料" },
             { value: "duties", label: `职责 · ${currentDuties.length}` },
+            { value: "appointments", label: "科组任命" },
             { value: "history", label: "任职历史" },
           ]}
         />
@@ -278,6 +280,8 @@ export function StaffDetailSheet({ staff, endedDutyIds, onClose, onOpenDuty, onA
           ) : null}
         </div>
       ) : null}
+
+      {tab === "appointments" ? <StaffAppointmentsPanel key={staff.id} staff={staff} /> : null}
 
       {tab === "history" ? (
         <div className="space-y-2.5">

@@ -1,6 +1,6 @@
 import { lessonsOfWeek, taskById, weekOfDate } from "@/lib/mt/model"
 import { PERIODS } from "@/lib/timetable/data"
-import { activeAt, canEditDocument, canEditGroup, canLeadGroup, canReadActivity, canReadCriterion, canReadDocument, canRetainItem, copyDocument, courseTaskMap, coursesFor, groups, itemReadable, schoolScopes, scopeValid, validateCriterion, validateDocument, type Actor, type Activity, type Appointment, type CatalogState, type Criterion, type Discussion, type Document, type Notice, type Outcome, type ResearchState, type SchoolTask, type SupportIssue, type Task } from "./model"
+import { activeAt, appointmentValidationError, sameAppointment, canEditDocument, canEditGroup, canLeadGroup, canReadActivity, canReadCriterion, canReadDocument, canRetainItem, copyDocument, courseTaskMap, coursesFor, groups, itemReadable, schoolScopes, scopeValid, validateCriterion, validateDocument, type Actor, type Activity, type Appointment, type CatalogState, type Criterion, type Discussion, type Document, type Notice, type Outcome, type ResearchState, type SchoolTask, type SupportIssue, type Task } from "./model"
 
 export type Command =
   | { type: "save-group-slot"; slot: import("./model").GroupScheduleSlot }
@@ -27,7 +27,7 @@ export type Command =
   | { type: "support"; issue: SupportIssue }
   | { type: "respond-support"; id: string; response: string }
   | { type: "criterion"; criterion: Criterion }
-  | { type: "appointment"; appointment: Appointment }
+  | { type: "appointment"; appointment: Appointment; expected?: Appointment }
 
 function requireCondition(condition: unknown, message: string): asserts condition { if (!condition) throw new Error(message) }
 export function applyResearchCommand(state: ResearchState, actor: Actor, command: Command, catalog: CatalogState, accountEnabled: (staff: string) => boolean = () => true): ResearchState {
@@ -85,7 +85,7 @@ export function applyResearchCommand(state: ResearchState, actor: Actor, command
       if (d.share.audience !== saved.share.audience || JSON.stringify(d.share) !== JSON.stringify(saved.share)) {
         requireCondition(d.owner === actor.staff || canLeadGroup(state,actor,d.owner),"组内共享范围由当前有效组长维护。")
         requireCondition(!d.restricted || JSON.stringify(d.share) === JSON.stringify(saved.share),"受限答案／未公开试卷不能通过编辑解除限制。")
-        requireCondition(d.items.every(i => i.references.every(ref => { const source = state.documents.find(x => x.id === ref.documentId); return source && !source.restricted && (d.share.audience === "owner" || source.share.audience === "school" || d.share.audience === "group" && source.owner === d.owner || d.share.audience === "specified" && source.share.audience === "specified" && d.share.staff.every(id => source.share.staff.includes(id)) && d.share.groups.every(id => source.share.groups.includes(id))) })),"共享会扩大受限���源的可见范围，请先取得来源授权或移除该引用。")
+        requireCondition(d.items.every(i => i.references.every(ref => { const source = state.documents.find(x => x.id === ref.documentId); return source && !source.restricted && (d.share.audience === "owner" || source.share.audience === "school" || d.share.audience === "group" && source.owner === d.owner || d.share.audience === "specified" && source.share.audience === "specified" && d.share.staff.every(id => source.share.staff.includes(id)) && d.share.groups.every(id => source.share.groups.includes(id))) })),"共享会扩大受限�����源的可见范围，请先取得来源授权或移除该引用。")
       }
       validateDocument(d)
       const updated = { ...structuredClone(d), version: saved.version+1 }
@@ -248,11 +248,12 @@ export function applyResearchCommand(state: ResearchState, actor: Actor, command
     case "appointment": {
       const a = command.appointment
       requireCondition(schoolScopes(state,actor,true).includes(a.group),"组内分工不授予正式任命权，请使用学校人员任命流程。")
-      requireCondition(a.start && (!a.end || a.end >= a.start),"任期日期无效。")
       const prev = state.appointments.find(x => x.id === a.id)
-      requireCondition(!prev || prev.staff === a.staff && prev.group === a.group,"任命对象不可通过修订变更。")
-      requireCondition(a.role !== "组长" || !state.appointments.some(x => x.id !== a.id && x.group === a.group && x.role === "组长" && (!x.end || x.end >= a.start) && (!a.end || a.end >= x.start)),"该任期与已有组长重叠，请先结束原任命。")
-      next.appointments = prev ? state.appointments.map(x => x.id === a.id ? a : x) : [...state.appointments,a]; break
+      requireCondition(!command.expected || prev && sameAppointment(prev, command.expected), "该任命已被其他操作修订，请返回列表重新打开；不会覆盖最新记录。")
+      const error = appointmentValidationError(state, a)
+      requireCondition(!error, error)
+      const saved = { ...a }
+      next.appointments = prev ? state.appointments.map(x => x.id === a.id ? saved : x) : [...state.appointments, saved]; break
     }
   }
   return next
