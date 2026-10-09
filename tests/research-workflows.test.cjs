@@ -67,6 +67,20 @@ test("group timetable is shared, leader-only, group-scoped and rejects occupied 
   assert.doesNotMatch(fs.readFileSync(path.join(root, "components/research/overview.tsx"), "utf8"), /需要学校支持的事项/)
 })
 
+test("day-card tasks are dated, leader-only and remain shared without repeating next week", () => {
+  const task = { ...seed().tasks.find(t => t.group === "math"), id: "day-task", parent: null, schoolTaskId: null, title: "日卡研讨事项", scheduleDate: "2026-10-13", owner: "u-zhou", collaborators: [], submitters: [], mode: "牵头提交", course: "", status: "进行中", outcomes: [] }
+  const state = command(seed(), { type: "save-task", task })
+  assert.equal(state.tasks.find(t => t.id === task.id).scheduleDate, "2026-10-13")
+  assert.equal(migrateResearch(JSON.parse(JSON.stringify(state))).tasks.find(t => t.id === task.id).scheduleDate, "2026-10-13")
+  assert.equal(state.tasks.filter(t => t.scheduleDate === "2026-10-20").length, 0)
+  assert.equal(model.canViewGroup(state, actor("u-zhou"), task.group), true)
+  assert.throws(() => command(seed(), { type: "save-task", task }, "u-zhou"), /组长/)
+  assert.throws(() => command(state, { type: "save-task", task: { ...task, owner: "u-zhou", scheduleDate: undefined } }, "u-zhou"), /组长/)
+  assert.throws(() => command(seed(), { type: "save-task", task: { ...task, group: "physics" } }), /组长/)
+  assert.throws(() => command(seed(), { type: "save-task", task: { ...task, scheduleDate: "2026-02-30" } }), /日期/)
+  assert.throws(() => command(seed(), { type: "save-task", task: { ...task, scheduleDate: "not-a-date" } }), /日期/)
+})
+
 test("copied lessons preserve content and teaching links without reusing source identity or date", () => {
   const { applyWeekEdits, applyTemplateEdits } = require("../lib/timetable/data.ts")
   const original = BASELINE_TEMPLATES.lin[2]
