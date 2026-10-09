@@ -17,6 +17,7 @@ import { DocumentLibrary } from "./document-library"
 import { HomeworkHandoff } from "./homework-handoff"
 import { PlanHandoff } from "./plan-handoff"
 import { ResearchOverview } from "./overview"
+import { GroupSchedule } from "./group-schedule"
 import { ResearchMembers } from "./members"
 import { TaskBoard } from "./task-board"
 import { Panel } from "./primitives"
@@ -67,6 +68,7 @@ export function ResearchWorkspace() {
       {state.activities.some(a => a.participants.includes(actor.staff) && canReadActivity(state, actor, a)) && <Panel title="本人受邀的活动" description="参加跨组活动只开放该活动，不改变科组任命或开放来源组工作区。">{state.activities.filter(a => a.participants.includes(actor.staff) && canReadActivity(state, actor, a)).map(a => <Link key={a.id} className="self-start text-primary underline" href={`/research?activity=${encodeURIComponent(a.id)}`}>{a.title} · {a.start.slice(0, 10)}</Link>)}</Panel>}
       <Panel title="内容准备不依赖班级或课表"><p>可以先建立个人大纲、教学计划及多来源练习组合；确定具体任教任务后再采用。无需先完成教研任务，也可继续原日常填报。</p><div className="flex flex-wrap gap-2"><Link href="/research?space=personal" className={buttonVariants({ variant: "outline" })}>管理我的教学资料</Link><Link href="/teaching" className={buttonVariants({ variant: "outline" })}>原有日常教学</Link><Link href="/homework" className={buttonVariants({ variant: "outline" })}>原有作业管理</Link>{schoolScopes(state, actor).length > 0 && <Link href="/catalog" className={buttonVariants({ variant: "outline" })}>课程管理的授权科组概况</Link>}</div></Panel>
     </> : <>
+      {!personal && !shared && <GroupSchedule key={groupId} group={groupId} />}
       {!personal && !shared && <nav aria-label="教研工作区内容" className="overflow-x-auto"><ToggleGroup variant="outline" value={[tab]} onValueChange={value => value[0] && navigate({ tab: value[0], doc: "", version: "", item: "" })}>{tabs.map(t => <ToggleGroupItem key={t} value={t}>{t}</ToggleGroupItem>)}</ToggleGroup></nav>}
       {!personal && !shared && !member && <Alert role="note"><AlertTitle>仅管理查看</AlertTitle><AlertDescription>此来源只决定返回课程管理。内部编辑、承接、讨论及学生记录仍按各自真实授权检查。</AlertDescription></Alert>}
       {params.get("doc") ? <><Button variant="outline" className="self-start" onClick={() => navigate({ doc: "", version: "", item: "" })}>返回内容列表</Button>{!doc ? <Empty className="border"><EmptyHeader><EmptyTitle>此内容或依据版本不可访问</EmptyTitle><EmptyDescription>内容不在当前范围、授权已结束，或指定版本不存在。不会回退到新版本替代当时依据。</EmptyDescription></EmptyHeader></Empty> : <><DocumentEditor key={`${actor.staff}:${doc.id}:${requestedVersion || "current"}`} document={doc} readonly={!!requestedVersion} onCreated={created} />{!requestedVersion && !doc.archived && doc.kind === "计划" && <PlanHandoff document={doc} />}{!requestedVersion && !doc.archived && (doc.kind === "资源" || doc.kind === "练习组合") && <HomeworkHandoff document={doc} />}</>}</> : <>

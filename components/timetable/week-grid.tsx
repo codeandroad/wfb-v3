@@ -1,6 +1,8 @@
 "use client"
 
 import { Badge } from "@/components/kit"
+import { Button } from "@/components/ui/button"
+import { Copy } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { eventCovers, stoppedDatesFor, swapClonesFor, useCalendarEvents } from "@/lib/timetable/calendar-store"
 import { recordKey, useLessonRecords } from "@/lib/timetable/lesson-records"
@@ -55,6 +57,8 @@ export function WeekGrid({
   canonical = false,
   recordable = false,
   makeupEdits,
+  onCopyCell,
+  compact = false,
 }: {
   weekStart: string
   entries: ProjectedEntry[]
@@ -75,6 +79,8 @@ export function WeekGrid({
   recordable?: boolean
   // 作用于调休补课日镜像课次的单次编辑（键为镜像键，按补课日期命中）
   makeupEdits?: SlotEdit[]
+  onCopyCell?: (entry: ProjectedEntry, cell: { weekday: number; periodId: string; date: string }) => { ok: boolean; msg: string }
+  compact?: boolean
 }) {
   const timetable = useTimetable()
   const sharedEvents = useCalendarEvents()
@@ -85,6 +91,8 @@ export function WeekGrid({
   const [over, setOver] = useState<string | null>(null) // `${periodId}@${date}`
   const [ghost, setGhost] = useState<{ x: number; y: number; entry: ProjectedEntry } | null>(null)
   const draggedAtRef = useRef(0)
+  const [copied, setCopied] = useState<ProjectedEntry | null>(null)
+  const [copyMessage, setCopyMessage] = useState("")
 
   // 指针拖拽状态：使用 setPointerCapture，事件绑定在课卡自身，
   // 避免全局 window 监听在预览 iframe / 触屏环境下丢事件。
@@ -240,7 +248,7 @@ export function WeekGrid({
           const cal = calFor(d.date)
           const isMakeup = !!cal.swapSource
           const isStopped = stoppedDates.has(d.date)
-          const canAdd = editing && !!onAddCell && items.length === 0 && !isPastCell && !isStopped
+          const canAdd = editing && (!!onAddCell || !!copied && !!onCopyCell) && items.length === 0 && !isPastCell && !isStopped
           return (
             <div
               key={d.n}
@@ -261,16 +269,21 @@ export function WeekGrid({
                 {canAdd ? (
                   <button
                     type="button"
-                    onClick={() => onAddCell!(d.n, p.id, d.date)}
+                    onClick={() => {
+                      if (copied && onCopyCell) {
+                        const result = onCopyCell(copied, { weekday: d.n, periodId: p.id, date: d.date })
+                        setCopyMessage(result.ok ? `已复制到${d.label}${p.label}，可继续点击其他空格。` : result.msg)
+                      } else onAddCell?.(d.n, p.id, d.date)
+                    }}
                     className="flex min-h-[46px] w-full items-center justify-center rounded-md border border-dashed border-border/60 text-muted-foreground/40 transition-colors hover:border-primary/60 hover:bg-accent/40 hover:text-primary"
-                    aria-label={`在 ${d.label} ${p.label} 新增课次`}
+                    aria-label={copied && onCopyCell ? `粘贴到 ${d.label} ${p.label}` : `在 ${d.label} ${p.label} 新增课次`}
                   >
                     <Plus className="size-4" />
                   </button>
                 ) : null}
                 {items.map((e, i) => (
+                  <div key={e.key + i} className="flex min-w-0 flex-col gap-1">
                   <ClassCard
-                    key={e.key + i}
                     entry={e}
                     canonical={canonical}
                     meta={{
@@ -293,6 +306,8 @@ export function WeekGrid({
                     }
                     dragProps={draggableFor(e) ? dragHandlers(e) : undefined}
                   />
+                  {editing && onCopyCell && draggableFor(e) && <Button variant="ghost" size="xs" aria-label={`复制${e.className} ${d.label}${p.label}`} onClick={() => { setCopied({ ...e }); setCopyMessage("已选中课卡，点击空格粘贴；可连续复制多节。") }}><Copy data-icon="inline-start" />复制</Button>}
+                  </div>
                 ))}
               </div>
               {isOver ? (
@@ -309,6 +324,7 @@ export function WeekGrid({
 
   return (
     <div className={cn("overflow-hidden rounded-lg border bg-card", editing ? "border-primary/50 ring-1 ring-primary/30" : "border-border", className)}>
+      {editing && copied && onCopyCell && <div className="flex flex-wrap items-center justify-between gap-2 border-b bg-accent px-3 py-2 text-sm text-accent-foreground"><p role="status">复制「{copied.className}」 · {copyMessage}</p><Button variant="outline" size="sm" onClick={() => { setCopied(null); setCopyMessage("") }}>结束复制</Button></div>}
       <div className="flex items-stretch bg-muted/60">
         <div className={cn(AXIS, "shrink-0 px-1 py-1.5 text-center text-[10px] text-muted-foreground")}>节次</div>
         {days.map((d) => {
@@ -364,9 +380,9 @@ export function WeekGrid({
         </div>
       ) : null}
 
-      {dayPeriods.map((p) => renderRow(p, p.id === "a1"))}
+      {dayPeriods.filter(p => !compact || editing || renderEntries.some(e => e.periodId === p.id)).map((p) => renderRow(p, p.id === "a1"))}
 
-      <button
+      {(!compact || editing || eveningCount > 0) && <button
         onClick={() => setEveningOverride(!showEvening)}
         className="flex w-full items-center justify-between border-t border-border bg-muted/40 px-3 py-1.5 text-left text-[11px] text-muted-foreground transition-colors hover:bg-muted"
         aria-expanded={showEvening}
@@ -377,7 +393,7 @@ export function WeekGrid({
           {eveningCount > 0 ? <Badge tone="info">{eveningCount} 节有课</Badge> : <span className="text-muted-foreground/60">· 无课</span>}
         </span>
         <span className="text-[10px] text-muted-foreground/60">{showEvening ? "收起" : "展开"}</span>
-      </button>
+      </button>}
       {showEvening ? eveningPeriods.map((p) => renderRow(p, false)) : null}
 
       {ghost ? (

@@ -373,13 +373,14 @@ function EditView({ teacherId, weekStart, clockDate, onCard }: { teacherId: stri
           </div>
         </div>
         <p className="mt-1.5 text-[11px] text-muted-foreground">
-          拖动课卡到空闲格移动；点击课卡可改教室或删除；点击空闲格的「+」可新增课次；草稿仅本人可见，教务看到的现用安排不变，直至你确认应用。所有课次均可本地编排，最终以确认应用为准。
+          拖动课卡到空闲格移动；点击课卡可改教室或删除；点击「复制」后可连续点击空格粘贴，结束复制后「+」恢复新增；草稿仅本人可见，教务看到的现用安排不变，直至你确认应用。所有课次均可本地编排，最终以确认应用为准。
         </p>
       </div>
 
       {conflicts.length ? <ConflictBar count={conflicts.length} /> : null}
 
       <WeekGrid
+        key={teacherId}
         weekStart={weekStart}
         entries={entries}
         clockDate={clockDate}
@@ -390,6 +391,11 @@ function EditView({ teacherId, weekStart, clockDate, onCard }: { teacherId: stri
         onMove={(entry, weekday, periodId) => {
           const r = tt.draftEdit(teacherId, entry, { action: "move", weekday, periodId, room: entry.room ?? null })
           push(r.msg)
+        }}
+        onCopyCell={(entry, cell) => {
+          const r = tt.draftAdd(teacherId, cell, entry)
+          push(r.msg)
+          return r
         }}
         onAddCell={(weekday, periodId, date) => setAddCell({ weekday, periodId, date })}
       />

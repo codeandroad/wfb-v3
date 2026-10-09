@@ -1,7 +1,10 @@
 import { lessonsOfWeek, taskById, weekOfDate } from "@/lib/mt/model"
+import { PERIODS } from "@/lib/timetable/data"
 import { activeAt, canEditDocument, canEditGroup, canLeadGroup, canReadActivity, canReadCriterion, canReadDocument, canRetainItem, copyDocument, courseTaskMap, coursesFor, groups, itemReadable, schoolScopes, scopeValid, validateCriterion, validateDocument, type Actor, type Activity, type Appointment, type CatalogState, type Criterion, type Discussion, type Document, type Notice, type Outcome, type ResearchState, type SchoolTask, type SupportIssue, type Task } from "./model"
 
 export type Command =
+  | { type: "save-group-slot"; slot: import("./model").GroupScheduleSlot }
+  | { type: "delete-group-slot"; id: string }
   | { type: "form-draft"; key: string; value: unknown }
   | { type: "create-document"; document: Document }
   | { type: "draft-document"; document: Document; baseVersion: number }
@@ -32,6 +35,24 @@ export function applyResearchCommand(state: ResearchState, actor: Actor, command
   const next = { ...state }
   const members = (group: string) => new Set(state.appointments.filter(a => a.group === group && activeAt(a.start,a.end,actor.date)).map(a => a.staff))
   switch (command.type) {
+    case "save-group-slot": {
+      const slot = command.slot
+      const current = state.groupSchedules ?? []
+      const existing = current.find(s => s.id === slot.id)
+      requireCondition(canLeadGroup(state, actor, slot.group), "只有当前有效教研组长可以修改本组课表。")
+      requireCondition(!existing || existing.group === slot.group, "不能改变课卡所属科组。")
+      requireCondition(groups.some(g => g.id === slot.group) && slot.id && slot.title.trim() && slot.title.length <= 120, "请填写有效科组与教研名称。")
+      requireCondition(Number.isInteger(slot.weekday) && slot.weekday >= 1 && slot.weekday <= 7 && PERIODS.some(p => p.id === slot.periodId), "请选择有效星期和节次。")
+      requireCondition(!current.some(s => s.id !== slot.id && s.group === slot.group && s.weekday === slot.weekday && s.periodId === slot.periodId), "该位置已有本组教研安排，不会覆盖原课卡。")
+      next.groupSchedules = [...current.filter(s => s.id !== slot.id), { ...slot, title: slot.title.trim(), room: slot.room?.trim() || null }]
+      break
+    }
+    case "delete-group-slot": {
+      const slot = state.groupSchedules?.find(s => s.id === command.id)
+      requireCondition(slot && canLeadGroup(state, actor, slot.group), "只有当前有效教研组长可以删除本组课卡。")
+      next.groupSchedules = state.groupSchedules!.filter(s => s.id !== slot.id)
+      break
+    }
     case "form-draft": next.forms = { ...state.forms, [`${actor.staff}|${command.key}`]: command.value }; break
     case "create-document": {
       const d = command.document

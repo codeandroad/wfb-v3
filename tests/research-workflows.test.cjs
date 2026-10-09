@@ -47,14 +47,53 @@ const documentOf = (state, id) => state.documents.find(document => document.id =
 const command = (state, action, staff = "u-lin", online = () => true) => applyResearchCommand(state, actor(staff), action, structuredClone(catalogSeed), online)
 const ownMathTasks = biz => permittedTasks(biz, "TEACHER_LYNN").filter(task => model.dutyUnitMap[task.duty_id] === "U101")
 const success = result => { assert.equal("error" in result, false, result.error); return result }
+test("group timetable is shared, leader-only, group-scoped and rejects occupied slots", () => {
+  let state = seed()
+  const slot = state.groupSchedules.find(s => s.id === "math-tue4")
+  assert.equal(state.groupSchedules.filter(s => s.group === "math").length, 4)
+  assert.equal(model.canViewGroup(state, actor("u-zhou"), "math"), true)
+  assert.throws(() => command(state, { type: "save-group-slot", slot: { ...slot, weekday: 3 } }, "u-zhou"), /组长/)
+  assert.throws(() => command(state, { type: "delete-group-slot", id: slot.id }, "u-xu"), /组长/)
+  assert.throws(() => command(state, { type: "save-group-slot", slot: { ...slot, periodId: "m5" } }), /已有/)
+  state = command(state, { type: "save-group-slot", slot: { ...slot, weekday: 3 } })
+  assert.equal(state.groupSchedules.find(s => s.id === slot.id).weekday, 3)
+  assert.equal(migrateResearch(JSON.parse(JSON.stringify(state))).groupSchedules.find(s => s.id === slot.id).weekday, 3)
+  assert.throws(() => command(state, { type: "save-group-slot", slot: { ...slot, group: "physics" } }), /组长|所属/)
+  assert.throws(() => applyResearchCommand(state, actor("u-lin", "2028-01-01"), { type: "delete-group-slot", id: slot.id }, catalogSeed), /组长/)
+  state = command(state, { type: "delete-group-slot", id: slot.id })
+  assert.equal(state.groupSchedules.some(s => s.id === slot.id), false)
+  const workspace = fs.readFileSync(path.join(root, "components/research/workspace.tsx"), "utf8")
+  assert.ok(workspace.indexOf("<GroupSchedule") < workspace.indexOf('<nav aria-label="教研工作区内容"'))
+  assert.doesNotMatch(fs.readFileSync(path.join(root, "components/research/overview.tsx"), "utf8"), /需要学校支持的事项/)
+})
+
+test("copied lessons preserve content and teaching links without reusing source identity or date", () => {
+  const { applyWeekEdits, applyTemplateEdits } = require("../lib/timetable/data.ts")
+  const original = BASELINE_TEMPLATES.lin[2]
+  const edit = { ...original, id: "copy-edit", key: "copy-new", action: "add", weekday: 2, periodId: "m1", room: original.room, scope: "once", onDate: "2026-10-13", effectiveDate: "2026-10-12", label: "copy", note: "保留备注", noteShow: false, displayMode: "CUSTOM", customLabel: "实验分工" }
+  for (const template of [applyWeekEdits([original], [edit], "2026-10-12").template, applyTemplateEdits([original], [edit])]) {
+    const copy = template.find(s => s.key === "copy-new")
+    assert.equal(copy.taskId, original.taskId)
+    assert.equal(copy.className, original.className)
+    assert.equal(copy.group, original.group)
+    assert.equal(copy.note, "保留备注")
+    assert.equal(copy.noteShow, false)
+    assert.equal(copy.customLabel, "实验分工")
+    assert.equal(template.find(s => s.key === original.key).weekday, original.weekday)
+  }
+  assert.equal(applyWeekEdits([], [edit], "2026-10-19").template.length, 0)
+  const activity = { ...edit, kind: "activity", taskId: undefined }
+  assert.equal(applyTemplateEdits([], [activity])[0].kind, "activity")
+})
+
 const assignmentFor = (task, questions = []) => ({
   id: "TEST_RESEARCH_HW", taskId: task.id, title: "合成回归测试作业", instructions: "测试正文，不是正式记录", issuedAt: "2026-09-30T12:00:00+08:00", deadline: null,
   recipients: ["TEST_STUDENT_A", "TEST_STUDENT_B"], defaultRequirement: "REQUIRED", requirementOverrides: {}, results: {}, revision: 1, stamp: 1, schemeRevId: "SYS_BASIC4@1", status: "ACTIVE", questionSources: questions,
 })
 
- test("1. original global navigation stays unchanged; workspace retains query context and persistent form drafts", () => {
+ test("1. research navigation remains available; workspace retains query context and persistent form drafts", () => {
   const { NAV } = require("../lib/demo/nav.ts")
-  assert.equal(NAV.some(item => item.href.startsWith("/research")), false)
+  assert.equal(NAV.some(item => item.href.startsWith("/research")), true)
   let state = command(seed(), { type: "form-draft", key: "overview:math", value: { issueTitle: "尚未提交的协调事项", issueBody: "保留原草稿" } })
   state = command(state, { type: "form-draft", key: "overview:physics", value: { issueTitle: "另一科组独立草稿" } })
   const restored = migrateResearch(JSON.parse(JSON.stringify(state)))

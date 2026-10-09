@@ -152,6 +152,10 @@ export interface EditResult {
 
 // 新增课次时携带的完整课节信息（新增与已有课卡编辑共用同一组字段）
 export interface LessonCreateData {
+  kind?: TemplateEntry["kind"]
+  taskId?: string
+  studentGroup?: string
+  unitName?: string
   className: string
   subject: string
   group?: string
@@ -964,6 +968,10 @@ export function TimetableProvider({
           className: data.className,
           subject: data.subject,
           group: data.group,
+          kind: data.kind,
+          taskId: data.taskId,
+          studentGroup: data.studentGroup,
+          unitName: data.unitName,
           note: data.note || undefined,
           noteShow: data.noteShow,
           displayMode: data.displayMode,
@@ -1254,6 +1262,10 @@ export function TimetableProvider({
           className: data.className,
           subject: data.subject,
           group: data.group,
+          kind: data.kind,
+          taskId: data.taskId,
+          studentGroup: data.studentGroup,
+          unitName: data.unitName,
           note: data.note || undefined,
           noteShow: data.noteShow,
           displayMode: data.displayMode,
