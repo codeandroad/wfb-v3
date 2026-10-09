@@ -56,6 +56,14 @@ export function researchCommand(actor: Actor, command: Command): { ok: true } | 
   const me = people.find(p => p.id === actor.staff)
   const liveActor = { ...actor,enabled: actor.enabled && !!me && me.status !== "left" && me.accountStatus === "enabled" }
   try {
+    if (command.type === "appointment") {
+      const appointment = command.appointment
+      const target = people.find(person => person.id === appointment.staff)
+      if (!target) throw new Error("任命人员不存在，请返回教职工列表重新选择。")
+      const previous = current.appointments.find(item => item.id === appointment.id)
+      const endingExisting = previous && previous.staff === appointment.staff && previous.group === appointment.group && previous.role === appointment.role && previous.start === appointment.start && appointment.end !== null && (!previous.end || appointment.end <= previous.end)
+      if (target.status === "left" && !endingExisting) throw new Error("离职人员仅可结束已有任命，不能新增、改任角色或延长任期。")
+    }
     const next = applyResearchCommand(current,liveActor,command,getCatalog(),id => people.some(p => p.id === id && p.status !== "left" && p.accountStatus === "enabled"))
     if (!persist(next,command.type === "draft-document" || command.type === "form-draft")) return { ok: false,error: status.error }
     return { ok: true }

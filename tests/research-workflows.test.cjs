@@ -183,6 +183,110 @@ const assignmentFor = (task, questions = []) => ({
   assert.match(workspace, /data-testid="research-workspace"/)
 })
 
+test("school appointments require an enabled, current, group-scoped coordination grant, not just leadership", () => {
+  const state = seed()
+  const appointment = { id: "appointment-permission-test", staff: "u-he", group: "physics", role: "成员", start: "2026-09-30", end: null }
+  assert(model.canLeadGroup(state, actor("u-chen"), "physics"))
+  for (const staff of ["u-chen", "u-zhou", "u-xu"]) assert.throws(() => command(state, { type: "appointment", appointment }, staff), /任命权/)
+  assert.throws(() => applyResearchCommand(state, { ...actor(), enabled: false }, { type: "appointment", appointment }, catalogSeed), /账号/)
+  assert.throws(() => applyResearchCommand(state, actor("u-lin", "2028-01-01"), { type: "appointment", appointment }, catalogSeed), /任命权/)
+  const scoped = { ...state, grants: state.grants.filter(grant => grant.group === "math") }
+  assert.throws(() => command(scoped, { type: "appointment", appointment }), /任命权/)
+  assert.equal(command(state, { type: "appointment", appointment }).appointments.find(row => row.id === appointment.id).staff, "u-he")
+})
+
+test("school appointment creation, role revision and end date share research membership without deleting content", () => {
+  let state = seed()
+  const appointment = { id: "appointment-lifecycle-test", staff: "u-he", group: "math", role: "成员", start: "2026-09-30", end: null }
+  const documents = structuredClone(state.documents)
+  const originalAppointments = structuredClone(state.appointments)
+  state = command(state, { type: "appointment", appointment })
+  assert.equal(model.membership(state, "u-he", "math", actor().date).role, "成员")
+  const revised = { ...appointment, role: "维护者", end: "2027-07-31" }
+  state = command(state, { type: "appointment", appointment: revised, expected: appointment })
+  assert.equal(model.membership(state, "u-he", "math", actor().date).role, "维护者")
+  assert.equal(state.appointments.filter(row => row.id === appointment.id).length, 1)
+  const ended = { ...revised, end: "2026-10-01" }
+  state = command(state, { type: "appointment", appointment: ended, expected: revised })
+  assert(model.canEditGroup(state, actor("u-he", "2026-10-01"), "math"))
+  assert.equal(model.canViewGroup(state, actor("u-he", "2026-10-02"), "math"), false)
+  assert.deepEqual(state.documents, documents)
+  assert.deepEqual(state.appointments.filter(row => row.id !== appointment.id), originalAppointments)
+  assert.deepEqual(migrateResearch(JSON.parse(JSON.stringify(state))).appointments.find(row => row.id === appointment.id), ended)
+  assert.equal(model.canEditGroup(state, actor("u-he", "2026-09-29"), "math"), false)
+})
+
+test("appointment forms and commands reject invalid dates, unsupported roles and overlapping leader terms", () => {
+  const state = seed()
+  const appointment = { id: "appointment-validation-test", staff: "u-he", group: "math", role: "成员", start: "2026-09-30", end: null }
+  for (const start of ["", "2026-02-30", "2026-13-01", "2026-9-01", "0000-01-01", "not-a-date"]) {
+    assert.equal(model.appointmentDateValid(start), false)
+    assert.throws(() => command(state, { type: "appointment", appointment: { ...appointment, start } }), /日期/)
+  }
+  assert(model.appointmentDateValid("2024-02-29"))
+  for (const end of ["", "2026-09-29", "2027-02-29"]) assert.throws(() => command(state, { type: "appointment", appointment: { ...appointment, end } }), /日期/)
+  assert.throws(() => command(state, { type: "appointment", appointment: { ...appointment, role: "系统管理员" } }), /角色/)
+  assert.throws(() => command(state, { type: "appointment", appointment: { ...appointment, role: "组长" } }), /组长重叠/)
+  assert.throws(() => command(state, { type: "appointment", appointment: { ...appointment, role: "组长", start: "2027-07-31" } }), /组长重叠/)
+  const successor = command(state, { type: "appointment", appointment: { ...appointment, role: "组长", start: "2027-08-01" } })
+  assert.equal(model.membership(successor, "u-he", "math", "2027-07-31"), undefined)
+  assert.equal(model.canLeadGroup(successor, actor("u-he", "2027-08-01"), "math"), true)
+  const previous = state.appointments.find(row => row.id === "app-zhou-math")
+  assert.throws(() => command(state, { type: "appointment", appointment: { ...previous, staff: "u-he" } }), /对象不可/)
+  assert.throws(() => command(state, { type: "appointment", appointment: { ...previous, group: "physics" } }), /对象不可/)
+})
+
+test("a stale appointment revision cannot overwrite newer changes", () => {
+  const before = seed()
+  const previous = before.appointments.find(row => row.id === "app-zhou-math")
+  const revised = { ...previous, role: "维护者" }
+  const state = command(before, { type: "appointment", appointment: revised, expected: previous })
+  assert.throws(() => command(state, { type: "appointment", appointment: { ...previous, end: "2026-09-30" }, expected: previous }), /其他操作修订/)
+  assert.deepEqual(state.appointments.find(row => row.id === previous.id), revised)
+})
+
+test("appointment storage validates the live target, allows no-account registration and keeps changes atomic on save failure", () => {
+  const { getResearch, researchCommand, saveResearch } = require("../lib/research/store.ts")
+  const before = structuredClone(getResearch())
+  const appointment = { id: "appointment-store-test", staff: "u-wang", group: "physics", role: "成员", start: "2026-09-30", end: null }
+  try {
+    assert.match(researchCommand(actor(), { type: "appointment", appointment: { ...appointment, staff: "missing-staff" } }).error, /人员不存在/)
+    assert.match(researchCommand(actor(), { type: "appointment", appointment: { ...appointment, staff: "u-qian" } }).error, /离职/)
+    const result = researchCommand(actor(), { type: "appointment", appointment })
+    assert.equal(result.ok, true, result.error)
+    assert.equal(model.canViewGroup(getResearch(), { ...actor("u-wang"), enabled: false }, "physics"), false)
+    const saved = structuredClone(getResearch())
+    const setItem = storage.setItem
+    storage.setItem = () => { throw new Error("test quota exceeded") }
+    try {
+      const failure = researchCommand(actor(), { type: "appointment", appointment: { ...appointment, role: "维护者" }, expected: appointment })
+      assert.equal(failure.ok, false)
+      assert.match(failure.error, /保存失败/)
+      assert.deepEqual(getResearch(), saved)
+    } finally { storage.setItem = setItem }
+    const departed = { ...appointment, id: "departed-appointment-test", staff: "u-qian" }
+    saveResearch({ ...getResearch(), appointments: [...getResearch().appointments, departed] })
+    assert.match(researchCommand(actor(), { type: "appointment", appointment: { ...departed, role: "维护者" }, expected: departed }).error, /离职/)
+    assert.equal(researchCommand(actor(), { type: "appointment", appointment: { ...departed, end: actor().date }, expected: departed }).ok, true)
+  } finally { saveResearch(before) }
+})
+
+test("appointment management is wired into the staff detail, not a teacher self-appointment form", () => {
+  const detail = fs.readFileSync(path.join(root, "components/school/staff-detail-sheet.tsx"), "utf8")
+  const form = fs.readFileSync(path.join(root, "components/school/staff-appointment-form.tsx"), "utf8")
+  const panel = fs.readFileSync(path.join(root, "components/school/staff-appointments-panel.tsx"), "utf8")
+  assert.match(detail, /value: "appointments", label: "科组任命"/)
+  assert.match(detail, /tab === "appointments"[\s\S]*<StaffAppointmentsPanel/)
+  assert.match(panel, /useStaffPermission\(\)/)
+  assert.match(panel, /schoolScopes\(state, actor, true\)/)
+  assert.match(panel, /data-testid="staff-appointments"/)
+  assert.match(form, /type: "appointment"/)
+  assert.match(form, /expected: previous/)
+  assert.match(form, /确认结束任命/)
+  assert.match(form, /required checked=\{confirmed\}/)
+  assert.doesNotMatch(fs.readFileSync(path.join(root, "components/research/members.tsx"), "utf8"), /StaffAppointmentForm|type: "appointment"/)
+})
+
  test("2. effective appointments, independent multi-group duties, no-timetable leader, expired and scoped school viewer", () => {
   const state = seed()
   assert(model.canLeadGroup(state, actor(), "math"))
