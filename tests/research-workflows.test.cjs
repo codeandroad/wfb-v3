@@ -15,6 +15,7 @@ for (const extension of [".ts", ".tsx"]) {
     compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true },
   }).outputText, file)
 }
+require.extensions[".css"] = () => {}
 const data = new Map()
 const storage = { getItem: key => data.get(key) ?? null, setItem: (key, value) => data.set(key, value), removeItem: key => data.delete(key) }
 global.window = { localStorage: storage, sessionStorage: storage, addEventListener() {}, removeEventListener() {} }
@@ -67,23 +68,67 @@ test("group timetable is shared, leader-only, group-scoped and rejects occupied 
   assert.doesNotMatch(fs.readFileSync(path.join(root, "components/research/overview.tsx"), "utf8"), /需要学校支持的事项/)
 })
 
-test("compact period timetable remains alongside same-style daily timetable in both view and edit modes", () => {
+test("research timetable switches one shared projection between daily and period views", () => {
   const schedule = fs.readFileSync(path.join(root, "components/research/group-schedule.tsx"), "utf8")
   const days = fs.readFileSync(path.join(root, "components/research/schedule-days.tsx"), "utf8")
   const grid = fs.readFileSync(path.join(root, "components/timetable/week-grid.tsx"), "utf8")
+  assert.match(schedule, /useState<"days" \| "periods">\("days"\)/)
+  assert.match(schedule, /<ToggleGroup[^>]*value=\{\[view\]\}/)
+  assert.match(schedule, /setView\(canEdit \? "days" : "periods"\)/)
+  assert.match(schedule, /\{view === "periods" \? <section[\s\S]*<WeekGrid[\s\S]*<\/section> : <section[\s\S]*<ScheduleDays/)
   assert.match(schedule, /data-testid="research-period-grid"/)
   assert.match(schedule, /entries=\{entries\} compact canonical editing=\{canEdit\}/)
   assert.match(schedule, /<ScheduleDays group=\{group\} week=\{week\} entries=\{entries\} \/>/)
-  assert.doesNotMatch(schedule, /\{!?canEdit && <(?:div[^>]*><WeekGrid|ScheduleDays)/)
-  assert.ok(schedule.indexOf('data-testid="research-period-grid"') < schedule.indexOf("<ScheduleDays"))
   assert.match(days, /<WeekGrid[^>]*weekStart=\{week\} entries=\{entries\} compact canonical renderDay=/)
+  assert.match(days, /if \(!dayEntries\.length && !tasks\.length\) return null/)
   assert.match(days, /<ClassCard entry=\{merged\} canonical/)
   assert.match(days, /onClick=\{leader \? \(\) => setDate\(dayDate\) : undefined\}/)
   assert.match(days, /t\.group === group && t\.scheduleDate === dayDate/)
-  assert.doesNotMatch(days, /grid-cols-|const cardClass/)
+  assert.match(days, /owner: actor\.staff/)
+  assert.doesNotMatch(days, /当日无教研事项|暂无当天事项|无固定教研课次|事项负责人|<Plus|grid-cols-|const cardClass/)
   assert.match(grid, /data-layout=\{renderDay \? "days" : "periods"\}/)
   assert.match(grid, /renderEntries\.filter\(entry => entry\.date === day\.date\)\.sort/)
   assert.equal((grid.match(/children \?\? inner/g) || []).length, 2)
+})
+
+test("rendered daily timetable removes empty cards and follows shared slot moves", () => {
+  const { createElement } = require("react")
+  const { renderToStaticMarkup } = require("react-dom/server")
+  const { DemoProvider } = require("../lib/demo/store.tsx")
+  const { MtProvider } = require("../lib/mt/store.tsx")
+  const { TimetableProvider } = require("../lib/timetable/store.tsx")
+  const { ScheduleDays } = require("../components/research/schedule-days.tsx")
+  const { GroupSchedule } = require("../components/research/group-schedule.tsx")
+  const { addDays } = require("../lib/timetable/data.ts")
+  const renderUI = child => renderToStaticMarkup(createElement(DemoProvider, null, createElement(MtProvider, null, createElement(TimetableProvider, null, child))))
+  const week = "2026-10-12"
+  const render = state => renderUI(createElement(ScheduleDays, {
+    group: "math", week,
+    entries: state.groupSchedules.filter(slot => slot.group === "math").map(slot => ({ key: slot.id, weekday: slot.weekday, date: addDays(week, slot.weekday - 1), periodId: slot.periodId, className: slot.title, subject: "数学", room: slot.room, kind: "activity", teacherId: "research:math" })),
+  }))
+  const dayHtml = (html, date) => html.split(`data-day="${date}"`)[1].split('data-day="')[0]
+  let state = seed()
+  const title = state.groupSchedules.find(slot => slot.id === "math-tue4").title
+  const before = render(state)
+  assert.equal((dayHtml(before, "2026-10-13").match(new RegExp(title, "g")) || []).length, 1)
+  assert.match(dayHtml(before, "2026-10-13"), /第4节/)
+  assert.match(dayHtml(before, "2026-10-13"), /第5节/)
+  for (const date of ["2026-10-12", "2026-10-14", "2026-10-16", "2026-10-17", "2026-10-18"]) {
+    assert.doesNotMatch(dayHtml(before, date), /教研日卡|font-semibold|添加事项/)
+  }
+  for (const id of ["math-tue4", "math-tue5"]) {
+    const slot = state.groupSchedules.find(slot => slot.id === id)
+    state = command(state, { type: "save-group-slot", slot: { ...slot, weekday: 3 } })
+  }
+  const after = render(state)
+  assert.doesNotMatch(dayHtml(after, "2026-10-13"), /教研日卡|font-semibold/)
+  assert.match(dayHtml(after, "2026-10-14"), new RegExp(title))
+  assert.match(dayHtml(after, "2026-10-14"), /第4节/)
+  assert.match(dayHtml(after, "2026-10-14"), /第5节/)
+  assert.doesNotMatch(after, /暂无当天事项|无固定教研课次|事项负责人/)
+  const defaultView = renderUI(createElement(GroupSchedule, { group: "math" }))
+  assert.match(defaultView, /data-layout="days"/)
+  assert.doesNotMatch(defaultView, /data-layout="periods"|data-testid="research-period-grid"/)
 })
 
 test("day-card tasks are dated, leader-only and remain shared without repeating next week", () => {
