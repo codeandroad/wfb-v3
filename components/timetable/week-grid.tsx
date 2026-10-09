@@ -59,6 +59,7 @@ export function WeekGrid({
   makeupEdits,
   onCopyCell,
   compact = false,
+  renderDay,
 }: {
   weekStart: string
   entries: ProjectedEntry[]
@@ -81,6 +82,7 @@ export function WeekGrid({
   makeupEdits?: SlotEdit[]
   onCopyCell?: (entry: ProjectedEntry, cell: { weekday: number; periodId: string; date: string }) => { ok: boolean; msg: string }
   compact?: boolean
+  renderDay?: (day: { weekday: number; date: string; entries: ProjectedEntry[]; stopped: boolean }) => React.ReactNode
 }) {
   const timetable = useTimetable()
   const sharedEvents = useCalendarEvents()
@@ -323,10 +325,10 @@ export function WeekGrid({
   )
 
   return (
-    <div className={cn("overflow-hidden rounded-lg border bg-card", editing ? "border-primary/50 ring-1 ring-primary/30" : "border-border", className)}>
+    <div data-layout={renderDay ? "days" : "periods"} className={cn("overflow-hidden rounded-lg border bg-card", editing ? "border-primary/50 ring-1 ring-primary/30" : "border-border", className)}>
       {editing && copied && onCopyCell && <div className="flex flex-wrap items-center justify-between gap-2 border-b bg-accent px-3 py-2 text-sm text-accent-foreground"><p role="status">复制「{copied.className}」 · {copyMessage}</p><Button variant="outline" size="sm" onClick={() => { setCopied(null); setCopyMessage("") }}>结束复制</Button></div>}
       <div className="flex items-stretch bg-muted/60">
-        <div className={cn(AXIS, "shrink-0 px-1 py-1.5 text-center text-[10px] text-muted-foreground")}>节次</div>
+        <div className={cn(AXIS, "shrink-0 px-1 py-1.5 text-center text-[10px] text-muted-foreground")}>{renderDay ? "日程" : "节次"}</div>
         {days.map((d) => {
           const isToday = clockDate === d.date
           const { holiday, swapSource, movedAway } = calFor(d.date)
@@ -380,21 +382,45 @@ export function WeekGrid({
         </div>
       ) : null}
 
-      {dayPeriods.filter(p => !compact || editing || renderEntries.some(e => e.periodId === p.id)).map((p) => renderRow(p, p.id === "a1"))}
+      {renderDay ? (
+        <div className="flex items-stretch border-t border-border/70">
+          <div className={cn(AXIS, "flex shrink-0 items-center justify-center text-sm text-muted-foreground")}>当日</div>
+          {days.map((day) => (
+            <div
+              key={day.n}
+              data-day={day.date}
+              className={cn("min-w-0 flex-1 border-l border-border/70 p-1", day.n >= 6 && "bg-muted/20", stoppedDates.has(day.date) && "bg-muted/40")}
+            >
+              <div className="flex min-h-[46px] flex-col gap-1">
+                {renderDay({
+                  weekday: day.n,
+                  date: day.date,
+                  entries: renderEntries.filter(entry => entry.date === day.date).sort((a, b) => (periodById(a.periodId)?.no ?? 0) - (periodById(b.periodId)?.no ?? 0)),
+                  stopped: stoppedDates.has(day.date),
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <>
+          {dayPeriods.filter(p => !compact || editing || renderEntries.some(e => e.periodId === p.id)).map((p) => renderRow(p, p.id === "a1"))}
 
-      {(!compact || editing || eveningCount > 0) && <button
-        onClick={() => setEveningOverride(!showEvening)}
-        className="flex w-full items-center justify-between border-t border-border bg-muted/40 px-3 py-1.5 text-left text-[11px] text-muted-foreground transition-colors hover:bg-muted"
-        aria-expanded={showEvening}
-      >
-        <span className="flex items-center gap-1.5">
-          {showEvening ? <ChevronDown className="size-3.5" /> : <ChevronRight className="size-3.5" />}
-          晚间 {eveningPeriods.length} 节
-          {eveningCount > 0 ? <Badge tone="info">{eveningCount} 节有课</Badge> : <span className="text-muted-foreground/60">· 无课</span>}
-        </span>
-        <span className="text-[10px] text-muted-foreground/60">{showEvening ? "收起" : "展开"}</span>
-      </button>}
-      {showEvening ? eveningPeriods.map((p) => renderRow(p, false)) : null}
+          {(!compact || editing || eveningCount > 0) && <button
+            onClick={() => setEveningOverride(!showEvening)}
+            className="flex w-full items-center justify-between border-t border-border bg-muted/40 px-3 py-1.5 text-left text-[11px] text-muted-foreground transition-colors hover:bg-muted"
+            aria-expanded={showEvening}
+          >
+            <span className="flex items-center gap-1.5">
+              {showEvening ? <ChevronDown className="size-3.5" /> : <ChevronRight className="size-3.5" />}
+              晚间 {eveningPeriods.length} 节
+              {eveningCount > 0 ? <Badge tone="info">{eveningCount} 节有课</Badge> : <span className="text-muted-foreground/60">· 无课</span>}
+            </span>
+            <span className="text-[10px] text-muted-foreground/60">{showEvening ? "收起" : "展开"}</span>
+          </button>}
+          {showEvening ? eveningPeriods.map((p) => renderRow(p, false)) : null}
+        </>
+      )}
 
       {ghost ? (
         <div
@@ -418,10 +444,14 @@ export function ClassCard({
   onClick,
   dragProps,
   canonical = false,
+  children,
+  ariaLabel,
 }: {
   entry: ProjectedEntry
   meta?: CardMeta
   canonical?: boolean
+  children?: React.ReactNode
+  ariaLabel?: string
   onClick?: () => void
   dragProps?: {
     onPointerDown: (e: React.PointerEvent<HTMLButtonElement>) => void
@@ -552,19 +582,20 @@ export function ClassCard({
       <button
         type="button"
         onClick={onClick}
+        aria-label={ariaLabel}
         className={cls}
         style={personalCard}
         data-style-bg={ps && plainTone ? ps.bg?.label ?? "" : ""}
         draggable={false}
         {...(dragProps ?? {})}
       >
-        {inner}
+        {children ?? inner}
       </button>
     )
   }
   return (
-    <div className={cls} style={personalCard}>
-      {inner}
+    <div role={ariaLabel ? "group" : undefined} aria-label={ariaLabel} className={cls} style={personalCard}>
+      {children ?? inner}
     </div>
   )
 }
