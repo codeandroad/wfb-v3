@@ -54,6 +54,12 @@ $$s=ut+\frac12at^2$$`, notes: "器材检查、采样误差及安全要求由活�
       { id: "app-zhou-expired", staff: "u-zhou", group: "physics", role: "成员", start: "2025-09-01", end: "2026-07-31" },
       { id: "app-zhou-future", staff: "u-zhou", group: "physics", role: "成员", start: "2027-09-01", end: "2028-07-31" },
     ],
+    groupSchedules: [
+      { id: "math-tue4", group: "math", weekday: 2, periodId: "m4", title: "数学教研", room: "D110" },
+      { id: "math-tue5", group: "math", weekday: 2, periodId: "m5", title: "数学教研", room: "D110" },
+      { id: "math-thu6", group: "math", weekday: 4, periodId: "a1", title: "数学教研", room: "D110" },
+      { id: "math-thu7", group: "math", weekday: 4, periodId: "a2", title: "数学教研", room: "D110" },
+    ],
     forms: {}, grants: [{ staff: "u-lin", group: "math", mode: "统筹", start: "2026-09-01", end: "2027-07-31" },{ staff: "u-lin", group: "physics", mode: "统筹", start: "2026-09-01", end: "2027-07-31" },{ staff: "u-xu", group: "math", mode: "查看", start: "2026-09-01", end: "2027-07-31" }],
     schoolTasks: [{ id: "school-task-1", title: "学期教学内容整理", groups: ["math","physics"], due: "2026-11-01", requirements: "各组引用本组已有大纲或教学计划；牵头提交，不要求教师另填报告。", acceptance: false, createdBy: "u-lin", createdAt: "2026-09-01" }],
     tasks: ["math","physics"].map(group => ({ id: `task-${group}`, title: "学期教学内容整理", group, parent: null, schoolTaskId: "school-task-1", course: "", owner: "", collaborators: [], submitters: [], due: "2026-11-01", mode: "牵头提交", requirements: "引用已有成果即可。", acceptance: false, status: "待承接", outcomes: [], acceptedNote: "" })),

@@ -346,7 +346,7 @@ function SchoolView({ teacherId, weekStart, clockDate, onReadCard, onEditCard, o
       {editing ? (
         <div className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-lg border border-primary/40 bg-accent/60 px-3 py-2 text-[12px]">
           <Badge tone="primary">编辑中</Badge>
-          <span className="text-muted-foreground">基于 {schLabel(ownDraft!.baseSeq)} · {dirty ? `${editCount} 处改动` : "尚无改动"}</span>
+          <span className="text-muted-foreground">基于 {schLabel(ownDraft!.baseSeq)} · {dirty ? `${editCount} 处改动` : "尚无��动"}</span>
           <div className="ml-auto flex flex-wrap gap-1.5">
             <Button variant="ghost" size="xs" disabled={!dirty} onClick={() => { tt.undoSchoolDraft(teacherId); push("已撤销上一步") }}><Undo2 className="size-3 mr-1" />撤销</Button>
             <Button variant="ghost" size="xs" onClick={() => { tt.discardSchoolDraft(teacherId); push("已放弃该教师草稿") }}><X className="size-3 mr-1" />放弃</Button>
@@ -378,6 +378,7 @@ function SchoolView({ teacherId, weekStart, clockDate, onReadCard, onEditCard, o
 
       {conflicts.length ? <ConflictBar count={conflicts.length} /> : null}
       <WeekGrid
+        key={`${teacherId}:${editing}`}
         weekStart={weekStart}
         entries={entries}
         clockDate={clockDate}
@@ -387,6 +388,11 @@ function SchoolView({ teacherId, weekStart, clockDate, onReadCard, onEditCard, o
         onMove={editing ? (entry, weekday, periodId) => {
           const r = tt.schoolDraftEdit(teacherId, entry, { action: "move", weekday, periodId, room: entry.room ?? null })
           push(r.msg)
+        } : undefined}
+        onCopyCell={editing ? (entry, cell) => {
+          const r = tt.schoolDraftAdd(teacherId, cell, entry)
+          push(r.msg)
+          return r
         } : undefined}
         onAddCell={editing ? onAddCell : undefined}
       />

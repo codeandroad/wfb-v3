@@ -54,10 +54,12 @@ export type Criterion = {
   documentId: string | null; itemId: string | null; maxScore: number | null; scoring: string;
   testName: string; thresholds: { minimum: number; code: string }[];
 }
+export type GroupScheduleSlot = { id: string; group: string; weekday: number; periodId: string; title: string; room: string | null }
 export type ResearchState = {
   schema: 2; documents: Document[]; revisions: Record<string, Document>; drafts: Record<string, DraftDocument>;
   appointments: Appointment[]; grants: SchoolGrant[]; schoolTasks: SchoolTask[]; tasks: Task[]; activities: Activity[];
   discussions: Discussion[]; notices: Notice[]; issues: SupportIssue[]; criteria: Criterion[];
+  groupSchedules?: GroupScheduleSlot[];
   criterionRevisions?: Record<string, Criterion>; forms: Record<string, unknown>;
 }
 export type CatalogState = { subjects: CatalogSubject[]; courses: CatalogCourse[]; units: CatalogUnit[]; settings: Record<string, { active: boolean; groupIds: string[] }> }

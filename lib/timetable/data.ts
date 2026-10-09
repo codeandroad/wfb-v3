@@ -534,6 +534,10 @@ export interface SlotEdit {
   effectiveTo?: string // 固定区间：区间结束（含）；缺省表示自开始日起持续，但界面要求填写有界范围
   label: string
   // 新增课次（action="add"）时携带的完整字段
+  kind?: EntryKind
+  taskId?: string
+  studentGroup?: string
+  unitName?: string
   className?: string
   subject?: string
   group?: string
@@ -588,7 +592,10 @@ export function applyWeekEdits(
           subject: ed.subject ?? "",
           group: ed.group,
           room: ed.room,
-          kind: "class",
+          kind: ed.kind ?? "class",
+          taskId: ed.taskId,
+          studentGroup: ed.studentGroup,
+          unitName: ed.unitName,
           note: ed.note || undefined,
           noteShow: ed.noteShow,
           displayMode: ed.displayMode,
@@ -626,7 +633,10 @@ export function applyTemplateEdits(base: TemplateEntry[], edits: SlotEdit[]): Te
           subject: ed.subject ?? "",
           group: ed.group,
           room: ed.room,
-          kind: "class",
+          kind: ed.kind ?? "class",
+          taskId: ed.taskId,
+          studentGroup: ed.studentGroup,
+          unitName: ed.unitName,
           note: ed.note || undefined,
           noteShow: ed.noteShow,
           displayMode: ed.displayMode,
