@@ -2,10 +2,11 @@
 
 import { useSyncExternalStore } from "react"
 import type { StaffProfile } from "@/lib/demo/staff"
-import { applyStaffDutyCommand, migrateLegacyResearchDuties, migrateStaffDutyState, staffDutySeed, validateStaffDutyState, type DutyActor, type StaffDutyCommand, type StaffDutyState } from "./duty-model"
+import { applyStaffDutyCommand, migrateLegacyResearchDuties, restoreCoexistingResearchDuties, staffDutySeed, validateStaffDutyState, type DutyActor, type StaffDutyCommand, type StaffDutyState } from "./duty-model"
 
 export const STAFF_DUTY_STORAGE_KEY = "tgs:staff-duties-prototype:v1"
 export const STAFF_DUTY_REPAIR_BACKUP_KEY = `${STAFF_DUTY_STORAGE_KEY}:before-overlap-repair`
+export const STAFF_DUTY_COEXISTENCE_BACKUP_KEY = `${STAFF_DUTY_STORAGE_KEY}:before-coexistence-restore`
 const LEGACY_KEYS = ["tgs:research-prototype:v2", "tgs:research-prototype:v1"]
 const seed = staffDutySeed()
 const serverStatus = { error: "" }
@@ -21,12 +22,12 @@ export function getStaffDuties(): StaffDutyState {
     try {
       const raw = window.localStorage.getItem(STAFF_DUTY_STORAGE_KEY)
       let next = seed
-      if (raw) next = migrateStaffDutyState(JSON.parse(raw))
+      if (raw) next = validateStaffDutyState(JSON.parse(raw))
       else {
         const legacy = LEGACY_KEYS.map(key => window.localStorage.getItem(key)).find(Boolean)
         if (legacy) {
           const data = JSON.parse(legacy)
-          if (Array.isArray(data.staffDuties) && Array.isArray(data.groups)) next = migrateStaffDutyState({ schema: 1, assignments: data.staffDuties, groups: data.groups })
+          if (Array.isArray(data.staffDuties) && Array.isArray(data.groups)) next = validateStaffDutyState({ schema: 1, assignments: data.staffDuties, groups: data.groups })
           else {
             const assignments = migrateLegacyResearchDuties(data)
             const groups = structuredClone(seed.groups)
@@ -35,13 +36,22 @@ export function getStaffDuties(): StaffDutyState {
           }
         }
       }
+      if (next.assignments.some(duty => duty.history?.some(entry => entry.text.startsWith("修正旧职责 · 教研参与教师 原记录 ")))) {
+        const keys = Array.from({ length: window.localStorage.length }, (_, index) => window.localStorage.key(index)).filter((key): key is string => !!key && (key === STAFF_DUTY_REPAIR_BACKUP_KEY || key.startsWith(`${STAFF_DUTY_REPAIR_BACKUP_KEY}:`))).reverse()
+        for (const key of keys) {
+          let backup: StaffDutyState
+          try { backup = validateStaffDutyState(JSON.parse(window.localStorage.getItem(key)!)) }
+          catch { continue }
+          next = restoreCoexistingResearchDuties(next, backup)
+        }
+      }
       const serialized = JSON.stringify(next)
       if (!raw || JSON.stringify(JSON.parse(raw)) !== serialized) {
         if (raw) {
-          const backup = window.localStorage.getItem(STAFF_DUTY_REPAIR_BACKUP_KEY)
-          if (backup !== raw) window.localStorage.setItem(backup ? `${STAFF_DUTY_REPAIR_BACKUP_KEY}:${crypto.randomUUID()}` : STAFF_DUTY_REPAIR_BACKUP_KEY, raw)
+          const backup = window.localStorage.getItem(STAFF_DUTY_COEXISTENCE_BACKUP_KEY)
+          if (backup !== raw) window.localStorage.setItem(backup ? `${STAFF_DUTY_COEXISTENCE_BACKUP_KEY}:${crypto.randomUUID()}` : STAFF_DUTY_COEXISTENCE_BACKUP_KEY, raw)
         }
-        // 保留旧教研存储与各次修正前快照；内容服务不再保存第二份授权。
+        // 原始快照与后续变更均保留；内容服务不再保存第二份授权。
         window.localStorage.setItem(STAFF_DUTY_STORAGE_KEY, serialized)
       }
       state = next

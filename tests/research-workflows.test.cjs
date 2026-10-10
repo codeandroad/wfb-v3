@@ -17,7 +17,7 @@ for (const extension of [".ts", ".tsx"]) {
 }
 require.extensions[".css"] = () => {}
 const data = new Map()
-const storage = { getItem: key => data.get(key) ?? null, setItem: (key, value) => data.set(key, value), removeItem: key => data.delete(key) }
+const storage = { get length() { return data.size }, key: index => [...data.keys()][index] ?? null, getItem: key => data.get(key) ?? null, setItem: (key, value) => data.set(key, value), removeItem: key => data.delete(key) }
 global.window = { localStorage: storage, sessionStorage: storage, addEventListener() {}, removeEventListener() {} }
 
 const model = require("../lib/research/model.ts")
@@ -317,8 +317,70 @@ test("legacy appointments and school grants migrate once into template-based dut
   assert.throws(() => dutyModel.migrateLegacyResearchDuties({ appointments: [{}], grants: [] }), /未清空/)
 })
 
-test("legacy migration removes duplicate authorization intervals instead of importing conflicting duties", () => {
-  const assignments = dutyModel.migrateLegacyResearchDuties({
+test("same-group leader and participant duties coexist and can each end independently while live", () => {
+  const initial = seed()
+  const participant = dutyModel.createResearchDuty("lin-math-participant", "u-lin", "research_participate", "math", "2026-09-01", "2027-07-31")
+  const state = dutyCommand(initial, { type: "arrange", assignments: [participant] }, "u-lin", "2026-10-10")
+  const leader = state.staffDuties.find(duty => duty.id === "app-lin-math")
+  const dutyState = { schema: 1, assignments: state.staffDuties, groups: state.groups }
+  assert.equal(dutyModel.validateStaffDutyState(dutyState), dutyState)
+  assert.deepEqual(dutyModel.staffDutyConflicts(dutyState, participant), [])
+  assert.deepEqual(dutyModel.staffDutyConflicts(dutyState, leader), [])
+  for (const previous of [leader, state.staffDuties.find(duty => duty.id === participant.id)]) {
+    assert(dutyModel.dutyEffective(previous, "2026-10-10"))
+    const ended = dutyCommand(state, { type: "end", assignment: { ...previous, end: "2026-10-10" }, expected: previous }, "u-lin", "2026-10-10")
+    const saved = ended.staffDuties.find(duty => duty.id === previous.id)
+    assert.equal(saved.end, "2026-10-10")
+    assert(dutyModel.dutyEffective(saved, "2026-10-10"))
+    assert.equal(dutyModel.dutyEffective(saved, "2026-10-11"), false)
+    assert.deepEqual(saved.history.slice(0, -1), previous.history)
+    assert.match(saved.history.at(-1).text, /登记结束职责/)
+    assert.deepEqual(ended.staffDuties.filter(duty => duty.id !== previous.id), state.staffDuties.filter(duty => duty.id !== previous.id))
+    assert.deepEqual(ended.documents, state.documents)
+    assert(model.canParticipateGroup(ended, actor("u-lin", "2026-10-11"), "math"))
+    assert.equal(model.canLeadGroup(ended, actor("u-lin", "2026-10-11"), "math"), previous.type !== "research_lead")
+    assert(model.canParticipateGroup(ended, actor("u-lin", "2026-10-11"), "physics"))
+  }
+})
+
+test("persisted legacy overlaps do not block ending an active duty or alter any other record", () => {
+  const source = seed()
+  const leader = source.staffDuties.find(duty => duty.id === "app-lin-math")
+  const participant = dutyModel.createResearchDuty("legacy-concurrent-participant", "u-lin", "research_participate", "math", "2026-09-01")
+  source.staffDuties.push(participant, { ...structuredClone(leader), id: "legacy-duplicate-leader" })
+  const unrelated = source.staffDuties.find(duty => duty.id === "app-zhou-math")
+  source.staffDuties.push({ ...structuredClone(unrelated), id: "unrelated-legacy-overlap" })
+  const before = structuredClone(source)
+  const dutyState = { schema: 1, assignments: source.staffDuties, groups: source.groups }
+  assert.equal(dutyModel.validateStaffDutyState(dutyState), dutyState)
+  assert.equal(dutyModel.staffDutyValidationError(dutyState, { ...leader, end: "2026-10-10" }, leader, "end"), "")
+  const ended = dutyCommand(source, { type: "end", assignment: { ...leader, end: "2026-10-10" }, expected: leader }, "u-lin", "2026-10-10")
+  assert.equal(ended.staffDuties.find(duty => duty.id === leader.id).end, "2026-10-10")
+  assert.deepEqual(ended.staffDuties.filter(duty => duty.id !== leader.id), before.staffDuties.filter(duty => duty.id !== leader.id))
+  assert.deepEqual(source, before)
+  assert.throws(() => dutyCommand(source, { type: "arrange", assignments: [{ ...participant, id: "new-same-template-duplicate" }] }), /重叠的同类职责/)
+})
+
+test("loading stored coexisting duties preserves every original term and writes no repair", () => {
+  const source = dutyModel.staffDutySeed()
+  source.assignments.push(dutyModel.createResearchDuty("stored-lin-math-participant", "u-lin", "research_participate", "math", "2026-08-01", "2027-09-30"))
+  const raw = JSON.stringify(source)
+  withDutyStorage([["tgs:staff-duties-prototype:v1", raw]], store => {
+    let writes = 0
+    const setItem = storage.setItem
+    storage.setItem = (...args) => { writes++; return setItem(...args) }
+    assert.deepEqual(store.getStaffDuties(), source)
+    assert.equal(data.get(store.STAFF_DUTY_STORAGE_KEY), raw)
+    assert.equal(data.has(store.STAFF_DUTY_REPAIR_BACKUP_KEY), false)
+    assert.equal(writes, 0)
+    const previous = store.getStaffDuties().assignments.find(duty => duty.id === "app-lin-math")
+    assert.equal(store.commitStaffDuty(actor("u-lin", "2026-10-10"), { type: "end", assignment: { ...previous, end: "2026-10-10" }, expected: previous }, STAFF).ok, true)
+    assert.deepEqual(store.getStaffDuties().assignments.filter(duty => duty.id !== previous.id), source.assignments.filter(duty => duty.id !== previous.id))
+  })
+})
+
+test("legacy migration preserves concurrent templates, original IDs and every original term", () => {
+  const legacy = {
     appointments: [
       { id: "app-lin-math", staff: "u-lin", group: "math", role: "组长", start: "2026-09-01", end: "2027-07-31" },
       { id: "old-lin-math-member", staff: "u-lin", group: "math", role: "成员", start: "2026-10-10", end: null },
@@ -326,33 +388,38 @@ test("legacy migration removes duplicate authorization intervals instead of impo
       { id: "app-lin-physics", staff: "u-lin", group: "physics", role: "成员", start: "2026-09-01", end: "2027-07-31" },
     ],
     grants: [{ staff: "u-lin", group: "math", mode: "统筹", start: "2026-09-01", end: "2027-07-31" }],
-  })
+  }
+  const before = structuredClone(legacy)
+  const assignments = dutyModel.migrateLegacyResearchDuties(legacy)
   const state = { schema: 1, assignments, groups: dutyModel.staffDutySeed().groups }
-  assert.equal(assignments.filter(duty => duty.type === "research_lead").length, 1)
-  assert.equal(assignments.find(duty => duty.id === "app-lin-math").end, "2027-07-31")
-  const member = assignments.find(duty => duty.id === "old-lin-math-member")
-  assert.equal(member.start, "2027-08-01")
-  assert.equal(member.end, undefined)
-  assert(assignments.some(duty => duty.id === "app-lin-physics"))
-  assert(assignments.some(duty => duty.type === "research_manage"))
-  for (const duty of assignments) assert.deepEqual(dutyModel.staffDutyConflicts(state, duty), [])
-  assert.match(assignments.find(duty => duty.id === "app-lin-math").history.at(-1).text, /修正旧职责/)
-})
-
-test("persisted duty states reject overlapping authorizations even when their structure is valid", () => {
-  const state = dutyModel.staffDutySeed()
-  const duplicate = dutyModel.createResearchDuty("persisted-math-member", "u-lin", "research_participate", "math", "2026-10-10")
-  const invalid = { ...state, assignments: [...state.assignments, duplicate] }
-  assert.throws(() => dutyModel.validateStaffDutyState(invalid), /职责.*重叠|重叠.*职责/)
+  assert.deepEqual(legacy, before)
+  assert.equal(assignments.length, 5)
+  for (const original of legacy.appointments) {
+    const saved = assignments.find(duty => duty.id === original.id)
+    assert.equal(saved.start, original.start)
+    assert.equal(saved.end, original.end ?? undefined)
+    assert.equal(saved.history.some(entry => entry.text.includes("修正旧职责")), false)
+  }
+  assert.deepEqual(dutyModel.staffDutyConflicts(state, assignments.find(duty => duty.id === "old-lin-math-member")), [])
   assert.equal(dutyModel.validateStaffDutyState(state), state)
 })
 
-test("repaired legacy duties end normally without a duplicate record keeping leadership active", () => {
+test("persisted duty validation protects record structure without enforcing whole-state exclusivity", () => {
+  const state = dutyModel.staffDutySeed()
+  const member = dutyModel.createResearchDuty("persisted-math-member", "u-lin", "research_participate", "math", "2026-10-10")
+  const concurrent = { ...state, assignments: [...state.assignments, member] }
+  assert.equal(dutyModel.validateStaffDutyState(concurrent), concurrent)
+  for (const patch of [{ start: "2026-02-30" }, { scopeRefs: [] }, { type: "unknown-duty" }]) {
+    assert.throws(() => dutyModel.validateStaffDutyState({ ...state, assignments: [...state.assignments, { ...member, ...patch }] }), /格式无效|未清空/)
+  }
+  assert.throws(() => dutyModel.validateStaffDutyState({ ...state, assignments: [...state.assignments, state.assignments[0]] }), /格式无效/)
+})
+
+test("ending an effective migrated leader preserves participation in the same group and all original histories", () => {
   const assignments = dutyModel.migrateLegacyResearchDuties({
     appointments: [
       { id: "legacy-lin-leader", staff: "u-lin", group: "math", role: "组长", start: "2026-09-01", end: "2027-07-31" },
       { id: "legacy-lin-member", staff: "u-lin", group: "math", role: "成员", start: "2026-10-10", end: null },
-      { id: "legacy-lin-duplicate", staff: "u-lin", group: "math", role: "组长", start: "2026-09-01", end: "2027-07-31" },
     ],
     grants: [{ staff: "u-lin", group: "math", mode: "统筹", start: "2026-09-01", end: "2027-07-31" }],
   })
@@ -361,8 +428,7 @@ test("repaired legacy duties end normally without a duplicate record keeping lea
   const previous = assignments.find(duty => duty.id === "legacy-lin-leader")
   const ending = { ...previous, end: "2026-10-11" }
   assert.deepEqual(dutyModel.staffDutyConflicts(dutyState, previous), [])
-  assert.equal(assignments.some(duty => duty.id === "legacy-lin-duplicate"), false)
-  assert.equal(dutyModel.staffDutyValidationError(dutyState, ending, previous), "")
+  assert.equal(dutyModel.staffDutyValidationError(dutyState, ending, previous, "end"), "")
   const ended = dutyCommand(state, { type: "end", assignment: ending, expected: previous }, "u-lin", "2026-10-11")
   const saved = ended.staffDuties.find(duty => duty.id === previous.id)
   assert.equal(ended.staffDuties.length, assignments.length)
@@ -373,28 +439,24 @@ test("repaired legacy duties end normally without a duplicate record keeping lea
   assert.deepEqual(ended.documents, state.documents)
   assert(model.canLeadGroup(ended, actor("u-lin", "2026-10-11"), "math"))
   assert.equal(model.canLeadGroup(ended, actor("u-lin", "2026-10-12"), "math"), false)
-  assert.equal(model.canParticipateGroup(ended, actor("u-lin", "2026-10-12"), "math"), false)
-  assert(model.canViewGroup(ended, actor("u-lin", "2026-10-12"), "math"))
+  assert(model.canParticipateGroup(ended, actor("u-lin", "2026-10-12"), "math"))
+  assert.equal(ended.staffDuties.find(duty => duty.id === "legacy-lin-member").start, "2026-10-10")
   const member = ended.staffDuties.find(duty => duty.id === "legacy-lin-member")
-  assert.equal(member.start, "2027-08-01")
-  const duplicate = { ...member, id: "new-duplicate-member" }
-  assert.throws(() => dutyCommand(ended, { type: "arrange", assignments: [duplicate] }, "u-lin", "2026-10-11"), /重叠的同类职责/)
-  assert.throws(() => dutyCommand(state, { type: "revise", assignment: { ...previous, end: "2028-07-31" }, expected: previous }, "u-lin", "2026-10-11"), /重叠/)
+  assert.throws(() => dutyCommand(ended, { type: "arrange", assignments: [{ ...member, id: "new-duplicate-member" }] }, "u-lin", "2026-10-11"), /重叠的同类职责/)
 })
 
- test("same-template duplicates become one duty and ending it revokes participation after the inclusive last day", () => {
-  const original = seed()
-  const previous = original.staffDuties.find(duty => duty.id === "app-zhou-math")
-  original.staffDuties.push({ ...structuredClone(previous), id: "old-duplicate-zhou-math" })
-  const repaired = dutyModel.migrateStaffDutyState({ schema: 1, assignments: original.staffDuties, groups: original.groups })
-  const state = { ...original, staffDuties: repaired.assignments }
-  const canonical = state.staffDuties.find(duty => duty.id === previous.id)
-  assert.equal(state.staffDuties.some(duty => duty.id === "old-duplicate-zhou-math"), false)
-  assert.equal(canonical.end, previous.end)
-  const ended = dutyCommand(state, { type: "end", assignment: { ...canonical, end: "2026-10-11" }, expected: canonical }, "u-lin", "2026-10-11")
-  assert(model.canParticipateGroup(ended, actor("u-zhou", "2026-10-11"), "math"))
-  assert.equal(model.canViewGroup(ended, actor("u-zhou", "2026-10-12"), "math"), false)
-  assert.deepEqual(ended.staffDuties.filter(duty => duty.id !== previous.id), state.staffDuties.filter(duty => duty.id !== previous.id))
+test("legacy same-template overlaps can be ended individually without silently merging or ending other records", () => {
+  const state = seed()
+  const previous = state.staffDuties.find(duty => duty.id === "app-zhou-math")
+  const duplicate = { ...structuredClone(previous), id: "old-duplicate-zhou-math" }
+  state.staffDuties.push(duplicate)
+  const ended = dutyCommand(state, { type: "end", assignment: { ...previous, end: "2026-10-11" }, expected: previous }, "u-lin", "2026-10-11")
+  assert.equal(ended.staffDuties.length, state.staffDuties.length)
+  assert.deepEqual(ended.staffDuties.find(duty => duty.id === duplicate.id), duplicate)
+  assert(model.canParticipateGroup(ended, actor("u-zhou", "2026-10-12"), "math"))
+  const second = dutyCommand(ended, { type: "end", assignment: { ...duplicate, end: "2026-10-11" }, expected: duplicate }, "u-lin", "2026-10-11")
+  assert.equal(model.canViewGroup(second, actor("u-zhou", "2026-10-12"), "math"), false)
+  assert.deepEqual(second.staffDuties.filter(duty => ![previous.id, duplicate.id].includes(duty.id)), state.staffDuties.filter(duty => ![previous.id, duplicate.id].includes(duty.id)))
 })
 
 test("ending a valid duty enforces immutable identity, valid shorter terms, live permissions and stale checks", () => {
@@ -432,46 +494,41 @@ test("shortening a paused or readonly duty never reactivates it or expands its w
   }
 })
 
-test("repair retains only nonoverlapping parts of an existing term, is idempotent and never mutates the source", () => {
+test("reading concurrent duties never splits terms, creates remainder records or changes history", () => {
   const source = dutyModel.staffDutySeed()
-  const member = dutyModel.createResearchDuty("member-across-leader-term", "u-lin", "research_participate", "math", "2026-08-01", "2027-09-30")
-  source.assignments.push(member)
+  source.assignments.push(dutyModel.createResearchDuty("member-across-leader-term", "u-lin", "research_participate", "math", "2026-08-01", "2027-09-30"))
   const before = structuredClone(source)
-  const repaired = dutyModel.migrateStaffDutyState(source)
+  assert.equal(dutyModel.validateStaffDutyState(source), source)
   assert.deepEqual(source, before)
-  const parts = repaired.assignments.filter(duty => duty.id.startsWith(member.id))
-  assert.deepEqual(parts.map(duty => [duty.start, duty.end]), [["2026-08-01", "2026-08-31"], ["2027-08-01", "2027-09-30"]])
-  assert.equal(new Set(repaired.assignments.map(duty => duty.id)).size, repaired.assignments.length)
-  assert.equal(dutyModel.migrateStaffDutyState(repaired), repaired)
-  for (const duty of repaired.assignments) assert.deepEqual(dutyModel.staffDutyConflicts(repaired, duty), [])
-  assert.deepEqual(repaired.assignments.filter(duty => duty.staffId !== "u-lin"), before.assignments.filter(duty => duty.staffId !== "u-lin"))
+  assert.equal(source.assignments.some(duty => duty.id.includes(":remainder:")), false)
+  for (const duty of source.assignments) assert.deepEqual(dutyModel.staffDutyConflicts(source, duty), [])
 })
 
-test("repairing duplicate records cannot undo an ended term, pause, readonly mode or shorter end date", () => {
+test("legacy duplicate records retain their independent ended, paused, readonly and shorter-term limits", () => {
   for (const patch of [{ status: "paused", workMode: "paused" }, { status: "active", workMode: "ro" }, { status: "ended", workMode: "rw" }]) {
     const source = dutyModel.staffDutySeed()
     const canonical = source.assignments.find(duty => duty.id === "app-zhou-math")
     const limited = { ...structuredClone(canonical), ...patch, id: "limited-duplicate-member", end: "2026-10-11", history: [{ date: "2026-10-11", text: "登记结束职责 · 原任期已缩短" }] }
     source.assignments.push(limited)
-    const repaired = dutyModel.migrateStaffDutyState(source)
-    const saved = repaired.assignments.find(duty => duty.id === canonical.id)
-    assert.equal(saved.end, limited.end)
-    assert.equal(saved.status, limited.status)
-    assert.equal(saved.workMode, limited.workMode)
-    assert.equal(repaired.assignments.some(duty => duty.id === limited.id), false)
-    assert(saved.history.some(item => item.text === limited.history[0].text))
-    assert.equal(model.canViewGroup({ ...seed(), staffDuties: repaired.assignments }, actor("u-zhou", "2026-10-12"), "math"), false)
+    const before = structuredClone(source)
+    assert.equal(dutyModel.validateStaffDutyState(source), source)
+    assert.deepEqual(source, before)
+    const ended = dutyModel.applyStaffDutyCommand(source, actor("u-lin", "2026-10-11"), { type: "end", assignment: { ...canonical, end: "2026-10-11" }, expected: canonical }, STAFF)
+    assert.deepEqual(ended.assignments.find(duty => duty.id === limited.id), limited)
+    assert.equal(model.canViewGroup({ ...seed(), staffDuties: ended.assignments }, actor("u-zhou", "2026-10-12"), "math"), false)
   }
 })
 
-test("different overlapping leaders remain rejected; repair cannot choose a new holder or bypass checks with an end command", () => {
+test("legacy competing leaders can be ended without choosing a new holder or allowing new duplicate appointments", () => {
   const source = dutyModel.staffDutySeed()
   const leader = source.assignments.find(duty => duty.id === "app-lin-math")
-  source.assignments.push(dutyModel.createResearchDuty("contradictory-math-leader", "u-he", "research_lead", "math", "2026-10-01"))
+  const other = dutyModel.createResearchDuty("legacy-other-math-leader", "u-he", "research_lead", "math", "2026-10-01")
+  source.assignments.push(other)
   const before = structuredClone(source)
-  assert.throws(() => dutyModel.migrateStaffDutyState(source), /职责记录存在重叠/)
-  assert.throws(() => dutyModel.applyStaffDutyCommand(source, actor(), { type: "end", assignment: { ...leader, end: "2026-10-11" }, expected: leader }, STAFF), /职责记录存在重叠/)
+  const ended = dutyModel.applyStaffDutyCommand(source, actor("u-lin", "2026-10-11"), { type: "end", assignment: { ...leader, end: "2026-10-11" }, expected: leader }, STAFF)
   assert.deepEqual(source, before)
+  assert.deepEqual(ended.assignments.find(duty => duty.id === other.id), other)
+  assert.throws(() => dutyModel.applyStaffDutyCommand(source, actor("u-lin", "2026-10-11"), { type: "arrange", assignments: [{ ...other, id: "new-competing-leader" }] }, STAFF), /教研组长职责重叠/)
 })
 
 function withDutyStorage(entries, run) {
@@ -492,56 +549,146 @@ function withDutyStorage(entries, run) {
   }
 }
 
-test("persisted duplicate repair is backed up before saving and later duty edits never restore its old authorization", () => {
+test("stored legacy overlaps are preserved rather than automatically merged or backed up as errors", () => {
   const source = dutyModel.staffDutySeed()
   const original = source.assignments.find(duty => duty.id === "app-zhou-math")
-  source.assignments.push({ ...structuredClone(original), id: "persisted-zhou-duplicate" })
+  const duplicate = { ...structuredClone(original), id: "persisted-zhou-duplicate" }
+  source.assignments.push(duplicate)
   const raw = JSON.stringify(source)
-  withDutyStorage([["tgs:staff-duties-prototype:v1", raw]], store => {
-    const state = store.getStaffDuties()
-    assert.equal(data.get(store.STAFF_DUTY_REPAIR_BACKUP_KEY), raw)
-    assert.equal(state.assignments.some(duty => duty.id === "persisted-zhou-duplicate"), false)
-    assert.deepEqual(JSON.parse(data.get(store.STAFF_DUTY_STORAGE_KEY)), state)
-    const previous = state.assignments.find(duty => duty.id === original.id)
+  withDutyStorage([["tgs:staff-duties-prototype:v1", raw], ["tgs:staff-duties-prototype:v1:before-overlap-repair", raw]], store => {
+    assert.deepEqual(store.getStaffDuties(), source)
+    assert.equal(data.get(store.STAFF_DUTY_STORAGE_KEY), raw)
+    assert.equal(data.has(store.STAFF_DUTY_COEXISTENCE_BACKUP_KEY), false)
+    const previous = store.getStaffDuties().assignments.find(duty => duty.id === original.id)
     assert.equal(store.commitStaffDuty(actor(), { type: "end", assignment: { ...previous, end: "2026-10-11" }, expected: previous }, STAFF).ok, true)
     const saved = store.getStaffDuties()
     assert.equal(saved.assignments.find(duty => duty.id === original.id).end, "2026-10-11")
-    assert.equal(saved.assignments.some(duty => duty.id === "persisted-zhou-duplicate"), false)
+    assert.deepEqual(saved.assignments.find(duty => duty.id === duplicate.id), duplicate)
     assert.equal(data.get(store.STAFF_DUTY_REPAIR_BACKUP_KEY), raw)
-    assert.equal(model.canViewGroup({ ...seed(), staffDuties: saved.assignments }, actor("u-zhou", "2026-10-12"), "math"), false)
   })
 })
 
-test("a second invalid snapshot gets its own backup without overwriting the first repair source", () => {
+function wrongParticipationRepair(source, id, intervals) {
+  const state = structuredClone(source)
+  const original = state.assignments.find(duty => duty.id === id)
+  const leader = state.assignments.find(duty => duty.id === "app-lin-math")
+  const repair = { date: "2026-10-10", text: `修正旧职责 · 教研参与教师 原记录 ${id}（${original.start} 至 ${original.end || "未设结束日期"}）去除与 ${leader.id} 的重复生效区间；${intervals.length ? "只保留原任期内不重叠的部分" : "不再作为独立生效授权"}，原记录保留在迁移备份。` }
+  leader.history = [...leader.history, ...original.history.map(entry => ({ ...entry, text: `${entry.text} · 原记录 ${id}` })), repair]
+  state.assignments = state.assignments.flatMap(duty => duty.id !== id ? [duty] : intervals.map(([start, end], index) => ({
+    ...duty, id: index === 0 ? id : `${id}:remainder:${start}`, start, end, history: [...duty.history, repair],
+  })))
+  return state
+}
+
+test("exactly backed-up erroneous shifts, deletions and splits are restored once without undoing later endings", () => {
+  for (const [start, end, intervals] of [
+    ["2026-10-10", undefined, [["2027-08-01", undefined]]],
+    ["2026-09-01", "2027-07-31", []],
+    ["2026-08-01", "2027-09-30", [["2026-08-01", "2026-08-31"], ["2027-08-01", "2027-09-30"]]],
+  ]) {
+    const source = dutyModel.staffDutySeed()
+    const original = dutyModel.createResearchDuty("wrongly-trimmed-participant", "u-lin", "research_participate", "math", start, end)
+    source.assignments.push(original)
+    const corrupted = wrongParticipationRepair(source, original.id, intervals)
+    const raw = JSON.stringify(corrupted)
+    const backup = JSON.stringify(source)
+    withDutyStorage([["tgs:staff-duties-prototype:v1", raw], ["tgs:staff-duties-prototype:v1:before-overlap-repair", backup]], store => {
+      const restored = store.getStaffDuties()
+      const duty = restored.assignments.find(item => item.id === original.id)
+      assert.equal(duty.start, original.start)
+      assert.equal(duty.end, original.end)
+      assert.deepEqual(duty.history.slice(0, original.history.length), original.history)
+      assert.match(duty.history.at(-1).text, /撤销错误的职责互斥修正/)
+      assert.equal(restored.assignments.length, source.assignments.length)
+      assert.equal(restored.assignments.some(item => item.id.includes(":remainder:")), false)
+      assert.equal(data.get(store.STAFF_DUTY_REPAIR_BACKUP_KEY), backup)
+      assert.equal(data.get(store.STAFF_DUTY_COEXISTENCE_BACKUP_KEY), raw)
+      assert.equal(dutyModel.restoreCoexistingResearchDuties(restored, source), restored)
+      assert.deepEqual(restored.assignments.filter(item => ![original.id, "app-lin-math"].includes(item.id)), source.assignments.filter(item => ![original.id, "app-lin-math"].includes(item.id)))
+      assert.equal(store.commitStaffDuty(actor("u-lin", "2026-10-10"), { type: "end", assignment: { ...duty, end: "2026-10-10" }, expected: duty }, STAFF).ok, true)
+      const saved = structuredClone(store.getStaffDuties())
+      assert.equal(dutyModel.dutyEffective(saved.assignments.find(item => item.id === original.id), "2026-10-11"), false)
+      withDutyStorage([...data.entries()], reloaded => {
+        assert.deepEqual(reloaded.getStaffDuties(), saved)
+        assert.equal(reloaded.getStaffDuties().assignments.find(item => item.id === original.id).end, "2026-10-10")
+      })
+    })
+  }
+})
+
+test("restoring an untouched participant never reverses a later explicit ending of the leader", () => {
   const source = dutyModel.staffDutySeed()
-  const original = source.assignments.find(duty => duty.id === "app-zhou-math")
-  source.assignments.push({ ...structuredClone(original), id: "first-backup-duplicate" })
-  const raw = JSON.stringify(source)
-  withDutyStorage([["tgs:staff-duties-prototype:v1", raw]], store => {
-    const repaired = structuredClone(store.getStaffDuties())
-    const canonical = repaired.assignments.find(duty => duty.id === original.id)
-    repaired.assignments.push({ ...structuredClone(canonical), id: "second-backup-duplicate" })
-    const secondRaw = JSON.stringify(repaired)
-    data.set(store.STAFF_DUTY_STORAGE_KEY, secondRaw)
-    const assignment = dutyModel.createResearchDuty("second-repair-arrangement", "u-he", "research_participate", "physics", actor().date)
-    assert.equal(store.commitStaffDuty(actor(), { type: "arrange", assignments: [assignment] }, STAFF).ok, true)
-    assert.equal(data.get(store.STAFF_DUTY_REPAIR_BACKUP_KEY), raw)
-    const backups = [...data.entries()].filter(([key]) => key.startsWith(`${store.STAFF_DUTY_REPAIR_BACKUP_KEY}:`))
-    assert.equal(backups.length, 1)
-    assert.equal(backups[0][1], secondRaw)
-    assert.equal(store.getStaffDuties().assignments.some(duty => duty.id === "second-backup-duplicate"), false)
+  const original = dutyModel.createResearchDuty("removed-concurrent-participant", "u-lin", "research_participate", "math", "2026-09-01", "2027-07-31")
+  source.assignments.push(original)
+  const corrupted = wrongParticipationRepair(source, original.id, [])
+  const leader = corrupted.assignments.find(duty => duty.id === "app-lin-math")
+  leader.end = "2026-10-10"
+  leader.history.push({ date: "2026-10-10", text: "登记结束职责 · 原任期已缩短" })
+  const before = structuredClone(corrupted)
+  const restored = dutyModel.restoreCoexistingResearchDuties(corrupted, source)
+  assert.equal(restored.assignments.find(duty => duty.id === leader.id).end, leader.end)
+  assert.deepEqual(restored.assignments.find(duty => duty.id === leader.id).history.slice(0, -1), leader.history)
+  assert.equal(model.canLeadGroup({ ...seed(), staffDuties: restored.assignments }, actor("u-lin", "2026-10-11"), "math"), false)
+  assert(model.canParticipateGroup({ ...seed(), staffDuties: restored.assignments }, actor("u-lin", "2026-10-11"), "math"))
+  assert.deepEqual(corrupted, before)
+})
+
+test("recovery leaves later participant edits, replacement duties and missing or invalid backups untouched", () => {
+  const source = dutyModel.staffDutySeed()
+  const original = dutyModel.createResearchDuty("edited-trimmed-participant", "u-lin", "research_participate", "math", "2026-08-01", "2027-09-30")
+  source.assignments.push(original)
+  const corrupted = wrongParticipationRepair(source, original.id, [["2026-08-01", "2026-08-31"], ["2027-08-01", "2027-09-30"]])
+  const edited = corrupted.assignments.find(duty => duty.id === original.id)
+  edited.end = "2026-08-15"
+  edited.history.push({ date: "2026-10-11", text: "登记结束职责 · 后续正常结束" })
+  assert.equal(dutyModel.restoreCoexistingResearchDuties(corrupted, source), corrupted)
+  const removedSource = dutyModel.staffDutySeed()
+  const removed = dutyModel.createResearchDuty("removed-participant", "u-lin", "research_participate", "math", "2026-09-01", "2027-07-31")
+  removedSource.assignments.push(removed)
+  const replacementState = wrongParticipationRepair(removedSource, removed.id, [])
+  replacementState.assignments.push({ ...structuredClone(removed), id: "new-explicitly-ended-participant", end: "2026-10-10", status: "ended", history: [{ date: "2026-10-10", text: "登记结束职责" }] })
+  assert.equal(dutyModel.restoreCoexistingResearchDuties(replacementState, removedSource), replacementState)
+  const raw = JSON.stringify(corrupted)
+  for (const backups of [[], [["tgs:staff-duties-prototype:v1:before-overlap-repair", "invalid-json"]]]) {
+    withDutyStorage([["tgs:staff-duties-prototype:v1", raw], ...backups], store => {
+      assert.deepEqual(store.getStaffDuties(), corrupted)
+      assert.equal(data.get(store.STAFF_DUTY_STORAGE_KEY), raw)
+      assert.equal(data.has(store.STAFF_DUTY_COEXISTENCE_BACKUP_KEY), false)
+    })
+  }
+})
+
+test("recovery also finds additional original snapshots without overwriting any existing backup", () => {
+  const source = dutyModel.staffDutySeed()
+  const original = dutyModel.createResearchDuty("additional-backup-member", "u-lin", "research_participate", "math", "2026-09-01", "2027-07-31")
+  source.assignments.push(original)
+  const raw = JSON.stringify(wrongParticipationRepair(source, original.id, []))
+  const firstBackup = JSON.stringify(dutyModel.staffDutySeed())
+  const matchingBackup = JSON.stringify(source)
+  withDutyStorage([
+    ["tgs:staff-duties-prototype:v1", raw],
+    ["tgs:staff-duties-prototype:v1:before-overlap-repair", firstBackup],
+    ["tgs:staff-duties-prototype:v1:before-overlap-repair:second", matchingBackup],
+  ], store => {
+    assert.equal(store.getStaffDuties().assignments.find(duty => duty.id === original.id).start, original.start)
+    assert.equal(data.get(store.STAFF_DUTY_REPAIR_BACKUP_KEY), firstBackup)
+    assert.equal(data.get(`${store.STAFF_DUTY_REPAIR_BACKUP_KEY}:second`), matchingBackup)
+    assert.equal(data.get(store.STAFF_DUTY_COEXISTENCE_BACKUP_KEY), raw)
   })
 })
 
-test("a failed repair backup leaves the original source intact and cannot fall back to seeded permissions", () => {
+test("a failed recovery backup leaves both current data and original snapshots intact without seeded permissions", () => {
   const source = dutyModel.staffDutySeed()
-  source.assignments.push(dutyModel.createResearchDuty("backup-failure-member", "u-lin", "research_participate", "math", "2026-10-10"))
-  const raw = JSON.stringify(source)
-  withDutyStorage([["tgs:staff-duties-prototype:v1", raw]], store => {
-    storage.setItem = () => { throw new Error("test backup storage unavailable") }
+  const original = dutyModel.createResearchDuty("backup-failure-member", "u-lin", "research_participate", "math", "2026-09-01", "2027-07-31")
+  source.assignments.push(original)
+  const raw = JSON.stringify(wrongParticipationRepair(source, original.id, []))
+  const backup = JSON.stringify(source)
+  withDutyStorage([["tgs:staff-duties-prototype:v1", raw], ["tgs:staff-duties-prototype:v1:before-overlap-repair", backup]], store => {
+    storage.setItem = () => { throw new Error("test recovery backup unavailable") }
     assert.deepEqual(store.getStaffDuties().assignments, [])
     assert.equal(data.get(store.STAFF_DUTY_STORAGE_KEY), raw)
-    assert.equal(data.has(store.STAFF_DUTY_REPAIR_BACKUP_KEY), false)
+    assert.equal(data.get(store.STAFF_DUTY_REPAIR_BACKUP_KEY), backup)
+    assert.equal(data.has(store.STAFF_DUTY_COEXISTENCE_BACKUP_KEY), false)
     const assignment = dutyModel.createResearchDuty("should-not-save", "u-he", "research_participate", "math", actor().date)
     const result = store.commitStaffDuty(actor(), { type: "arrange", assignments: [assignment] }, STAFF)
     assert.equal(result.ok, false)
@@ -598,6 +745,9 @@ test("the shared staff duty entry replaces separate appointment UI and arbitrary
   assert.match(form, /expected: previous/)
   assert.match(form, /确认结束职责/)
   assert.match(form, /required checked=\{confirmed\}/)
+  assert.match(form, /已生效职责可以结束/)
+  assert.match(form, /教研组长与教研参与教师可以在同一教研组同时存在/)
+  assert.doesNotMatch(detail, /仅保留原任期内不重叠的安排/)
   assert.doesNotMatch(fs.readFileSync(path.join(root, "components/research/members.tsx"), "utf8"), /type: "appointment"|type: "arrange"/)
 })
 

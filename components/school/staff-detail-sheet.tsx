@@ -260,8 +260,8 @@ export function StaffDetailSheet({ staff, endedDutyIds, onClose, onOpenDuty, onA
 
       {tab === "duties" ? (
         <div className="flex flex-col gap-3">
-          <InfoNote>教研工作也在此统一安排：职责模板决定组长或参与教师的工作边界，负责对象选择具体教研组，生效时间决定任期。教研组不是二级人事部门，也不从任课自动归组。</InfoNote>
-          {duties.some(duty => duty.history?.some(item => item.text.includes("修正旧职责"))) && <InfoNote>旧职责的重复生效区间已修正，仅保留原任期内不重叠的安排，不延长授权。原始快照已备份，修正依据可在任职历史查看。</InfoNote>}
+          <InfoNote>教研工作在此统一安排：同一教研组的组长与参与教师职责可以同时存在，分别按各自任期生效，也可单独结束。教研组不是二级人事部门，不从任课自动归组。</InfoNote>
+          {duties.some(duty => duty.history?.some(item => item.text.startsWith("撤销错误的职责互斥修正"))) && <InfoNote>此前错误裁剪且未被后续修改的参与职责已按原始备份恢复。其他职责的正常结束与修订未被覆盖，恢复依据保留在职责历史中。</InfoNote>}
           {staff.qualificationNote ? <InfoNote>{staff.qualificationNote}</InfoNote> : null}
 
           {currentDuties.length ? (
