@@ -80,15 +80,90 @@ export function migrateLegacyResearchDuties(value: unknown): StaffDutyAssignment
     duty.history = [{ date: item.start, text: `旧学校${item.mode}授权迁入职责 · 原任期与负责对象保留` }]
     return duty
   })
-  return [...appointments, ...grants]
+  const assignments = [...appointments, ...grants]
+  const groups = structuredClone(RESEARCH_GROUPS)
+  for (const duty of assignments) for (const ref of duty.scopeRefs) if (!groups.some(group => group.id === ref.id)) groups.push({ id: ref.id, name: duty.scopeLabel, kind: "research_group", department: "教学部", subject: "", active: false })
+  return migrateStaffDutyState({ schema: 1, assignments, groups }).assignments
+}
+
+function readStaffDutyState(value: unknown): StaffDutyState {
+  if (!isRecord(value) || value.schema !== 1 || !Array.isArray(value.assignments) || !Array.isArray(value.groups)) throw new Error("统一职责数据无法读取，原数据未清空。")
+  const state = value as unknown as StaffDutyState
+  if (state.groups.some(group => !isRecord(group) || typeof group.id !== "string" || !group.id.trim() || typeof group.name !== "string" || !group.name.trim() || group.kind !== "research_group" || group.department !== "教学部" || typeof group.active !== "boolean" || typeof group.subject !== "string") || new Set(state.groups.map(group => group.id)).size !== state.groups.length) throw new Error("负责对象目录格式无效，原数据未清空。")
+  if (state.assignments.some(duty => !isRecord(duty) || typeof duty.id !== "string" || !duty.id.trim() || typeof duty.staffId !== "string" || !duty.staffId.trim() || !isResearchDuty(duty.type) || !Array.isArray(duty.scopeRefs) || duty.scopeRefs.length !== 1 || !isRecord(duty.scopeRefs[0]) || duty.scopeRefs[0].kind !== "research_group" || !state.groups.some(group => group.id === duty.scopeRefs[0].id) || !dutyDateValid(duty.start) || duty.end !== undefined && (!dutyDateValid(duty.end) || duty.end < duty.start) || !["active", "pending", "paused", "ended"].includes(duty.status) || !["rw", "ro", "paused"].includes(duty.workMode) || duty.history !== undefined && (!Array.isArray(duty.history) || duty.history.some(item => !isRecord(item) || typeof item.date !== "string" || typeof item.text !== "string"))) || new Set(state.assignments.map(duty => duty.id)).size !== state.assignments.length) throw new Error("职责人员、负责对象或任期格式无效，原数据未清空。")
+  return state
+}
+
+function dutyOrigin(duty: StaffDutyAssignment) {
+  return JSON.stringify([duty.staffId, duty.type, duty.scopeRefs[0].id, duty.start])
 }
 
 export function validateStaffDutyState(value: unknown): StaffDutyState {
-  if (!isRecord(value) || value.schema !== 1 || !Array.isArray(value.assignments) || !Array.isArray(value.groups)) throw new Error("统一职责数据无法读取，原数据未清空。")
-  const state = value as unknown as StaffDutyState
-  if (new Set(state.groups.map(group => group.id)).size !== state.groups.length || state.groups.some(group => !group.id || typeof group.name !== "string" || !group.name.trim() || group.kind !== "research_group" || group.department !== "教学部" || typeof group.active !== "boolean" || typeof group.subject !== "string")) throw new Error("负责对象目录格式无效，原数据未清空。")
-  if (new Set(state.assignments.map(duty => duty.id)).size !== state.assignments.length || state.assignments.some(duty => !duty.id || !duty.staffId || !isResearchDuty(duty.type) || !Array.isArray(duty.scopeRefs) || duty.scopeRefs.length !== 1 || duty.scopeRefs[0].kind !== "research_group" || !state.groups.some(group => group.id === duty.scopeRefs[0].id) || !dutyDateValid(duty.start) || duty.end !== undefined && (!dutyDateValid(duty.end) || duty.end < duty.start) || !["active", "pending", "paused", "ended"].includes(duty.status) || !["rw", "ro", "paused"].includes(duty.workMode))) throw new Error("职责人员、负责对象或任期格式无效，原数据未清空。")
+  const state = readStaffDutyState(value)
+  const origins = new Set<string>()
+  for (const duty of state.assignments) {
+    const origin = dutyOrigin(duty)
+    if (origins.has(origin) || duty.status !== "ended" && staffDutyConflicts(state, duty).length) throw new Error(`统一职责记录存在重叠：${DUTY_BY_KEY[duty.type].label} · ${researchGroupName(state.groups, duty.scopeRefs[0].id)}。原数据未清空，不会启用冲突授权。`)
+    origins.add(origin)
+  }
   return state
+}
+
+type DutyInterval = { start: number; end: number }
+const DUTY_DAY = 86_400_000
+const LAST_DUTY_DAY = Date.parse("9999-12-31T00:00:00Z")
+const dutyDay = (date: string) => Date.parse(`${date}T00:00:00Z`)
+const dutyDate = (day: number) => new Date(day).toISOString().slice(0, 10)
+const dutyInterval = (duty: StaffDutyAssignment): DutyInterval => ({ start: dutyDay(duty.start), end: duty.end ? dutyDay(duty.end) : LAST_DUTY_DAY })
+
+function withoutInterval(intervals: DutyInterval[], occupied: DutyInterval): DutyInterval[] {
+  return intervals.flatMap(interval => {
+    if (occupied.end < interval.start || occupied.start > interval.end) return [interval]
+    const remaining: DutyInterval[] = []
+    if (interval.start < occupied.start) remaining.push({ start: interval.start, end: occupied.start - DUTY_DAY })
+    if (interval.end > occupied.end) remaining.push({ start: occupied.end + DUTY_DAY, end: interval.end })
+    return remaining
+  })
+}
+
+export function migrateStaffDutyState(value: unknown): StaffDutyState {
+  const state = readStaffDutyState(value)
+  if (new Set(state.assignments.map(dutyOrigin)).size === state.assignments.length && !state.assignments.some(duty => duty.status !== "ended" && staffDutyConflicts(state, duty).length)) return validateStaffDutyState(state)
+  const repairedAt = new Date().toISOString().slice(0, 10)
+  const originalOrder = new Map(state.assignments.map((duty, index) => [duty.id, index]))
+  const origins = new Map<string, StaffDutyAssignment[]>()
+  for (const duty of structuredClone(state.assignments)) {
+    const origin = dutyOrigin(duty)
+    origins.set(origin, [...(origins.get(origin) ?? []), duty])
+  }
+  const unique = [...origins.values()].map(records => {
+    const first = records[0]
+    if (records.length === 1) return first
+    const end = records.map(duty => duty.end).filter((date): date is string => !!date).sort()[0]
+    const status = records.some(duty => duty.status === "ended") ? "ended" : records.some(duty => duty.status === "paused") ? "paused" : first.status
+    const workMode = records.some(duty => duty.workMode === "paused") ? "paused" : records.some(duty => duty.workMode === "ro") ? "ro" : first.workMode
+    const history = records.flatMap(duty => duty.history ?? []).filter((item, index, items) => items.findIndex(other => other.date === item.date && other.text === item.text) === index)
+    history.push({ date: repairedAt, text: `修正旧职责 · 合并同一人员、模板、对象与开始日期的重复记录 ${records.map(duty => duty.id).join("、")}；保留最早结束日期及原有限制，不恢复已结束或暂停的授权。` })
+    return { ...first, end, status, workMode, history }
+  })
+  unique.sort((a, b) => Number(b.type === "research_lead") - Number(a.type === "research_lead") || a.start.localeCompare(b.start) || originalOrder.get(a.id)! - originalOrder.get(b.id)!)
+  const assignments: StaffDutyAssignment[] = []
+  for (const duty of unique) {
+    if (duty.status === "ended") { assignments.push(duty); continue }
+    const matching = assignments.filter(item => item.status !== "ended" && item.staffId === duty.staffId && item.scopeRefs[0].id === duty.scopeRefs[0].id && (item.type === duty.type || ["research_lead", "research_participate"].includes(item.type) && ["research_lead", "research_participate"].includes(duty.type)) && overlaps(item, duty))
+    if (!matching.length) { assignments.push(duty); continue }
+    const remaining = matching.reduce((intervals, item) => withoutInterval(intervals, dutyInterval(item)), [dutyInterval(duty)])
+    const text = `修正旧职责 · ${DUTY_BY_KEY[duty.type].label} 原记录 ${duty.id}（${duty.start} 至 ${duty.end || "未设结束日期"}）去除与 ${matching.map(item => item.id).join("、")} 的重复生效区间；${remaining.length ? "只保留原任期内不重叠的部分" : "不再作为独立生效授权"}，原记录保留在迁移备份。`
+    for (const item of matching) item.history = [...(item.history ?? []), ...(duty.history ?? []).map(entry => ({ ...entry, text: `${entry.text} · 原记录 ${duty.id}` })), { date: repairedAt, text }]
+    remaining.forEach((interval, index) => {
+      const start = dutyDate(interval.start)
+      const id = index === 0 ? duty.id : `${duty.id}:remainder:${start}`
+      originalOrder.set(id, originalOrder.get(duty.id)!)
+      assignments.push({ ...duty, id, start, end: duty.end === undefined && interval.end === LAST_DUTY_DAY ? undefined : dutyDate(interval.end), history: [...(duty.history ?? []), { date: repairedAt, text }] })
+    })
+  }
+  assignments.sort((a, b) => originalOrder.get(a.id)! - originalOrder.get(b.id)! || a.start.localeCompare(b.start))
+  return validateStaffDutyState({ ...state, assignments })
 }
 
 export function schoolDutyManager(people: StaffProfile[], actor: DutyActor) {
@@ -140,6 +215,7 @@ function requireCondition(value: unknown, message: string): asserts value {
 }
 
 export function applyStaffDutyCommand(state: StaffDutyState, actor: DutyActor, command: StaffDutyCommand, people: StaffProfile[]): StaffDutyState {
+  validateStaffDutyState(state)
   requireCondition(dutyDateValid(actor.date), "当前业务日期无效。")
   const operator = people.find(person => person.id === actor.staff)
   requireCondition(actor.enabled && operator && operator.status !== "left" && operator.accountStatus === "enabled", "当前账号不可办理职责安排。")
