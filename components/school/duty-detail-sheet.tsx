@@ -38,6 +38,7 @@ export function DutyDetailSheet({
   const def = DUTY_BY_KEY[duty.type]
   const shared = isResearchDuty(duty.type) ? state.assignments.find(item => item.id === duty.id) : undefined
   const canManage = !!shared && ready && !error && manageableResearchGroups(state, people, actor, shared.type).includes(shared.scopeRefs[0].id)
+  const canEnd = !!shared && ready && !error && manageableResearchGroups(state, people, actor, shared.type, true).includes(shared.scopeRefs[0].id)
 
   if (!open) return null
   if (shared && revision) return <Sheet open onClose={onClose} title={revision === "end" ? "结束职责" : "修订职责任期"} desc={`${staffName} · ${def.label} · ${duty.scopeLabel}`} width="max-w-lg"><StaffDutyRevisionForm key={`${shared.id}:${revision}`} duty={shared} mode={revision} onCancel={() => setRevision(null)} onDone={message => { push(message); onClose() }} /></Sheet>
@@ -60,7 +61,7 @@ export function DutyDetailSheet({
               </Button>
             ) : (
               <>
-                <Button size="sm" variant="ghost" disabled={!!shared && (!canManage || duty.status === "pending" || duty.end === actor.date)} onClick={() => shared ? setRevision("end") : setConfirmEnd(true)}>
+                <Button size="sm" variant="ghost" disabled={!!shared && (!canEnd || duty.status === "pending" || duty.end === actor.date)} onClick={() => shared ? setRevision("end") : setConfirmEnd(true)}>
                   结束职责
                 </Button>
                 <Button size="sm" variant="outline" disabled={!!shared && (!canManage || people.find(person => person.id === shared.staffId)?.status === "left")} onClick={() => shared ? setRevision("revise") : onAdjust?.()}>
@@ -81,7 +82,7 @@ export function DutyDetailSheet({
           {duty.scopeSub ? <p className="text-[13px] text-muted-foreground">范围补充：{duty.scopeSub}</p> : null}
 
           <CanCannotBlock duty={duty} />
-          {shared && <p className="text-sm leading-relaxed text-muted-foreground">来自教职工管理的同一份职责记录，按业务日期 {actor.date} 核验；结束日期含当日。{duty.end === actor.date ? "今日为最后有效日，次日起停止本项访问。" : "未生效与已结束职责不授予教研工作区访问。"}{!canManage && "当前身份没有此负责对象的职责安排权。"}</p>}
+          {shared && <p className="text-sm leading-relaxed text-muted-foreground">来自教职工管理的同一份职责记录，按业务日期 {actor.date} 核验；结束日期含当日。{duty.end === actor.date ? "今日为最后有效日，次日起停止本项访问。" : "未生效与已结束职责不授予教研工作区访问。"}{canEnd && !canManage && "负责对象已停用；当前只能结束旧职责，不可新增或延长任期。"}{!canEnd && "当前身份没有此负责对象的职责安排权。"}</p>}
 
           {currentUseLimit ? (
             <div className="flex items-start gap-2 rounded-lg border border-[#e6d4a8] bg-[#fbf7ee] p-3 text-[12.5px] text-[#7a5514]">

@@ -23,7 +23,7 @@ export function StaffDutyRevisionForm({ duty, mode, onCancel, onDone }: { duty: 
   const title = mode === "end" ? "结束职责" : "修订职责任期"
   const current = state.assignments.find(item => item.id === previous.id)
   const stale = !current || !sameStaffDuty(current, previous)
-  const allowed = ready && !error && manageableResearchGroups(state, people, actor, duty.type).includes(duty.scopeRefs[0].id) && (person?.status !== "left" || mode === "end")
+  const allowed = ready && !error && manageableResearchGroups(state, people, actor, duty.type, mode === "end").includes(duty.scopeRefs[0].id) && (person?.status !== "left" || mode === "end")
   const dateError = !dutyDateValid(draft.start) || draft.end !== undefined && (!dutyDateValid(draft.end) || draft.end < draft.start)
   const validation = staffDutyValidationError(state, draft, previous) || (mode === "end" && previous.end && draft.end && draft.end > previous.end ? "结束职责不能延长原任期；如需延长，请另行修订。" : "")
   const changed = !sameStaffDuty(previous, draft)

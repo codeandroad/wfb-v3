@@ -96,12 +96,12 @@ export function schoolDutyManager(people: StaffProfile[], actor: DutyActor) {
   return actor.enabled && !!person && person.status !== "left" && person.accountStatus === "enabled" && person.systemRoles.includes("SCHOOL_ADMIN") && person.duties.some(duty => duty.type === "school_admin" && dutyEffective(duty, actor.date))
 }
 
-export function manageableResearchGroups(state: StaffDutyState, people: StaffProfile[], actor: DutyActor, type: ResearchDutyKey = "research_participate") {
+export function manageableResearchGroups(state: StaffDutyState, people: StaffProfile[], actor: DutyActor, type: ResearchDutyKey = "research_participate", includeInactive = false) {
   const me = people.find(person => person.id === actor.staff)
   if (!actor.enabled || !me || me.status === "left" || me.accountStatus !== "enabled" || !dutyDateValid(actor.date)) return []
-  if (schoolDutyManager(people, actor)) return state.groups.filter(group => group.active).map(group => group.id)
+  if (schoolDutyManager(people, actor)) return state.groups.filter(group => group.active || includeInactive).map(group => group.id)
   if (type === "research_manage" || type === "research_view" || !me.systemRoles.includes("TEACHING_MANAGER")) return []
-  return [...new Set(state.assignments.filter(duty => duty.staffId === actor.staff && duty.type === "research_manage" && dutyEffective(duty, actor.date)).flatMap(duty => duty.scopeRefs.map(ref => ref.id)))].filter(id => state.groups.some(group => group.id === id && group.active))
+  return [...new Set(state.assignments.filter(duty => duty.staffId === actor.staff && duty.type === "research_manage" && dutyEffective(duty, actor.date)).flatMap(duty => duty.scopeRefs.map(ref => ref.id)))].filter(id => state.groups.some(group => group.id === id && (group.active || includeInactive)))
 }
 
 export function canMaintainResearchGroups(state: StaffDutyState, people: StaffProfile[], actor: DutyActor) {
@@ -149,7 +149,7 @@ export function applyStaffDutyCommand(state: StaffDutyState, actor: DutyActor, c
     requireCondition(target, "安排人员不存在，请从教职工列表重新选择。")
     requireCondition(command.type === "arrange" ? !previous : previous && sameStaffDuty(previous, command.expected), "职责记录已被其他操作修订，请返回列表重新打开；不会覆盖最新记录。")
     const groupId = assignment.scopeRefs[0]?.id
-    requireCondition(manageableResearchGroups(next, people, actor, assignment.type).includes(groupId) || command.type === "end" && !next.groups.find(group => group.id === groupId)?.active && (schoolDutyManager(people, actor) || state.assignments.some(duty => duty.staffId === actor.staff && duty.type === "research_manage" && dutyEffective(duty, actor.date) && duty.scopeRefs.some(ref => ref.id === groupId))), "没有该负责对象的职责安排权；组长、查看职责或人事部门不授予任命权。")
+    requireCondition(manageableResearchGroups(next, people, actor, assignment.type, command.type === "end").includes(groupId), "没有该负责对象的职责安排权；组长、查看职责或人事部门不授予任命权。")
     requireCondition(command.type === "end" || target.status !== "left", "离职人员仅可结束已有职责，不能新增、修订或延长任期。")
     requireCondition(command.type === "end" || target.systemRoles.includes(DUTY_BY_KEY[assignment.type].role), "该人员缺少本职责所需的任职资格；不会自动授予资格或开通账号。")
     requireCondition(command.type !== "end" || previous && assignment.end && assignment.start === previous.start && (!previous.end || assignment.end <= previous.end), "结束职责必须保留开始日期，且不能延长原任期。")
