@@ -317,6 +317,89 @@ test("legacy appointments and school grants migrate once into template-based dut
   assert.throws(() => dutyModel.migrateLegacyResearchDuties({ appointments: [{}], grants: [] }), /未清空/)
 })
 
+test("overlapping legacy duties can be ended individually without deleting records or permitting new duplicates", () => {
+  const assignments = dutyModel.migrateLegacyResearchDuties({
+    appointments: [
+      { id: "legacy-lin-leader", staff: "u-lin", group: "math", role: "组长", start: "2026-09-01", end: "2027-07-31" },
+      { id: "legacy-lin-member", staff: "u-lin", group: "math", role: "成员", start: "2026-10-10", end: null },
+      { id: "legacy-lin-duplicate", staff: "u-lin", group: "math", role: "组长", start: "2026-09-01", end: "2027-07-31" },
+    ],
+    grants: [{ staff: "u-lin", group: "math", mode: "统筹", start: "2026-09-01", end: "2027-07-31" }],
+  })
+  const state = { ...seed(), staffDuties: assignments }
+  const dutyState = { schema: 1, assignments, groups: state.groups }
+  const previous = assignments.find(duty => duty.id === "legacy-lin-leader")
+  const ending = { ...previous, end: "2026-10-11" }
+  assert.deepEqual(dutyModel.staffDutyConflicts(dutyState, previous).map(duty => duty.id), ["legacy-lin-member", "legacy-lin-duplicate"])
+  assert.match(dutyModel.staffDutyValidationError(dutyState, ending, previous), /职责重叠/)
+  assert.equal(dutyModel.staffDutyValidationError(dutyState, ending, previous, "end"), "")
+  const ended = dutyCommand(state, { type: "end", assignment: ending, expected: previous }, "u-lin", "2026-10-11")
+  const saved = ended.staffDuties.find(duty => duty.id === previous.id)
+  assert.equal(ended.staffDuties.length, assignments.length)
+  assert.equal(saved.end, "2026-10-11")
+  assert.deepEqual(saved.history.slice(0, -1), previous.history)
+  assert.match(saved.history.at(-1).text, /登记结束职责.*原任期/)
+  assert.deepEqual(ended.staffDuties.filter(duty => duty.id !== previous.id), assignments.filter(duty => duty.id !== previous.id))
+  assert.deepEqual(ended.documents, state.documents)
+  assert(model.canLeadGroup(ended, actor("u-lin", "2026-10-12"), "math"))
+  const member = ended.staffDuties.find(duty => duty.id === "legacy-lin-member")
+  const duplicate = { ...member, id: "new-duplicate-member" }
+  assert.throws(() => dutyCommand(ended, { type: "arrange", assignments: [duplicate] }, "u-lin", "2026-10-11"), /重叠的同类职责/)
+  assert.throws(() => dutyCommand(state, { type: "revise", assignment: { ...previous, end: "2028-07-31" }, expected: previous }, "u-lin", "2026-10-11"), /职责重叠/)
+})
+
+test("ending same-template duplicate memberships preserves the other records and normal end-date boundaries", () => {
+  const state = seed()
+  const previous = state.staffDuties.find(duty => duty.id === "app-zhou-math")
+  const duplicate = { ...structuredClone(previous), id: "old-duplicate-zhou-math" }
+  state.staffDuties.push(duplicate)
+  const ending = { type: "end", assignment: { ...duplicate, end: "2026-10-11" }, expected: duplicate }
+  const ended = dutyCommand(state, ending, "u-lin", "2026-10-11")
+  assert.deepEqual(ended.staffDuties.find(duty => duty.id === previous.id), previous)
+  assert(model.canParticipateGroup(ended, actor("u-zhou", "2026-10-12"), "math"))
+  const closed = ended.staffDuties.find(duty => duty.id === duplicate.id)
+  const bothEnded = dutyCommand(ended, { type: "end", assignment: { ...previous, end: "2026-10-11" }, expected: previous }, "u-lin", "2026-10-11")
+  assert(model.canParticipateGroup(bothEnded, actor("u-zhou", "2026-10-11"), "math"))
+  assert.equal(model.canViewGroup(bothEnded, actor("u-zhou", "2026-10-12"), "math"), false)
+  assert.deepEqual(bothEnded.staffDuties.find(duty => duty.id === duplicate.id), closed)
+})
+
+test("ending overlap recovery still enforces immutable identity, valid shorter terms, live permissions and stale checks", () => {
+  const state = seed()
+  const previous = state.staffDuties.find(duty => duty.id === "app-lin-math")
+  state.staffDuties.push({ ...structuredClone(previous), id: "old-duplicate-leader" })
+  const ending = { type: "end", assignment: { ...previous, end: "2026-10-11" }, expected: previous }
+  for (const patch of [{ start: "2026-09-02" }, { end: "2028-07-31" }, { end: undefined }]) {
+    assert.throws(() => dutyCommand(state, { ...ending, assignment: { ...ending.assignment, ...patch } }, "u-lin", "2026-10-11"), /不能延长|保留开始日期/)
+  }
+  for (const patch of [{ end: "2026-02-30" }, { end: "2026-08-31" }]) {
+    assert.throws(() => dutyCommand(state, { ...ending, assignment: { ...ending.assignment, ...patch } }, "u-lin", "2026-10-11"), /日期/)
+  }
+  for (const patch of [{ staffId: "u-zhou" }, { type: "research_participate" }, { scopeRefs: [{ kind: "research_group", id: "physics" }] }]) {
+    assert.throws(() => dutyCommand(state, { ...ending, assignment: { ...ending.assignment, ...patch } }, "u-lin", "2026-10-11"), /修订不能更换/)
+  }
+  for (const staff of ["u-chen", "u-zhou", "u-xu"]) assert.throws(() => dutyCommand(state, ending, staff, "2026-10-11"), /安排权/)
+  assert.throws(() => dutyCommand(state, { ...ending, expected: { ...previous, end: "2027-06-30" } }, "u-lin", "2026-10-11"), /其他操作修订/)
+  const grant = state.staffDuties.find(duty => duty.type === "research_manage" && duty.staffId === "u-lin" && duty.scopeRefs[0].id === "math")
+  const endGrant = { type: "end", assignment: { ...grant, end: "2026-10-11" }, expected: grant }
+  assert.throws(() => dutyCommand(state, endGrant, "u-lin", "2026-10-11"), /安排权/)
+  assert.equal(dutyCommand(state, endGrant, "u-zhao", "2026-10-11").staffDuties.find(duty => duty.id === grant.id).end, "2026-10-11")
+})
+
+test("shortening a paused or readonly duty never reactivates it or expands its work mode", () => {
+  for (const patch of [{ status: "paused", workMode: "paused" }, { status: "active", workMode: "ro" }, { status: "ended", workMode: "rw" }]) {
+    const state = seed()
+    const previous = state.staffDuties.find(duty => duty.id === "app-zhou-math")
+    Object.assign(previous, patch, { note: "保留原始限制" })
+    const ended = dutyCommand(state, { type: "end", assignment: { ...previous, end: "2026-10-11", status: "active", workMode: "rw" }, expected: previous }, "u-lin", "2026-10-11")
+    const saved = ended.staffDuties.find(duty => duty.id === previous.id)
+    assert.equal(saved.status, previous.status)
+    assert.equal(saved.workMode, previous.workMode)
+    assert.equal(saved.note, previous.note)
+    assert.deepEqual(saved.history.slice(0, -1), previous.history)
+  }
+})
+
 test("the shared staff duty entry replaces separate appointment UI and arbitrary membership editing", () => {
   const detail = fs.readFileSync(path.join(root, "components/school/staff-detail-sheet.tsx"), "utf8")
   const arrange = fs.readFileSync(path.join(root, "components/school/duty-arrange-sheet.tsx"), "utf8")

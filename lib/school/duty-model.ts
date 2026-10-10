@@ -112,13 +112,26 @@ function overlaps(a: DutyRecord, b: DutyRecord) {
   return (!a.end || a.end >= b.start) && (!b.end || b.end >= a.start)
 }
 
-export function staffDutyValidationError(state: StaffDutyState, duty: StaffDutyAssignment, previous?: StaffDutyAssignment) {
-  if (!duty.id?.trim() || !duty.staffId?.trim() || !isResearchDuty(duty.type) || duty.scopeRefs.length !== 1 || duty.scopeRefs[0].kind !== "research_group" || !state.groups.some(group => group.id === duty.scopeRefs[0].id)) return "请选择有效人员、职责模板与教研负责对象。"
+export function staffDutyConflicts(state: StaffDutyState, duty: StaffDutyAssignment) {
+  return state.assignments.filter(item => item.id !== duty.id && item.status !== "ended" && item.scopeRefs.some(ref => ref.id === duty.scopeRefs[0].id) && overlaps(item, duty) && (
+    duty.type === "research_lead" && item.type === "research_lead" ||
+    item.staffId === duty.staffId && (item.type === duty.type || ["research_lead", "research_participate"].includes(item.type) && ["research_lead", "research_participate"].includes(duty.type))
+  ))
+}
+
+export function staffDutyValidationError(state: StaffDutyState, duty: StaffDutyAssignment, previous?: StaffDutyAssignment, mode: "arrange" | "revise" | "end" = previous ? "revise" : "arrange") {
+  if (!duty.id?.trim() || !duty.staffId?.trim() || !isResearchDuty(duty.type) || !Array.isArray(duty.scopeRefs) || duty.scopeRefs.length !== 1 || duty.scopeRefs[0].kind !== "research_group" || !state.groups.some(group => group.id === duty.scopeRefs[0].id)) return "请选择有效人员、职责模板与教研负责对象。"
   if (!dutyDateValid(duty.start) || duty.end !== undefined && (!dutyDateValid(duty.end) || duty.end < duty.start)) return "任期日期无效：请填写真实日期，结束日期不得早于开始日期。"
-  if (previous && (previous.staffId !== duty.staffId || JSON.stringify(previous.scopeRefs) !== JSON.stringify(duty.scopeRefs) || previous.type !== duty.type)) return "修订不能更换人员、职责模板或负责对象；请结束原职责后另行安排。"
-  const related = state.assignments.filter(item => item.id !== duty.id && item.status !== "ended" && item.scopeRefs.some(ref => ref.id === duty.scopeRefs[0].id) && overlaps(item, duty))
-  if (duty.type === "research_lead" && related.some(item => item.type === "research_lead")) return "该任期与已有教研组长职责重叠。结束日期含当日，接任须从次日或之后开始。"
-  if (related.some(item => item.staffId === duty.staffId && (item.type === duty.type || ["research_lead", "research_participate"].includes(item.type) && ["research_lead", "research_participate"].includes(duty.type)))) return "该人员在此负责对象内已有重叠的同类职责，请修订原记录，勿重复安排。"
+  if (previous && (previous.id !== duty.id || previous.staffId !== duty.staffId || JSON.stringify(previous.scopeRefs) !== JSON.stringify(duty.scopeRefs) || previous.type !== duty.type)) return "修订不能更换人员、职责模板或负责对象；请结束原职责后另行安排。"
+  if (mode === "end") {
+    if (!previous || !duty.end || duty.start !== previous.start || previous.end && duty.end > previous.end) return "结束职责必须保留开始日期，且不能延长原任期。"
+    return ""
+  }
+  const conflicts = staffDutyConflicts(state, duty)
+  const leader = conflicts.find(item => item.type === "research_lead")
+  if (duty.type === "research_lead" && leader) return `该任期与已有教研组长职责重叠。结束日期含当日，接任须从次日或之后开始。已有任期：${leader.start} 至 ${leader.end || "未设结束日期"}。`
+  const membership = conflicts.find(item => item.staffId === duty.staffId)
+  if (membership) return `该人员在此负责对象内已有重叠的同类职责，请修订原记录，勿重复安排。已有：${DUTY_BY_KEY[membership.type].label} · ${researchGroupName(state.groups, membership.scopeRefs[0].id)}（${membership.start} 至 ${membership.end || "未设结束日期"}）。`
   return ""
 }
 
@@ -152,10 +165,10 @@ export function applyStaffDutyCommand(state: StaffDutyState, actor: DutyActor, c
     requireCondition(manageableResearchGroups(next, people, actor, assignment.type, command.type === "end").includes(groupId), "没有该负责对象的职责安排权；组长、查看职责或人事部门不授予任命权。")
     requireCondition(command.type === "end" || target.status !== "left", "离职人员仅可结束已有职责，不能新增、修订或延长任期。")
     requireCondition(command.type === "end" || target.systemRoles.includes(DUTY_BY_KEY[assignment.type].role), "该人员缺少本职责所需的任职资格；不会自动授予资格或开通账号。")
-    requireCondition(command.type !== "end" || previous && assignment.end && assignment.start === previous.start && (!previous.end || assignment.end <= previous.end), "结束职责必须保留开始日期，且不能延长原任期。")
-    const error = staffDutyValidationError(next, assignment, previous)
+    const error = staffDutyValidationError(next, assignment, previous, command.type)
     requireCondition(!error, error)
     const saved = createResearchDuty(assignment.id, assignment.staffId, assignment.type, groupId, assignment.start, assignment.end, next.groups)
+    if (previous) { saved.status = previous.status; saved.workMode = previous.workMode }
     if (previous?.note !== undefined) saved.note = previous.note
     saved.history = previous ? [...(previous.history ?? []), { date: actor.date, text: `${command.type === "end" ? "登记结束职责" : "修订职责任期"} · 原任期 ${previous.start} 至 ${previous.end || "未设结束日期"} → ${assignment.start} 至 ${assignment.end || "未设结束日期"}` }] : [{ date: actor.date, text: `安排职责 · ${DUTY_BY_KEY[saved.type].label} · 任期 ${saved.start} 至 ${saved.end || "未设结束日期"}` }]
     next = { ...next, assignments: previous ? next.assignments.map(item => item.id === saved.id ? saved : item) : [...next.assignments, saved] }
