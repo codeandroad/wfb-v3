@@ -6,18 +6,18 @@ import { Button, buttonVariants } from "@/components/ui/button"
 import { FieldGroup } from "@/components/ui/field"
 import { useResearchContext } from "@/lib/research/context"
 import { useResearchForm } from "@/lib/research/use-form"
-import { activeAt, canEditGroup, canLeadGroup, canReadActivity, ownTodos } from "@/lib/research/model"
+import { canParticipateGroup, canLeadGroup, canReadActivity, groupDuties, ownTodos } from "@/lib/research/model"
 import { Panel, RField, Choices, RichText } from "./primitives"
 
 export function ResearchOverview({ group, navigate }: { group: string; navigate: (values: Record<string, string>) => void }) {
   const { state, actor, people, command } = useResearchContext()
   const form = useResearchForm(`overview:${group}`, { title: "", body: "", recipients: [] as string[], ack: false })
   const [error, setError] = useState("")
-  const member = canEditGroup(state, actor, group)
+  const member = canParticipateGroup(state, actor, group)
   const todos = member ? ownTodos(state, actor, group) : []
   const notices = state.notices.filter(n => n.group === group && n.recipients.includes(actor.staff))
   const activities = state.activities.filter(a => a.group === group && canReadActivity(state, actor, a)).sort((a,b) => a.start.localeCompare(b.start))
-  const memberIds = [...new Set(state.appointments.filter(a => a.group === group && activeAt(a.start, a.end, actor.date)).map(a => a.staff))]
+  const memberIds = [...new Set(groupDuties(state, group, actor.date).map(duty => duty.staffId))]
   function run(action: Parameters<typeof command>[0]) { const result = command(action); setError(result.ok ? "" : result.error); return result.ok }
   return <div className="flex min-w-0 flex-col gap-5"><div className="grid gap-5 lg:grid-cols-2">
     <Panel title="本人需要处理的事项" description="同一学校任务及其分工按来源去重，不以事项量排名。">{todos.map(t => <Button key={t.id} variant="outline" onClick={() => navigate({ tab: "任务与协作" })}>{t.title} · {t.due || "截止未设"}</Button>)}{!todos.length && <p className="text-muted-foreground">{member ? "当前没有本人需执行的未完成事项；尚未承接的学校事项在任务页由有效组长承接。" : "学校查看者没有组内个人待办，不自动加入成员。"}</p>}<Button variant="outline" className="self-start" onClick={() => navigate({ tab: "任务与协作" })}>查看本组承接与协作</Button></Panel>

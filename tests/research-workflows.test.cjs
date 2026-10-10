@@ -23,6 +23,8 @@ global.window = { localStorage: storage, sessionStorage: storage, addEventListen
 const model = require("../lib/research/model.ts")
 const { researchSeed } = require("../lib/research/seed.ts")
 const { applyResearchCommand } = require("../lib/research/commands.ts")
+const dutyModel = require("../lib/school/duty-model.ts")
+const { STAFF, DEPARTMENTS } = require("../lib/demo/staff.ts")
 const { migrateResearch, schoolPeriodMinutes } = require("../lib/research/store.ts")
 const { catalogSeed } = require("../lib/school/catalog-store.ts")
 const { freshBiz } = require("../lib/mt/store.tsx")
@@ -46,6 +48,10 @@ const actor = (staff = "u-lin", date = "2026-09-30") => ({ staff, date, enabled:
 const seed = () => researchSeed(schoolPeriodMinutes())
 const documentOf = (state, id) => state.documents.find(document => document.id === id)
 const command = (state, action, staff = "u-lin", online = () => true) => applyResearchCommand(state, actor(staff), action, structuredClone(catalogSeed), online)
+const dutyCommand = (state, action, staff = "u-lin", date = actor().date, people = STAFF) => {
+  const duties = dutyModel.applyStaffDutyCommand({ schema: 1, assignments: state.staffDuties, groups: state.groups }, actor(staff, date), action, people)
+  return { ...state, staffDuties: duties.assignments, groups: duties.groups }
+}
 const ownMathTasks = biz => permittedTasks(biz, "TEACHER_LYNN").filter(task => model.dutyUnitMap[task.duty_id] === "U101")
 const success = result => { assert.equal("error" in result, false, result.error); return result }
 test("group timetable is shared, leader-only, group-scoped and rejects occupied slots", () => {
@@ -183,114 +189,186 @@ const assignmentFor = (task, questions = []) => ({
   assert.match(workspace, /data-testid="research-workspace"/)
 })
 
-test("school appointments require an enabled, current, group-scoped coordination grant, not just leadership", () => {
+test("research staffing uses qualified, enabled, group-scoped duty arrangers, not leaders or viewers", () => {
   const state = seed()
-  const appointment = { id: "appointment-permission-test", staff: "u-he", group: "physics", role: "成员", start: "2026-09-30", end: null }
+  const assignment = dutyModel.createResearchDuty("duty-permission-test", "u-he", "research_participate", "physics", "2026-09-30")
+  const action = { type: "arrange", assignments: [assignment] }
   assert(model.canLeadGroup(state, actor("u-chen"), "physics"))
-  for (const staff of ["u-chen", "u-zhou", "u-xu"]) assert.throws(() => command(state, { type: "appointment", appointment }, staff), /任命权/)
-  assert.throws(() => applyResearchCommand(state, { ...actor(), enabled: false }, { type: "appointment", appointment }, catalogSeed), /账号/)
-  assert.throws(() => applyResearchCommand(state, actor("u-lin", "2028-01-01"), { type: "appointment", appointment }, catalogSeed), /任命权/)
-  const scoped = { ...state, grants: state.grants.filter(grant => grant.group === "math") }
-  assert.throws(() => command(scoped, { type: "appointment", appointment }), /任命权/)
-  assert.equal(command(state, { type: "appointment", appointment }).appointments.find(row => row.id === appointment.id).staff, "u-he")
+  for (const staff of ["u-chen", "u-zhou", "u-xu"]) assert.throws(() => dutyCommand(state, action, staff), /安排权|任命权/)
+  assert.throws(() => dutyModel.applyStaffDutyCommand({ schema: 1, assignments: state.staffDuties, groups: state.groups }, { ...actor(), enabled: false }, action, STAFF), /账号/)
+  assert.throws(() => dutyCommand(state, action, "u-lin", "2028-01-01"), /安排权/)
+  const scoped = { ...state, staffDuties: state.staffDuties.filter(duty => duty.type !== "research_manage" || duty.scopeRefs[0].id === "math") }
+  assert.throws(() => dutyCommand(scoped, action), /安排权/)
+  assert.equal(dutyCommand(state, action).staffDuties.find(duty => duty.id === assignment.id).staffId, "u-he")
+  assert.throws(() => command(state, { type: "appointment", appointment: {} }), /停用|安排职责/)
 })
 
-test("school appointment creation, role revision and end date share research membership without deleting content", () => {
+test("template, object and tenure share one duty record; ending one group preserves other work and history", () => {
   let state = seed()
-  const appointment = { id: "appointment-lifecycle-test", staff: "u-he", group: "math", role: "成员", start: "2026-09-30", end: null }
+  const assignment = dutyModel.createResearchDuty("duty-lifecycle-test", "u-he", "research_participate", "math", "2026-09-30")
+  const physics = dutyModel.createResearchDuty("duty-cross-group-test", "u-he", "research_participate", "physics", "2026-09-30")
   const documents = structuredClone(state.documents)
-  const originalAppointments = structuredClone(state.appointments)
-  state = command(state, { type: "appointment", appointment })
-  assert.equal(model.membership(state, "u-he", "math", actor().date).role, "成员")
-  const revised = { ...appointment, role: "维护者", end: "2027-07-31" }
-  state = command(state, { type: "appointment", appointment: revised, expected: appointment })
-  assert.equal(model.membership(state, "u-he", "math", actor().date).role, "维护者")
-  assert.equal(state.appointments.filter(row => row.id === appointment.id).length, 1)
-  const ended = { ...revised, end: "2026-10-01" }
-  state = command(state, { type: "appointment", appointment: ended, expected: revised })
-  assert(model.canEditGroup(state, actor("u-he", "2026-10-01"), "math"))
+  const original = structuredClone(state.staffDuties)
+  state = dutyCommand(state, { type: "arrange", assignments: [assignment, physics] })
+  assert.equal(model.membership(state, "u-he", "math", actor().date).type, "research_participate")
+  assert.equal(model.canEditGroup(state, actor("u-he"), "math"), false)
+  const saved = state.staffDuties.find(duty => duty.id === assignment.id)
+  state = dutyCommand(state, { type: "revise", assignment: { ...saved, end: "2027-07-31" }, expected: saved })
+  const revised = state.staffDuties.find(duty => duty.id === assignment.id)
+  assert.equal(state.staffDuties.filter(duty => duty.id === assignment.id).length, 1)
+  assert(revised.history.some(item => item.text.includes("原任期")))
+  state = dutyCommand(state, { type: "end", assignment: { ...revised, end: "2026-10-01" }, expected: revised })
+  assert(model.canParticipateGroup(state, actor("u-he", "2026-10-01"), "math"))
   assert.equal(model.canViewGroup(state, actor("u-he", "2026-10-02"), "math"), false)
+  assert(model.canParticipateGroup(state, actor("u-he", "2026-10-02"), "physics"))
+  assert.equal(model.canParticipateGroup(state, actor("u-he", "2026-09-29"), "math"), false)
   assert.deepEqual(state.documents, documents)
-  assert.deepEqual(state.appointments.filter(row => row.id !== appointment.id), originalAppointments)
-  assert.deepEqual(migrateResearch(JSON.parse(JSON.stringify(state))).appointments.find(row => row.id === appointment.id), ended)
-  assert.equal(model.canEditGroup(state, actor("u-he", "2026-09-29"), "math"), false)
+  assert.deepEqual(state.staffDuties.filter(duty => ![assignment.id, physics.id].includes(duty.id)), original)
+  assert.deepEqual(migrateResearch(JSON.parse(JSON.stringify(state))).staffDuties, state.staffDuties)
 })
 
-test("appointment forms and commands reject invalid dates, unsupported roles and overlapping leader terms", () => {
+test("duty dates, unsupported templates, duplicate memberships and overlapping leader terms are rejected", () => {
   const state = seed()
-  const appointment = { id: "appointment-validation-test", staff: "u-he", group: "math", role: "成员", start: "2026-09-30", end: null }
+  const assignment = dutyModel.createResearchDuty("duty-validation-test", "u-he", "research_participate", "math", "2026-09-30")
+  const arrange = value => dutyCommand(state, { type: "arrange", assignments: [value] })
   for (const start of ["", "2026-02-30", "2026-13-01", "2026-9-01", "0000-01-01", "not-a-date"]) {
-    assert.equal(model.appointmentDateValid(start), false)
-    assert.throws(() => command(state, { type: "appointment", appointment: { ...appointment, start } }), /日期/)
+    assert.equal(dutyModel.dutyDateValid(start), false)
+    assert.throws(() => arrange({ ...assignment, start }), /日期/)
   }
-  assert(model.appointmentDateValid("2024-02-29"))
-  for (const end of ["", "2026-09-29", "2027-02-29"]) assert.throws(() => command(state, { type: "appointment", appointment: { ...appointment, end } }), /日期/)
-  assert.throws(() => command(state, { type: "appointment", appointment: { ...appointment, role: "系统管理员" } }), /角色/)
-  assert.throws(() => command(state, { type: "appointment", appointment: { ...appointment, role: "组长" } }), /组长重叠/)
-  assert.throws(() => command(state, { type: "appointment", appointment: { ...appointment, role: "组长", start: "2027-07-31" } }), /组长重叠/)
-  const successor = command(state, { type: "appointment", appointment: { ...appointment, role: "组长", start: "2027-08-01" } })
+  assert(dutyModel.dutyDateValid("2024-02-29"))
+  for (const end of ["", "2026-09-29", "2027-02-29"]) assert.throws(() => arrange({ ...assignment, end }), /日期/)
+  assert.throws(() => arrange({ ...assignment, type: "arbitrary_admin" }), /模板/)
+  assert.throws(() => arrange({ ...assignment, type: "research_lead" }), /教研组长职责重叠/)
+  assert.throws(() => arrange({ ...assignment, type: "research_lead", start: "2027-07-31" }), /教研组长职责重叠/)
+  const successor = arrange({ ...assignment, type: "research_lead", start: "2027-08-01" })
   assert.equal(model.membership(successor, "u-he", "math", "2027-07-31"), undefined)
-  assert.equal(model.canLeadGroup(successor, actor("u-he", "2027-08-01"), "math"), true)
-  const previous = state.appointments.find(row => row.id === "app-zhou-math")
-  assert.throws(() => command(state, { type: "appointment", appointment: { ...previous, staff: "u-he" } }), /对象不可/)
-  assert.throws(() => command(state, { type: "appointment", appointment: { ...previous, group: "physics" } }), /对象不可/)
+  assert(model.canLeadGroup(successor, actor("u-he", "2027-08-01"), "math"))
+  const existing = state.staffDuties.find(duty => duty.id === "app-zhou-math")
+  assert.throws(() => dutyCommand(state, { type: "revise", assignment: { ...existing, staffId: "u-he" }, expected: existing }), /修订不能更换/)
+  assert.throws(() => dutyCommand(state, { type: "revise", assignment: { ...existing, scopeRefs: [{ kind: "research_group", id: "physics" }] }, expected: existing }), /修订不能更换/)
+  assert.throws(() => dutyCommand(state, { type: "arrange", assignments: [{ ...existing, id: "duplicate-member" }] }), /重叠的同类职责/)
 })
 
-test("a stale appointment revision cannot overwrite newer changes", () => {
+test("stale duty revisions cannot overwrite newer terms or histories", () => {
   const before = seed()
-  const previous = before.appointments.find(row => row.id === "app-zhou-math")
-  const revised = { ...previous, role: "维护者" }
-  const state = command(before, { type: "appointment", appointment: revised, expected: previous })
-  assert.throws(() => command(state, { type: "appointment", appointment: { ...previous, end: "2026-09-30" }, expected: previous }), /其他操作修订/)
-  assert.deepEqual(state.appointments.find(row => row.id === previous.id), revised)
+  const previous = before.staffDuties.find(duty => duty.id === "app-zhou-math")
+  const state = dutyCommand(before, { type: "revise", assignment: { ...previous, end: "2027-06-30" }, expected: previous })
+  assert.throws(() => dutyCommand(state, { type: "end", assignment: { ...previous, end: "2026-09-30" }, expected: previous }), /其他操作修订/)
+  assert.equal(state.staffDuties.find(duty => duty.id === previous.id).end, "2027-06-30")
 })
 
-test("appointment storage validates the live target, allows no-account registration and keeps changes atomic on save failure", () => {
-  const { getResearch, researchCommand, saveResearch } = require("../lib/research/store.ts")
-  const before = structuredClone(getResearch())
-  const appointment = { id: "appointment-store-test", staff: "u-wang", group: "physics", role: "成员", start: "2026-09-30", end: null }
+test("duty storage checks live staff, allows offline registration and remains atomic when saving fails", () => {
+  const { getResearch, saveResearch } = require("../lib/research/store.ts")
+  const { getStaffList } = require("../lib/school/staff-store.ts")
+  const { getStaffDuties, commitStaffDuty } = require("../lib/school/duty-store.ts")
+  const assignment = dutyModel.createResearchDuty("duty-store-test", "u-wang", "research_participate", "physics", "2026-09-30")
+  const arrange = value => commitStaffDuty(actor(), { type: "arrange", assignments: [value] }, getStaffList(actor().date))
+  assert.match(arrange({ ...assignment, staffId: "missing-staff" }).error, /人员不存在/)
+  assert.match(arrange({ ...assignment, staffId: "u-qian" }).error, /离职/)
+  assert.match(arrange({ ...assignment, staffId: "u-xu" }).error, /资格/)
+  assert.equal(arrange(assignment).ok, true)
+  assert(getStaffList(actor().date).find(person => person.id === "u-wang").duties.some(duty => duty.id === assignment.id))
+  assert.equal(model.canViewGroup(getResearch(), { ...actor("u-wang"), enabled: false }, "physics"), false)
+  const before = structuredClone(getStaffDuties())
+  const saved = before.assignments.find(duty => duty.id === assignment.id)
+  const setItem = storage.setItem
+  storage.setItem = () => { throw new Error("test quota exceeded") }
   try {
-    assert.match(researchCommand(actor(), { type: "appointment", appointment: { ...appointment, staff: "missing-staff" } }).error, /人员不存在/)
-    assert.match(researchCommand(actor(), { type: "appointment", appointment: { ...appointment, staff: "u-qian" } }).error, /离职/)
-    const result = researchCommand(actor(), { type: "appointment", appointment })
-    assert.equal(result.ok, true, result.error)
-    assert.equal(model.canViewGroup(getResearch(), { ...actor("u-wang"), enabled: false }, "physics"), false)
-    const saved = structuredClone(getResearch())
-    const setItem = storage.setItem
-    storage.setItem = () => { throw new Error("test quota exceeded") }
-    try {
-      const failure = researchCommand(actor(), { type: "appointment", appointment: { ...appointment, role: "维护者" }, expected: appointment })
-      assert.equal(failure.ok, false)
-      assert.match(failure.error, /保存失败/)
-      assert.deepEqual(getResearch(), saved)
-    } finally { storage.setItem = setItem }
-    const departed = { ...appointment, id: "departed-appointment-test", staff: "u-qian" }
-    saveResearch({ ...getResearch(), appointments: [...getResearch().appointments, departed] })
-    assert.match(researchCommand(actor(), { type: "appointment", appointment: { ...departed, role: "维护者" }, expected: departed }).error, /离职/)
-    assert.equal(researchCommand(actor(), { type: "appointment", appointment: { ...departed, end: actor().date }, expected: departed }).ok, true)
-  } finally { saveResearch(before) }
+    const result = commitStaffDuty(actor(), { type: "revise", assignment: { ...saved, end: "2027-07-31" }, expected: saved }, getStaffList(actor().date))
+    assert.equal(result.ok, false)
+    assert.match(result.error, /保存失败/)
+    assert.deepEqual(getStaffDuties(), before)
+    assert.equal(getResearch().staffDuties, getStaffDuties().assignments)
+  } finally { storage.setItem = setItem }
+  saveResearch(getResearch())
+  const content = JSON.parse(data.get("tgs:research-prototype:v2"))
+  for (const field of ["appointments", "grants", "staffDuties", "groups"]) assert.equal(field in content, false)
+  const departed = { ...saved, staffId: "u-qian", id: "departed-duty-test" }
+  const state = { ...seed(), staffDuties: [...seed().staffDuties, departed] }
+  assert.throws(() => dutyCommand(state, { type: "revise", assignment: { ...departed, end: "2027-07-31" }, expected: departed }), /离职/)
+  assert(dutyCommand(state, { type: "end", assignment: { ...departed, end: actor().date }, expected: departed }).staffDuties.some(duty => duty.id === departed.id && duty.end === actor().date))
 })
 
-test("appointment management is wired into the staff detail, not a teacher self-appointment form", () => {
+test("legacy appointments and school grants migrate once into template-based duties without losing IDs or terms", () => {
+  const previous = seed()
+  const legacy = { ...previous, schema: 2, appointments: [{ id: "legacy-maintainer", staff: "u-he", group: "physics", role: "维护者", start: "2025-09-01", end: "2026-07-31" }], grants: [{ staff: "u-xu", group: "math", mode: "查看", start: "2026-09-01", end: null }] }
+  delete legacy.staffDuties
+  delete legacy.groups
+  const migrated = migrateResearch(legacy)
+  assert.equal(migrated.schema, 3)
+  assert.equal("appointments" in migrated, false)
+  assert.equal("grants" in migrated, false)
+  assert.deepEqual(migrated.documents, previous.documents)
+  const duty = migrated.staffDuties.find(row => row.id === "legacy-maintainer")
+  assert.equal(duty.type, "research_participate")
+  assert.equal(duty.start, "2025-09-01")
+  assert.equal(duty.end, "2026-07-31")
+  assert.deepEqual(duty.scopeRefs, [{ kind: "research_group", id: "physics" }])
+  assert.match(duty.note, /不保留隐式编辑权/)
+  assert.equal(model.canViewGroup(migrated, actor("u-he"), "physics"), false)
+  assert.equal(model.canEditGroup(migrated, actor("u-xu"), "math"), false)
+  assert.equal(model.schoolScopes(migrated, actor("u-xu"), true).length, 0)
+  assert.throws(() => dutyModel.migrateLegacyResearchDuties({ appointments: [{}], grants: [] }), /未清空/)
+})
+
+test("the shared staff duty entry replaces separate appointment UI and arbitrary membership editing", () => {
   const detail = fs.readFileSync(path.join(root, "components/school/staff-detail-sheet.tsx"), "utf8")
-  const form = fs.readFileSync(path.join(root, "components/school/staff-appointment-form.tsx"), "utf8")
-  const panel = fs.readFileSync(path.join(root, "components/school/staff-appointments-panel.tsx"), "utf8")
-  assert.match(detail, /value: "appointments", label: "科组任命"/)
-  assert.match(detail, /tab === "appointments"[\s\S]*<StaffAppointmentsPanel/)
-  assert.match(panel, /useStaffPermission\(\)/)
-  assert.match(panel, /schoolScopes\(state, actor, true\)/)
-  assert.match(panel, /data-testid="staff-appointments"/)
-  assert.match(form, /type: "appointment"/)
+  const arrange = fs.readFileSync(path.join(root, "components/school/duty-arrange-sheet.tsx"), "utf8")
+  const form = fs.readFileSync(path.join(root, "components/school/staff-duty-revision-form.tsx"), "utf8")
+  assert.doesNotMatch(detail, /value: "appointments"|StaffAppointmentsPanel/)
+  assert.equal(fs.existsSync(path.join(root, "components/school/staff-appointment-form.tsx")), false)
+  assert.equal(fs.existsSync(path.join(root, "components/school/staff-appointments-panel.tsx")), false)
+  assert.match(arrange, /职责模板/)
+  assert.match(arrange, /dutyContext.command\(\{ type: "arrange", assignments: researchAssignments \}\)/)
   assert.match(form, /expected: previous/)
-  assert.match(form, /确认结束任命/)
+  assert.match(form, /确认结束职责/)
   assert.match(form, /required checked=\{confirmed\}/)
-  assert.doesNotMatch(fs.readFileSync(path.join(root, "components/research/members.tsx"), "utf8"), /StaffAppointmentForm|type: "appointment"/)
+  assert.doesNotMatch(fs.readFileSync(path.join(root, "components/research/members.tsx"), "utf8"), /type: "appointment"|type: "arrange"/)
+})
+
+test("group leaders maintain public assets while participants use resources and submit only their own work", () => {
+  let state = seed()
+  const teacher = actor("u-zhou")
+  const plan = documentOf(state, "plan-demo")
+  assert(model.canReadDocument(state, teacher, plan))
+  assert.equal(model.canEditDocument(state, teacher, plan), false)
+  assert.throws(() => command(state, { type: "save-document", document: { ...plan, notes: "不能改写公共原稿" }, baseVersion: 1 }, "u-zhou"), /修订权限/)
+  assert.throws(() => command(state, { type: "criterion", criterion: { ...state.criteria[0], title: "不能改写本组依据" } }, "u-zhou"), /评价依据/)
+  const own = model.emptyDocument("participant-personal-test", "计划", "我的调整版", "u-zhou", "u-zhou", "C101", 40)
+  state = command(state, { type: "create-document", document: own }, "u-zhou")
+  assert(model.canEditDocument(state, teacher, documentOf(state, own.id)))
+  const task = { ...state.tasks.find(t => t.group === "math"), id: "participant-task-test", owner: "u-zhou", parent: null, schoolTaskId: null, status: "进行中", mode: "牵头提交", collaborators: [], submitters: [] }
+  state = command(state, { type: "save-task", task })
+  assert.throws(() => command(state, { type: "save-task", task: { ...task, owner: "u-lin" } }, "u-zhou"), /分工/)
+  state = command(state, { type: "discussion", discussion: { id: "participant-feedback-test", target: `task:${task.id}`, author: "u-zhou", body: "本人分工反馈", at: actor().date } }, "u-zhou")
+  state = command(state, { type: "submit-task", id: task.id, outcome: { id: "participant-outcome-test", kind: "document", entityId: own.id, version: 1, title: own.title, submittedBy: "u-zhou", submittedAt: actor().date } }, "u-zhou")
+  assert.equal(state.tasks.find(t => t.id === task.id).outcomes[0].submittedBy, "u-zhou")
+  assert.equal(model.canEditDocument(state, actor("u-chen"), plan), false)
+  assert.equal(model.canReadDocument(state, teacher, documentOf(state, "answers-demo")), false)
+})
+
+test("flat responsibility objects keep stable references through renaming and disabling without creating departments", () => {
+  let state = seed()
+  assert.deepEqual(DEPARTMENTS, ["校长室", "办公室", "教学部", "教务部", "学生部", "后勤部"])
+  assert(state.groups.every(group => group.kind === "research_group" && group.department === "教学部"))
+  const original = state.groups.find(group => group.id === "math")
+  const assignments = structuredClone(state.staffDuties)
+  state = dutyCommand(state, { type: "save-group", group: { ...original, name: "数学与建模教研组" }, expected: original })
+  assert.deepEqual(state.staffDuties, assignments)
+  assert(model.canLeadGroup(state, actor(), "math"))
+  const renamed = state.groups.find(group => group.id === "math")
+  state = dutyCommand(state, { type: "save-group", group: { ...renamed, active: false }, expected: renamed })
+  assert.equal(model.canViewGroup(state, actor(), "math"), false)
+  assert(model.canParticipateGroup(state, actor(), "physics"))
+  assert.deepEqual(state.staffDuties, assignments)
+  assert.throws(() => dutyCommand(seed(), { type: "save-group", group: original, expected: original }, "u-chen"), /有权人员/)
 })
 
  test("2. effective appointments, independent multi-group duties, no-timetable leader, expired and scoped school viewer", () => {
   const state = seed()
   assert(model.canLeadGroup(state, actor(), "math"))
-  assert(model.canEditGroup(state, actor(), "physics"))
+  assert(model.canParticipateGroup(state, actor(), "physics"))
+  assert.equal(model.canEditGroup(state, actor(), "physics"), false)
   assert.equal(model.canLeadGroup(state, actor(), "physics"), false)
   assert(model.canLeadGroup(state, actor("u-chen"), "physics"))
   assert.equal(isTeachingActor(actor("u-chen"), null), false)
@@ -426,9 +504,11 @@ test("appointment management is wired into the staff detail, not a teacher self-
   assert.equal(model.canReadDocument(state, expired, documentOf(state, "plan-demo")), false)
   assert(model.canReadDocument(state, expired, personal))
   assert(personal.items.every(item => model.itemReadable(state, expired, item, personal.owner)))
-  const old = state.appointments.find(appointment => appointment.id === "app-lin-math")
-  state = command(state, { type: "appointment", appointment: { ...old, end: "2026-09-29" } })
-  state = command(state, { type: "appointment", appointment: { id: "new-leader-test", staff: "u-zhou", group: "math", role: "组长", start: "2026-09-30", end: null } })
+  const old = state.staffDuties.find(duty => duty.id === "app-lin-math")
+  state = dutyCommand(state, { type: "end", assignment: { ...old, end: "2026-09-29" }, expected: old })
+  const participant = state.staffDuties.find(duty => duty.id === "app-zhou-math")
+  state = dutyCommand(state, { type: "end", assignment: { ...participant, end: "2026-09-29" }, expected: participant })
+  state = dutyCommand(state, { type: "arrange", assignments: [dutyModel.createResearchDuty("new-leader-test", "u-zhou", "research_lead", "math", "2026-09-30")] })
   assert(model.canLeadGroup(state, actor("u-zhou"), "math"))
   assert(model.canEditDocument(state, actor("u-zhou"), documentOf(state, "plan-demo")))
   const edited = { ...documentOf(state, "plan-demo"), notes: "新负责人接续维护" }

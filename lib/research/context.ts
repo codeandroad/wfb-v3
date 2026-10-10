@@ -11,7 +11,7 @@ import { schoolPeriodMinutes, useResearch, researchCommand, type Actor, type Com
 export function useResearchContext() {
   const demo = useDemo()
   const mt = useMt()
-  const people = useStaffList()
+  const people = useStaffList(dateOfClock(mt.biz.clock))
   const state = useResearch()
   const catalog = useCatalog()
   const staff = PERSONAS[demo.persona].staffId

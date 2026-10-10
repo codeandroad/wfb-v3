@@ -2,7 +2,13 @@
 
 // 教职工资料覆盖层（原型）：编辑资料、请假、销假、离职的结果按会话保存，切页不丢失。
 import { useMemo, useSyncExternalStore } from "react"
-import { STAFF, type HistoryItem, type StaffProfile } from "@/lib/demo/staff"
+import { DEMO_TODAY, STAFF, type HistoryItem, type StaffProfile } from "@/lib/demo/staff"
+import { PERSONAS } from "@/lib/demo/nav"
+import { useMt } from "@/lib/mt/store"
+import { dateOfClock } from "@/lib/mt/model"
+import { dutyStatusAt, isResearchDuty, type StaffDutyCommand, type StaffDutyState } from "./duty-model"
+import { commitStaffDuty, getStaffDuties, useStaffDuties, useStaffDutyStatus } from "./duty-store"
+import { researchGroupName } from "./responsibility-scopes"
 
 import { useDemo } from "@/lib/demo/store"
 import { registerIssued } from "./person-no"
@@ -28,9 +34,23 @@ export function createStaff(profile: StaffProfile): StaffProfile {
   return profile
 }
 
-export function getStaffList() {
+export function getStaffList(date = DEMO_TODAY) {
   hydrate()
-  return [...STAFF, ...created].map((staff) => applyPatch(staff, patches[staff.id]))
+  const duties = getStaffDuties()
+  return [...STAFF, ...created].map(staff => withSharedDuties(applyPatch(staff, patches[staff.id]), duties, date))
+}
+
+export function useStaffDutyContext() {
+  const demo = useDemo()
+  const mt = useMt()
+  const date = dateOfClock(mt.biz.clock)
+  const people = useStaffList(date)
+  const state = useStaffDuties()
+  const status = useStaffDutyStatus()
+  const staff = PERSONAS[demo.persona].staffId
+  const person = people.find(item => item.id === staff)
+  const actor = { staff, date, enabled: mt.ready && demo.scenario !== "parent" && !!person && person.status !== "left" && person.accountStatus === "enabled" }
+  return { state, people, actor, ready: mt.ready, error: status.error, command: (command: StaffDutyCommand) => commitStaffDuty(actor, command, getStaffList(date)) }
 }
 
 export type StaffPatch = Partial<
@@ -102,13 +122,25 @@ function subscribe(l: () => void) {
   return () => listeners.delete(l)
 }
 
+const LEGACY_DEPARTMENTS: Record<string, string> = { 数学组: "教学部", 物理组: "教学部", 英语组: "教学部", 教务处: "教务部", 行政部: "办公室" }
+
 function applyPatch(s: StaffProfile, p?: StaffPatch): StaffProfile {
-  if (!p) return s
-  const { extraHistory, ...rest } = p
-  return { ...s, ...rest, history: [...s.history, ...(extraHistory ?? [])] }
+  const { extraHistory, ...rest } = p ?? {}
+  const department = rest.department ?? s.department
+  return { ...s, ...rest, department: LEGACY_DEPARTMENTS[department] ?? department, history: [...s.history, ...(extraHistory ?? [])] }
 }
 
-export function useStaffList(): StaffProfile[] {
+function withSharedDuties(staff: StaffProfile, state: StaffDutyState, date: string): StaffProfile {
+  const research = state.assignments.filter(duty => duty.staffId === staff.id)
+  return {
+    ...staff,
+    duties: [...staff.duties.filter(duty => !isResearchDuty(duty.type)), ...research.map(duty => ({ ...duty, scopeLabel: duty.scopeRefs.map(ref => researchGroupName(state.groups, ref.id)).join("、"), status: dutyStatusAt(duty, date), ...(state.groups.some(group => duty.scopeRefs.some(ref => ref.id === group.id) && !group.active) ? { scopeSub: "负责对象已停用；历史保留，不授予当前访问" } : {}) }))],
+    history: [...staff.history, ...research.flatMap(duty => (duty.history ?? []).map(item => ({ ...item, text: `${item.text} · ${researchGroupName(state.groups, duty.scopeRefs[0].id)}` })))].sort((a, b) => a.date.localeCompare(b.date)),
+  }
+}
+
+export function useStaffList(date = DEMO_TODAY): StaffProfile[] {
   const p = useSyncExternalStore(subscribe, getPatches, () => EMPTY)
-  return useMemo(() => [...STAFF, ...created].map((s) => applyPatch(s, p[s.id])), [p])
+  const duties = useStaffDuties()
+  return useMemo(() => [...STAFF, ...created].map(s => withSharedDuties(applyPatch(s, p[s.id]), duties, date)), [p, duties, date])
 }

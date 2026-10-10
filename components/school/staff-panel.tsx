@@ -6,6 +6,8 @@ import { homepageEligible } from "@/lib/profile/store"
 import { Button } from "@/components/ui/button"
 import {
   ACCOUNT_STATUS_LABEL,
+  DEPARTMENTS,
+  JOB_TITLES,
   DUTY_FILTERS,
   STAFF_STATUS_LABEL,
   STAFF_STATUS_TONE,
@@ -26,11 +28,13 @@ import { InviteSheet } from "./invite-sheet"
 import { ListToolbar, type FilterGroup, type FilterState } from "./list-toolbar"
 import { StaffCreateModal } from "./staff-create-modal"
 import { StaffDetailSheet } from "./staff-detail-sheet"
-import { useStaffList } from "@/lib/school/staff-store"
+import { useStaffDutyContext } from "@/lib/school/staff-store"
+import { ResponsibilityDirectorySheet } from "./responsibility-directory-sheet"
+import { isResearchDuty } from "@/lib/school/duty-model"
 import { historicalNumbers } from "@/lib/school/person-no"
 
-const STAFF_DEPTS = ["数学组", "物理组", "英语组", "教务处", "行政部"]
-const STAFF_TITLES = ["教师", "教务主任", "行政助理"]
+const STAFF_DEPTS = DEPARTMENTS
+const STAFF_TITLES = JOB_TITLES
 
 const STAFF_FILTER_GROUPS: FilterGroup[] = [
   {
@@ -75,7 +79,8 @@ type ListState = "data" | "empty" | "restricted"
 
 export function StaffPanel() {
   const { push } = useToast()
-  const staffList = useStaffList()
+  const { people: staffList, ready } = useStaffDutyContext()
+  const [directoryOpen, setDirectoryOpen] = useState(false)
   const [q, setQ] = useState("")
   const [filters, setFilters] = useState<FilterState>({})
   const [listState, setListState] = useState<ListState>("data")
@@ -117,7 +122,7 @@ export function StaffPanel() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" data-testid="staff-management" data-ready={ready}>
       {/* 页头一句话 */}
       <p className="text-[13px] text-muted-foreground">查看教职工及其工作安排。</p>
 
@@ -134,7 +139,8 @@ export function StaffPanel() {
             resultCount={listState === "data" ? rows.length : undefined}
             totalCount={listState === "data" ? total : undefined}
             right={
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <Button type="button" variant="outline" onClick={() => setDirectoryOpen(true)}>教研负责对象</Button>
                 <LinkButton href="/import?type=staff" variant="outline" size="default">
                   <Upload className="size-3.5" />
                   批量导入
@@ -259,6 +265,7 @@ export function StaffPanel() {
         />
       </div>
 
+      {directoryOpen && <ResponsibilityDirectorySheet onClose={() => setDirectoryOpen(false)} />}
       {/* 抽屉栈：仅渲染顶层 */}
       {top?.kind === "staff" ? (
           <StaffDetailSheet
@@ -348,7 +355,7 @@ function StaffRow({
   onOpenAccount: (accountId: string) => void
   onInvite: () => void
 }) {
-  const active = staff.duties.filter((d) => d.status !== "ended" && !endedDutyIds.has(d.id))
+  const active = staff.duties.filter(duty => duty.status !== "ended" && !endedDutyIds.has(duty.id)).sort((a, b) => Number(isResearchDuty(b.type)) - Number(isResearchDuty(a.type)))
   const shown = active.slice(0, 3)
   const extra = active.length - shown.length
   const acc = accountByStaffId(staff.id)

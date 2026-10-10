@@ -6,6 +6,9 @@ import { DUTY_BY_KEY, WORK_MODE_LABEL, type DutyRecord } from "@/lib/demo/staff"
 import { AdvancedBasis, CanCannotBlock, DutyStatusBadge, periodText } from "./duty-bits"
 import { CircleAlert } from "lucide-react"
 import { useState } from "react"
+import { isResearchDuty, manageableResearchGroups } from "@/lib/school/duty-model"
+import { useStaffDutyContext } from "@/lib/school/staff-store"
+import { StaffDutyRevisionForm } from "./staff-duty-revision-form"
 
 interface DetailProps {
   open: boolean
@@ -30,9 +33,14 @@ export function DutyDetailSheet({
 }: DetailProps) {
   const { push } = useToast()
   const [confirmEnd, setConfirmEnd] = useState(false)
+  const [revision, setRevision] = useState<"revise" | "end" | null>(null)
+  const { state, people, actor, ready, error } = useStaffDutyContext()
   const def = DUTY_BY_KEY[duty.type]
+  const shared = isResearchDuty(duty.type) ? state.assignments.find(item => item.id === duty.id) : undefined
+  const canManage = !!shared && ready && !error && manageableResearchGroups(state, people, actor, shared.type).includes(shared.scopeRefs[0].id)
 
   if (!open) return null
+  if (shared && revision) return <Sheet open onClose={onClose} title={revision === "end" ? "结束职责" : "修订职责任期"} desc={`${staffName} · ${def.label} · ${duty.scopeLabel}`} width="max-w-lg"><StaffDutyRevisionForm key={`${shared.id}:${revision}`} duty={shared} mode={revision} onCancel={() => setRevision(null)} onDone={message => { push(message); onClose() }} /></Sheet>
 
   const ended = duty.status === "ended"
 
@@ -52,10 +60,10 @@ export function DutyDetailSheet({
               </Button>
             ) : (
               <>
-                <Button size="sm" variant="ghost" onClick={() => setConfirmEnd(true)}>
+                <Button size="sm" variant="ghost" disabled={!!shared && (!canManage || duty.status === "pending" || duty.end === actor.date)} onClick={() => shared ? setRevision("end") : setConfirmEnd(true)}>
                   结束职责
                 </Button>
-                <Button size="sm" variant="outline" onClick={onAdjust}>
+                <Button size="sm" variant="outline" disabled={!!shared && (!canManage || people.find(person => person.id === shared.staffId)?.status === "left")} onClick={() => shared ? setRevision("revise") : onAdjust?.()}>
                   调整职责
                 </Button>
               </>
@@ -73,6 +81,7 @@ export function DutyDetailSheet({
           {duty.scopeSub ? <p className="text-[13px] text-muted-foreground">范围补充：{duty.scopeSub}</p> : null}
 
           <CanCannotBlock duty={duty} />
+          {shared && <p className="text-sm leading-relaxed text-muted-foreground">来自教职工管理的同一份职责记录，按业务日期 {actor.date} 核验；结束日期含当日。{duty.end === actor.date ? "今日为最后有效日，次日起停止本项访问。" : "未生效与已结束职责不授予教研工作区访问。"}{!canManage && "当前身份没有此负责对象的职责安排权。"}</p>}
 
           {currentUseLimit ? (
             <div className="flex items-start gap-2 rounded-lg border border-[#e6d4a8] bg-[#fbf7ee] p-3 text-[12.5px] text-[#7a5514]">
@@ -84,7 +93,7 @@ export function DutyDetailSheet({
           <div>
             <p className="mb-2 text-[13px] font-semibold">变更历史</p>
             <div className="space-y-1.5">
-              <HistoryRow date={duty.start} text={`安排职责 · ${def.label}`} />
+              {duty.history?.length ? duty.history.map((item, index) => <HistoryRow key={`${item.date}:${index}`} date={item.date} text={item.text} />) : <HistoryRow date={duty.start} text={`安排职责 · ${def.label}`} />}
               {duty.status === "pending" ? <HistoryRow date={duty.start} text="登记为未生效，到期自动生效" /> : null}
               {duty.status === "paused" ? <HistoryRow date={duty.start} text="职责暂停" /> : null}
               {ended ? <HistoryRow date={duty.end ?? duty.start} text="职责结束（历史保留）" /> : null}

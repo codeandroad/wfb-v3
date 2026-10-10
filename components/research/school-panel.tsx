@@ -7,7 +7,7 @@ import { Button, buttonVariants } from "@/components/ui/button"
 import { FieldGroup } from "@/components/ui/field"
 import { useResearchContext } from "@/lib/research/context"
 import { useResearchForm } from "@/lib/research/use-form"
-import { activeAt, canReadDocument, coursesFor, groups, schoolScopes, type SchoolTask, type Task } from "@/lib/research/model"
+import { canReadDocument, coursesFor, groupDuties, schoolScopes, type SchoolTask, type Task } from "@/lib/research/model"
 import { Choices, DocumentRead, Panel, RField, RichText, documentHref } from "./primitives"
 
 export function SchoolResearchPanel() {
@@ -15,8 +15,8 @@ export function SchoolResearchPanel() {
   const scope = [...new Set(schoolScopes(state, actor))]
   const manageScope = schoolScopes(state, actor, true)
   if (!scope.length) return null
-  const appointments = state.appointments.filter(a => scope.includes(a.group) && activeAt(a.start, a.end, actor.date))
-  const distinctPeople = new Set(appointments.map(a => a.staff))
+  const assignments = scope.flatMap(group => groupDuties(state, group, actor.date))
+  const distinctPeople = new Set(assignments.map(duty => duty.staffId))
   const shared = state.documents.filter(d => !d.archived && d.share.audience === "school" && canReadDocument(state, actor, d))
 
   return <section className="flex min-w-0 flex-col gap-5 py-6" aria-label="学校教研统筹">
@@ -25,16 +25,16 @@ export function SchoolResearchPanel() {
       <p className="text-muted-foreground">下列任命和统筹范围为本机演示配置，不代表正式学校授权。进入同一工作区不自动获得成员身份、资料编辑权或学生记录权限。</p>
     </Panel>
     <div className="grid gap-4 md:grid-cols-2">
-      {groups.filter(g => scope.includes(g.id)).map(g => {
-        const members = appointments.filter(a => a.group === g.id)
-        const leaders = members.filter(a => a.role === "组长")
+      {state.groups.filter(g => scope.includes(g.id)).map(g => {
+        const members = groupDuties(state, g.id, actor.date)
+        const leaders = members.filter(duty => duty.type === "research_lead")
         const courses = coursesFor(catalog, g.id)
         return <Panel key={g.id} title={g.name} description={catalog.subjects.find(s => s.code === g.subject)?.name || "学科关联待完善"} action={<Badge variant="outline">{manageScope.includes(g.id) ? "授权统筹" : "授权查看"}</Badge>}>
-          <p>有效负责人：{leaders.map(a => people.find(p => p.id === a.staff)?.name || a.staff).join("、") || "尚无有效组长任命"}</p>
-          <p>正式成员：{[...new Set(members.map(a => a.staff))].map(id => { const person = people.find(p => p.id === id); return `${person?.name || id}${person?.accountStatus !== "enabled" ? "（无可用账号）" : ""}` }).join("、") || "尚无有效成员任命"}</p>
+          <p>有效负责人：{leaders.map(duty => people.find(p => p.id === duty.staffId)?.name || duty.staffId).join("、") || "尚无有效教研组长职责"}</p>
+          <p>正式成员：{[...new Set(members.map(duty => duty.staffId))].map(id => { const person = people.find(p => p.id === id); return `${person?.name || id}${person?.accountStatus !== "enabled" ? "（无可用账号）" : ""}` }).join("、") || "尚无有效成员任命"}</p>
           <p>有效责任课程：{courses.map(c => `${c.name} · ${c.board} ${c.officialCode}`).join("、") || "尚未维护有效责任课程"}</p>
-          {(!leaders.length || !members.length) && <p className="text-muted-foreground">任命待完善：请使用原学校管理的教职工任命流程，不从任课或资格文字推定归组。</p>}
-          <div className="flex flex-wrap gap-2"><Link className={buttonVariants({ variant: "outline" })} href={`/research?group=${g.id}&from=catalog`}>查看{g.name}工作区</Link><Link className={buttonVariants({ variant: "outline" })} href="/school?tab=staff">学校人员任命</Link></div>
+          {(!leaders.length || !members.length) && <p className="text-muted-foreground">职责待完善：请通过教职工管理的安排职责维护，不从任课、部门或资格文字推定归组。</p>}
+          <div className="flex flex-wrap gap-2"><Link className={buttonVariants({ variant: "outline" })} href={`/research?group=${g.id}&from=catalog`}>查看{g.name}工作区</Link><Link className={buttonVariants({ variant: "outline" })} href="/school?tab=staff">教职工安排职责</Link></div>
         </Panel>
       })}
     </div>
@@ -55,7 +55,7 @@ export function SchoolResearchPanel() {
 }
 
 function SchoolTaskForm({ scope }: { scope: string[] }) {
-  const { actor, command } = useResearchContext()
+  const { state, actor, command } = useResearchContext()
   const form = useResearchForm("school-task-create", { title: "", groups: [] as string[], due: "", requirements: "", acceptance: false })
   const [error, setError] = useState("")
   const [message, setMessage] = useState("")
@@ -71,7 +71,7 @@ function SchoolTaskForm({ scope }: { scope: string[] }) {
   }
   return <Panel title="下发一项学校教研任务" description="截止日期与交付说明可以留空，默认不验收；不会要求额外工时、百分比或完成报告。">
     <FieldGroup className="grid sm:grid-cols-2"><RField label="学校任务名称" value={form.value.title} onChange={title => form.set({ title })} /><RField label="学校任务截止日期（可选）" type="date" value={form.value.due} onChange={due => form.set({ due })} /><RField label="学校任务交付要求（可选）" type="textarea" value={form.value.requirements} onChange={requirements => form.set({ requirements })} /></FieldGroup>
-    <Choices label="下发到获授权统筹的科组" options={groups.filter(g => scope.includes(g.id)).map(g => ({ value: g.id, label: g.name }))} value={form.value.groups} onChange={groups => form.set({ groups })} />
+    <Choices label="下发到获授权统筹的科组" options={state.groups.filter(g => scope.includes(g.id)).map(g => ({ value: g.id, label: g.name }))} value={form.value.groups} onChange={groups => form.set({ groups })} />
     <label className="flex items-center gap-2"><input type="checkbox" checked={form.value.acceptance} onChange={e => form.set({ acceptance: e.target.checked })} />本任务明确要求学校验收（默认不需要）</label>
     <Button className="self-start" disabled={!form.value.title.trim() || !form.value.groups.length} onClick={submit}>向所选科组下发</Button>
     {error && <p role="alert" className="text-destructive">{error}</p>}{message && <p role="status">{message}</p>}
@@ -88,7 +88,7 @@ function SchoolTaskProgress({ task, scope, manageScope }: { task: SchoolTask; sc
       const root = state.tasks.find(t => t.schoolTaskId === task.id && t.group === group && !t.parent)
       const divisions = state.tasks.filter(t => t.schoolTaskId === task.id && t.group === group && t.parent)
       return <section className="flex flex-col gap-3 rounded-lg bg-muted p-4 text-foreground" key={group}>
-        <h4 className="font-semibold">{groups.find(g => g.id === group)?.name} · {root?.status || "尚未建立承接事项"}</h4>
+        <h4 className="font-semibold">{state.groups.find(g => g.id === group)?.name} · {root?.status || "尚未建立承接事项"}</h4>
         <p>负责人：{people.find(p => p.id === root?.owner)?.name || "待本组承接确定"} · 必要分工 {divisions.length} 项（不要求所有分工完成才允许提交）</p>
         {divisions.map(d => <p key={d.id}>{d.title} · {people.find(p => p.id === d.owner)?.name || "负责人待确定"} · {d.status}</p>)}
         {(root?.outcomes ?? []).map(outcome => <details key={outcome.id}>
@@ -96,7 +96,7 @@ function SchoolTaskProgress({ task, scope, manageScope }: { task: SchoolTask; sc
           <div className="flex flex-col gap-3 pt-4">{outcome.document ? <DocumentRead document={outcome.document} submittedSnapshot /> : <RichText text={`${outcome.activity?.type || "活动"}：${outcome.activity?.title || outcome.title}\n${outcome.activity?.start || ""}—${outcome.activity?.end || ""}\n研讨结论：${outcome.activity?.conclusion || "尚未整理"}`} />}<p className="text-muted-foreground">此处为提交时快照，不改写来源内容，也不开放来源个人资料或学生记录。</p></div>
         </details>)}
         {!root?.outcomes.length && <p className="text-muted-foreground">尚无正式提交成果，不把组内草稿当作已提交。</p>}
-        {root?.status === "待验收" && manageScope.includes(group) && <Button className="self-start" onClick={() => { const result = command({ type: "review-task", id: root.id, note: "学校授权统筹人员明确验收本组成果" }); setError(result.ok ? "" : result.error) }}>验收{groups.find(g => g.id === group)?.name}本次提交</Button>}
+        {root?.status === "待验收" && manageScope.includes(group) && <Button className="self-start" onClick={() => { const result = command({ type: "review-task", id: root.id, note: "学校授权统筹人员明确验收本组成果" }); setError(result.ok ? "" : result.error) }}>验收{state.groups.find(g => g.id === group)?.name}本次提交</Button>}
         {root?.acceptedNote && <p>{root.acceptedNote}</p>}
         <Link className="self-start text-primary underline" href={`/research?group=${group}&tab=${encodeURIComponent("任务与协作")}&from=catalog`}>查看本组承接与分工</Link>
       </section>
@@ -110,5 +110,5 @@ function SupportResponse({ id, canManage }: { id: string; canManage: boolean }) 
   const issue = state.issues.find(i => i.id === id)!
   const form = useResearchForm(`school-support:${id}`, { response: issue.response })
   const [error, setError] = useState("")
-  return <article className="flex flex-col gap-3 rounded-lg border p-4"><h3 className="font-semibold">{groups.find(g => g.id === issue.group)?.name} · {issue.title} · {issue.status}</h3><RichText text={issue.body} />{issue.response && <RichText text={`学校回复：${issue.response}`} />}{canManage && <><FieldGroup><RField label="学校协调回复" type="textarea" value={form.value.response} onChange={response => form.set({ response })} /></FieldGroup><Button variant="outline" className="self-start" disabled={!form.value.response.trim()} onClick={() => { const result = command({ type: "respond-support", id, response: form.value.response }); setError(result.ok ? "" : result.error) }}>保存明确协调回复</Button></>}{error && <p role="alert" className="text-destructive">{error}</p>}</article>
+  return <article className="flex flex-col gap-3 rounded-lg border p-4"><h3 className="font-semibold">{state.groups.find(g => g.id === issue.group)?.name} · {issue.title} · {issue.status}</h3><RichText text={issue.body} />{issue.response && <RichText text={`学校回复：${issue.response}`} />}{canManage && <><FieldGroup><RField label="学校协调回复" type="textarea" value={form.value.response} onChange={response => form.set({ response })} /></FieldGroup><Button variant="outline" className="self-start" disabled={!form.value.response.trim()} onClick={() => { const result = command({ type: "respond-support", id, response: form.value.response }); setError(result.ok ? "" : result.error) }}>保存明确协调回复</Button></>}{error && <p role="alert" className="text-destructive">{error}</p>}</article>
 }

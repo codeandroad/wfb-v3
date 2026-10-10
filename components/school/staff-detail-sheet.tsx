@@ -28,7 +28,6 @@ import { StaffActionPanel, type StaffAction } from "./staff-actions"
 import { useState } from "react"
 import { useStaffPermission } from "@/lib/school/staff-store"
 import { educationExperiencesOf } from "@/lib/school/staff-background"
-import { StaffAppointmentsPanel } from "./staff-appointments-panel"
 
 interface Props {
   staff: StaffProfile
@@ -61,7 +60,7 @@ export function StaffDetailSheet({ staff, endedDutyIds, onClose, onOpenDuty, onA
       desc={`${staff.employeeNo || "待编号"} · ${[staff.department, staff.jobTitle].filter(Boolean).join("／") || "未填写部门 / 职务"}`}
       width="max-w-xl"
       footer={
-        action || tab === "appointments" ? undefined : (
+        action ? undefined : (
         <div className="flex items-center justify-between gap-2">
           <div className="flex flex-wrap items-center gap-1">
             <Button variant="ghost" size="sm" disabled={!canManage} onClick={() => canManage && setAction("edit")}>
@@ -145,7 +144,6 @@ export function StaffDetailSheet({ staff, endedDutyIds, onClose, onOpenDuty, onA
           tabs={[
             { value: "profile", label: "资料" },
             { value: "duties", label: `职责 · ${currentDuties.length}` },
-            { value: "appointments", label: "科组任命" },
             { value: "history", label: "任职历史" },
           ]}
         />
@@ -197,7 +195,7 @@ export function StaffDetailSheet({ staff, endedDutyIds, onClose, onOpenDuty, onA
 
           <div>
             <p className="mb-2 text-[13px] font-semibold">
-              关联账号角色<span className="ml-1 text-xs font-normal text-muted-foreground">（只读摘要）</span>
+              关联账号角色<span className="ml-1 text-xs font-normal text-muted-foreground">（只读摘要��</span>
             </p>
             {staff.accountStatus === "none" ? (
               <p className="rounded-lg border border-dashed border-border p-3 text-[12.5px] text-muted-foreground">
@@ -262,6 +260,7 @@ export function StaffDetailSheet({ staff, endedDutyIds, onClose, onOpenDuty, onA
 
       {tab === "duties" ? (
         <div className="space-y-3">
+          <InfoNote>教研工作也在此统一安排：职责模板决定组长或参与教师的工作边界，负责对象选择具体教研组，生效时间决定任期。教研组不是二级人事部门，也不从任课自动归组。</InfoNote>
           {staff.qualificationNote ? <InfoNote>{staff.qualificationNote}</InfoNote> : null}
 
           {currentDuties.length ? (
@@ -280,8 +279,6 @@ export function StaffDetailSheet({ staff, endedDutyIds, onClose, onOpenDuty, onA
           ) : null}
         </div>
       ) : null}
-
-      {tab === "appointments" ? <StaffAppointmentsPanel key={staff.id} staff={staff} /> : null}
 
       {tab === "history" ? (
         <div className="space-y-2.5">

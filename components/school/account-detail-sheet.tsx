@@ -7,13 +7,13 @@ import {
   STAFF_STATUS_LABEL,
   accountById,
   activeDuties,
-  staffById,
   type AccessExplain,
   type DutyRecord,
 } from "@/lib/demo/staff"
 import { AccountStatusBadge, DutyLine, InfoNote, RoleBadge, periodText } from "./duty-bits"
 import { Check, ChevronRight, Monitor, ShieldAlert, X } from "lucide-react"
 import { useState } from "react"
+import { useStaffDutyContext } from "@/lib/school/staff-store"
 
 interface Props {
   accountId: string
@@ -24,13 +24,14 @@ interface Props {
 
 export function AccountDetailSheet({ accountId, endedDutyIds, onClose, onOpenDuty }: Props) {
   const { push } = useToast()
+  const { people } = useStaffDutyContext()
   const [tab, setTab] = useState("duties")
   const [rolesOpen, setRolesOpen] = useState(false)
   const [confirm, setConfirm] = useState<null | "disable" | "revoke" | "logout">(null)
 
   const acc = accountById(accountId)
   if (!acc) return null
-  const staff = acc.staffId ? staffById(acc.staffId) : undefined
+  const staff = acc.staffId ? people.find(person => person.id === acc.staffId) : undefined
   const duties = staff ? activeDuties(staff).filter((d) => !endedDutyIds.has(d.id)) : []
 
   return (

@@ -39,6 +39,7 @@ import { InviteRecordsPanel } from "./invite-records-panel"
 import { ListToolbar, type FilterGroup, type FilterState } from "./list-toolbar"
 import { StaffDetailSheet } from "./staff-detail-sheet"
 import { cn } from "@/lib/utils"
+import { useStaffDutyContext } from "@/lib/school/staff-store"
 
 const ACCOUNT_FILTER_GROUPS: FilterGroup[] = [
   {
@@ -74,6 +75,8 @@ type Drawer =
   | { kind: "invite"; presetPerson?: string }
 
 export function AccountsPanel() {
+  const { people: staffList } = useStaffDutyContext()
+  const liveStaffById = (id: string) => staffList.find(staff => staff.id === id)
   const [tab, setTab] = useState("accounts")
   const [stack, setStack] = useState<Drawer[]>([])
   const [endedDutyIds, setEndedDutyIds] = useState<Set<string>>(new Set())
@@ -117,7 +120,7 @@ export function AccountsPanel() {
           endedDutyIds={endedDutyIds}
           onClose={pop}
           onOpenDuty={(d, staffName) => {
-            const staff = STAFF.find((s) => s.name === staffName)
+            const staff = staffList.find(staff => staff.name === staffName)
             if (staff) pushD({ kind: "duty", staffId: staff.id, dutyId: d.id })
           }}
         />
@@ -125,13 +128,13 @@ export function AccountsPanel() {
 
       {top?.kind === "staff" ? (
         <StaffDetailSheet
-          staff={staffById(top.staffId)!}
+          staff={liveStaffById(top.staffId)!}
           endedDutyIds={endedDutyIds}
           onClose={pop}
           onOpenDuty={(d) => pushD({ kind: "duty", staffId: top.staffId, dutyId: d.id })}
           onArrange={() => pushD({ kind: "arrange", staffId: top.staffId, mode: "arrange" })}
           onOpenAccount={(id) => pushD({ kind: "account", accountId: id })}
-          onInvite={() => pushD({ kind: "invite", presetPerson: staffById(top.staffId)!.name })}
+          onInvite={() => pushD({ kind: "invite", presetPerson: liveStaffById(top.staffId)!.name })}
         />
       ) : null}
 
@@ -139,7 +142,7 @@ export function AccountsPanel() {
         <DutyArrangeSheet
           open
           mode={top.mode}
-          staff={top.staffId ? staffById(top.staffId) : null}
+          staff={top.staffId ? liveStaffById(top.staffId) : null}
           lockStaff={!!top.staffId}
           presetDuty={top.presetDuty}
           presetScope={top.presetScope}
@@ -150,7 +153,7 @@ export function AccountsPanel() {
 
       {top?.kind === "duty"
         ? (() => {
-            const staff = staffById(top.staffId)
+            const staff = liveStaffById(top.staffId)
             const d = staff?.duties.find((x) => x.id === top.dutyId)
             if (!staff || !d) return null
             const duty: DutyRecord = endedDutyIds.has(d.id) ? { ...d, status: "ended" } : d
@@ -229,7 +232,7 @@ function AccountsList({
             right={
               <Button onClick={onInvite}>
                 <KeyRound className="size-3.5" />
-                开通账号
+                ���通账号
               </Button>
             }
           />
