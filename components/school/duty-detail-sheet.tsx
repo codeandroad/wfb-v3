@@ -2,11 +2,12 @@
 
 import { Badge, Modal, Sheet, useToast } from "@/components/kit"
 import { Button } from "@/components/ui/button"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { DUTY_BY_KEY, WORK_MODE_LABEL, type DutyRecord } from "@/lib/demo/staff"
 import { AdvancedBasis, CanCannotBlock, DutyStatusBadge, periodText } from "./duty-bits"
 import { CircleAlert } from "lucide-react"
-import { useState } from "react"
-import { isResearchDuty, manageableResearchGroups } from "@/lib/school/duty-model"
+import { useId, useState } from "react"
+import { isResearchDuty, manageableResearchGroups, staffDutyConflicts } from "@/lib/school/duty-model"
 import { useStaffDutyContext } from "@/lib/school/staff-store"
 import { StaffDutyRevisionForm } from "./staff-duty-revision-form"
 
@@ -39,11 +40,18 @@ export function DutyDetailSheet({
   const shared = isResearchDuty(duty.type) ? state.assignments.find(item => item.id === duty.id) : undefined
   const canManage = !!shared && ready && !error && manageableResearchGroups(state, people, actor, shared.type).includes(shared.scopeRefs[0].id)
   const canEnd = !!shared && ready && !error && manageableResearchGroups(state, people, actor, shared.type, true).includes(shared.scopeRefs[0].id)
+  const actionReasonId = useId()
+  const ended = duty.status === "ended"
+  const conflicts = shared && !ended ? staffDutyConflicts(state, shared) : []
+  const permissionReason = !shared ? "" : !ready ? "正在核验职责权限，请稍候。" : error || (!canEnd ? ["research_manage", "research_view"].includes(shared.type)
+    ? "学校教研统筹／查看属于学校级授权，仅具有有效「学校管理」职责的人员可调整或结束。当前身份不能变更这类授权，请由学校管理人员办理。"
+    : "当前身份没有此教研组的职责安排权，请由有权的教研统筹或学校管理人员办理。" : "")
+  const endReason = permissionReason || (shared && duty.status === "pending" ? "职责尚未生效，不能办理结束；请由有权人员调整未来任期。" : shared && duty.end === actor.date ? `已登记 ${actor.date} 为最后有效日，无需再次结束；次日起停止本项访问，其他有效授权不受影响。` : "")
+  const adjustReason = permissionReason || (shared && !canManage ? "负责对象已停用，当前只能结束旧职责，不能调整或延长任期。" : shared && people.find(person => person.id === shared.staffId)?.status === "left" ? "离职人员仅可结束已有职责，不能调整或重新安排。" : "")
+  const actionNotice = endReason && adjustReason && endReason !== adjustReason ? `${endReason} ${adjustReason}` : endReason || adjustReason
 
   if (!open) return null
   if (shared && revision) return <Sheet open onClose={onClose} title={revision === "end" ? "结束职责" : "修订职责任期"} desc={`${staffName} · ${def.label} · ${duty.scopeLabel}`} width="max-w-lg"><StaffDutyRevisionForm key={`${shared.id}:${revision}`} duty={shared} mode={revision} onCancel={() => setRevision(null)} onDone={message => { push(message); onClose() }} /></Sheet>
-
-  const ended = duty.status === "ended"
 
   return (
     <>
@@ -56,15 +64,15 @@ export function DutyDetailSheet({
         footer={
           <div className="flex items-center justify-end gap-2">
             {ended ? (
-              <Button size="sm" variant="outline" onClick={onAdjust}>
+              <Button size="sm" variant="outline" disabled={!!shared && !!adjustReason} title={adjustReason || undefined} aria-describedby={adjustReason ? actionReasonId : undefined} onClick={onAdjust}>
                 重新安排
               </Button>
             ) : (
               <>
-                <Button size="sm" variant="ghost" disabled={!!shared && (!canEnd || duty.status === "pending" || duty.end === actor.date)} onClick={() => shared ? setRevision("end") : setConfirmEnd(true)}>
+                <Button size="sm" variant="ghost" disabled={!!shared && !!endReason} title={endReason || undefined} aria-describedby={endReason ? actionReasonId : undefined} onClick={() => shared ? setRevision("end") : setConfirmEnd(true)}>
                   结束职责
                 </Button>
-                <Button size="sm" variant="outline" disabled={!!shared && (!canManage || people.find(person => person.id === shared.staffId)?.status === "left")} onClick={() => shared ? setRevision("revise") : onAdjust?.()}>
+                <Button size="sm" variant="outline" disabled={!!shared && !!adjustReason} title={adjustReason || undefined} aria-describedby={adjustReason ? actionReasonId : undefined} onClick={() => shared ? setRevision("revise") : onAdjust?.()}>
                   调整职责
                 </Button>
               </>
@@ -82,7 +90,9 @@ export function DutyDetailSheet({
           {duty.scopeSub ? <p className="text-[13px] text-muted-foreground">范围补充：{duty.scopeSub}</p> : null}
 
           <CanCannotBlock duty={duty} />
-          {shared && <p className="text-sm leading-relaxed text-muted-foreground">来自教职工管理的同一份职责记录，按业务日期 {actor.date} 核验；结束日期含当日。{duty.end === actor.date ? "今日为最后有效日，次日起停止本项访问。" : "未生效与已结束职责不授予教研工作区访问。"}{canEnd && !canManage && "负责对象已停用；当前只能结束旧职责，不可新增或延长任期。"}{!canEnd && "当前身份没有此负责对象的职责安排权。"}</p>}
+          {shared && <p className="text-sm leading-relaxed text-muted-foreground">来自教职工管理的同一份职责记录，按业务日期 {actor.date} 核验；结束日期含当日。{duty.end === actor.date ? "今日为最后有效日，次日起停止本项访问。" : "未生效与已结束职责不授予教研工作区访问。"}</p>}
+          {shared && actionNotice && <Alert role="note" id={actionReasonId}><AlertTitle>职责变更限制</AlertTitle><AlertDescription>{actionNotice}</AlertDescription></Alert>}
+          {conflicts.length > 0 && <Alert role="note"><AlertTitle>此职责与旧记录存在任期重叠</AlertTitle><AlertDescription><p>原记录及历史均已保留。有权人员可以结束本项职责；结束只影响所选记录，不会一并撤销其他授权。</p><ul className="flex list-inside list-disc flex-col gap-1">{conflicts.map(item => <li key={item.id}>{people.find(person => person.id === item.staffId)?.name || item.staffId} · {DUTY_BY_KEY[item.type].label} · {periodText(item)}</li>)}</ul></AlertDescription></Alert>}
 
           {currentUseLimit ? (
             <div className="flex items-start gap-2 rounded-lg border border-[#e6d4a8] bg-[#fbf7ee] p-3 text-[12.5px] text-[#7a5514]">

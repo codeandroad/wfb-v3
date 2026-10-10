@@ -3,6 +3,9 @@
 import { Badge, LinkButton, Sheet, Tabs, useToast } from "@/components/kit"
 import { homepageEligible } from "@/lib/profile/store"
 import { Button } from "@/components/ui/button"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { staffDutyConflicts } from "@/lib/school/duty-model"
+import { useStaffDuties } from "@/lib/school/duty-store"
 import {
   DUTY_BY_KEY,
   STAFF_STATUS_LABEL,
@@ -51,6 +54,12 @@ export function StaffDetailSheet({ staff, endedDutyIds, onClose, onOpenDuty, onA
   )
   const currentDuties = duties.filter((d) => d.status !== "ended")
   const endedDuties = duties.filter((d) => d.status === "ended")
+  const dutyState = useStaffDuties()
+  const overlappingDuties = currentDuties.filter(duty => {
+    const shared = dutyState.assignments.find(item => item.id === duty.id)
+    return shared && staffDutyConflicts(dutyState, shared).length > 0
+  })
+  const overlappingLabels = [...new Set(overlappingDuties.map(duty => `${DUTY_BY_KEY[duty.type].label} · ${duty.scopeLabel}`))]
 
   return (
     <Sheet
@@ -259,8 +268,9 @@ export function StaffDetailSheet({ staff, endedDutyIds, onClose, onOpenDuty, onA
       ) : null}
 
       {tab === "duties" ? (
-        <div className="space-y-3">
+        <div className="flex flex-col gap-3">
           <InfoNote>教研工作也在此统一安排：职责模板决定组长或参与教师的工作边界，负责对象选择具体教研组，生效时间决定任期。教研组不是二级人事部门，也不从任课自动归组。</InfoNote>
+          {overlappingLabels.length > 0 && <Alert role="note"><AlertTitle>存在重叠的旧职责记录</AlertTitle><AlertDescription>涉及：{overlappingLabels.join("；")}。原任期及历史已保留，请查看详情，由有权人员结束多余记录；旧记录重叠不会再阻止结束操作，不会一并撤销其他有效授权。</AlertDescription></Alert>}
           {staff.qualificationNote ? <InfoNote>{staff.qualificationNote}</InfoNote> : null}
 
           {currentDuties.length ? (
