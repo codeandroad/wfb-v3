@@ -1,11 +1,10 @@
 import type { CatalogCourse, CatalogSubject, CatalogUnit } from "@/lib/demo/school"
+import { dutyEffective, type DutyActor, type StaffDutyAssignment } from "@/lib/school/duty-model"
+import { RESEARCH_GROUPS, type ResearchGroup } from "@/lib/school/responsibility-scopes"
 
-export type Actor = { staff: string; date: string; enabled: boolean }
-export type Group = { id: string; name: string; subject: string }
-export const groups: Group[] = [{ id: "math", name: "数学组", subject: "S001" }, { id: "physics", name: "物理组", subject: "S002" }]
-export const appointmentRoles = ["组长", "成员", "维护者"] as const
-export type Appointment = { id: string; staff: string; group: string; role: (typeof appointmentRoles)[number]; start: string; end: string | null }
-export type SchoolGrant = { staff: string; group: string; mode: "查看" | "统筹"; start: string; end: string | null }
+export type Actor = DutyActor
+export type Group = ResearchGroup
+export const groups = RESEARCH_GROUPS
 export type Access = { audience: "owner" | "group" | "school" | "specified"; groups: string[]; staff: string[] }
 export type SourceRef = { documentId: string; version: number; itemId: string; title: string; locator: string; retainedBy?: string; retainText: boolean }
 export type WeekAllocation = { week: number; minutes: number }
@@ -58,8 +57,8 @@ export type Criterion = {
 }
 export type GroupScheduleSlot = { id: string; group: string; weekday: number; periodId: string; title: string; room: string | null }
 export type ResearchState = {
-  schema: 2; documents: Document[]; revisions: Record<string, Document>; drafts: Record<string, DraftDocument>;
-  appointments: Appointment[]; grants: SchoolGrant[]; schoolTasks: SchoolTask[]; tasks: Task[]; activities: Activity[];
+  schema: 3; documents: Document[]; revisions: Record<string, Document>; drafts: Record<string, DraftDocument>;
+  staffDuties: StaffDutyAssignment[]; groups: ResearchGroup[]; schoolTasks: SchoolTask[]; tasks: Task[]; activities: Activity[];
   discussions: Discussion[]; notices: Notice[]; issues: SupportIssue[]; criteria: Criterion[];
   groupSchedules?: GroupScheduleSlot[];
   criterionRevisions?: Record<string, Criterion>; forms: Record<string, unknown>;
@@ -72,41 +71,28 @@ export type TeachingContent = { id: string; title: string; text: string; source:
 export type Adoption = { id: string; documentId: string; version: number; taskId: string; itemIds: string[]; adoptedAt: string; items: Item[]; unitIds: string[] }
 
 export function activeAt(start: string, end: string | null, date: string) { return start <= date && (!end || end >= date) }
-export function appointmentDateValid(value: string) {
-  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value) || value.startsWith("0000")) return false
-  const date = new Date(`${value}T00:00:00Z`)
-  return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value
-}
-export function sameAppointment(a: Appointment, b: Appointment) {
-  return a.id === b.id && a.staff === b.staff && a.group === b.group && a.role === b.role && a.start === b.start && a.end === b.end
-}
-export function appointmentValidationError(state: ResearchState, appointment: Appointment) {
-  const a = appointment
-  if (typeof a.id !== "string" || !a.id.trim() || typeof a.staff !== "string" || !a.staff.trim() || !groups.some(group => group.id === a.group)) return "请选择有效人员与科组。"
-  if (!appointmentRoles.includes(a.role)) return "请选择有效的科组任命角色。"
-  if (!appointmentDateValid(a.start) || a.end !== null && (!appointmentDateValid(a.end) || a.end < a.start)) return "任期日期无效：请填写真实日期，结束日期不得早于开始日期。"
-  const previous = state.appointments.find(item => item.id === a.id)
-  if (previous && (previous.staff !== a.staff || previous.group !== a.group)) return "任命对象不可通过修订变更；请另行新增任命。"
-  if (a.role === "组长" && state.appointments.some(item => item.id !== a.id && item.group === a.group && item.role === "组长" && (!item.end || item.end >= a.start) && (!a.end || a.end >= item.start))) return "该任期与已有组长重叠，请先结束原任命。结束日期含当日，新任期须从次日或之后开始。"
-  return ""
+export function groupDuties(state: ResearchState, group: string, date: string) {
+  if (!state.groups.some(item => item.id === group && item.active)) return []
+  return state.staffDuties.filter(duty => ["research_lead", "research_participate"].includes(duty.type) && duty.scopeRefs.some(ref => ref.id === group) && dutyEffective(duty, date))
 }
 export function membership(state: ResearchState, staff: string, group: string, date: string) {
-  return state.appointments.filter(a => a.staff === staff && a.group === group && activeAt(a.start, a.end, date)).sort((a,b) => (a.role === "组长" ? -1 : b.role === "组长" ? 1 : a.role === "维护者" ? -1 : 1))[0]
+  return groupDuties(state, group, date).filter(duty => duty.staffId === staff).sort((a, b) => Number(b.type === "research_lead") - Number(a.type === "research_lead"))[0]
 }
 export function schoolScopes(state: ResearchState, actor: Actor, manage = false) {
-  return actor.enabled ? state.grants.filter(g => g.staff === actor.staff && activeAt(g.start, g.end, actor.date) && (!manage || g.mode === "统筹")).map(g => g.group) : []
+  return actor.enabled ? [...new Set(state.staffDuties.filter(duty => duty.staffId === actor.staff && (duty.type === "research_manage" || !manage && duty.type === "research_view") && dutyEffective(duty, actor.date)).flatMap(duty => duty.scopeRefs.map(ref => ref.id)))].filter(id => state.groups.some(group => group.id === id && group.active)) : []
 }
 export function canViewGroup(state: ResearchState, actor: Actor, group: string) { return actor.enabled && (!!membership(state, actor.staff, group, actor.date) || schoolScopes(state, actor).includes(group)) }
-export function canEditGroup(state: ResearchState, actor: Actor, group: string) { return actor.enabled && !!membership(state, actor.staff, group, actor.date) }
-export function canLeadGroup(state: ResearchState, actor: Actor, group: string) { return actor.enabled && membership(state, actor.staff, group, actor.date)?.role === "组长" }
+export function canParticipateGroup(state: ResearchState, actor: Actor, group: string) { return actor.enabled && !!membership(state, actor.staff, group, actor.date) }
+export function canLeadGroup(state: ResearchState, actor: Actor, group: string) { return actor.enabled && membership(state, actor.staff, group, actor.date)?.type === "research_lead" }
+export function canEditGroup(state: ResearchState, actor: Actor, group: string) { return canLeadGroup(state, actor, group) }
 export function canUseAccess(state: ResearchState, actor: Actor, owner: string, access: Access, management = true) {
   if (!actor.enabled) return false
   if (owner === actor.staff) return true
-  const ownedGroup = groups.some(g => g.id === owner)
+  const ownedGroup = state.groups.some(g => g.id === owner)
   if (access.audience === "owner") return false
   if (access.audience === "school") return true
-  if (access.audience === "specified") return access.staff.includes(actor.staff) || access.groups.some(g => canEditGroup(state, actor, g))
-  return ownedGroup && (management ? canViewGroup(state, actor, owner) : canEditGroup(state, actor, owner))
+  if (access.audience === "specified") return access.staff.includes(actor.staff) || access.groups.some(g => canParticipateGroup(state, actor, g))
+  return ownedGroup && (management ? canViewGroup(state, actor, owner) : canParticipateGroup(state, actor, owner))
 }
 export function canReadDocument(state: ResearchState, actor: Actor, doc: Document) {
   return canUseAccess(state, actor, doc.owner, doc.share, !doc.restricted)
@@ -164,12 +150,12 @@ export function coursesFor(catalog: CatalogState, group: string) { return catalo
 export function scopeValid(doc: Document, catalog: CatalogState) {
   return catalog.courses.some(c => c.code === doc.course) && (doc.scope === "whole" ? doc.unitIds.length === 0 : doc.unitIds.length > 0 && doc.unitIds.every(id => catalog.units.some(u => u.code === id && u.courseCode === doc.course)))
 }
-export function emptyAccess(owner: string): Access { return { audience: groups.some(g => g.id === owner) ? "group" : "owner", staff: [], groups: [] } }
+export function emptyAccess(owner: string, directory: Group[] = groups): Access { return { audience: directory.some(g => g.id === owner) ? "group" : "owner", staff: [], groups: [] } }
 export function emptyItem(id: string): Item {
   return { id, parentId: null, title: "新内容项目", body: "", notes: "", original: "", translation: "", supplement: "", origin: "教学补充", source: "", references: [], unitIds: [], minutes: null, fixed: false, weeks: [], section: "", printedPage: "", filePage: "", question: "", subquestion: "", stem: "", maxScore: null, scoring: "", answer: null }
 }
-export function emptyDocument(id: string, kind: Document["kind"], title: string, owner: string, author: string, course: string, period: number | null): Document {
-  return { id, kind, title, owner, author, course, version: 1, source: "", sourceVersion: "", language: "中文", years: "", objectives: "", prerequisites: "", notes: "", scope: "whole", unitIds: [], share: emptyAccess(owner), copyPolicy: "retain", restricted: false, archived: false, budget: null, reserve: 0, period, items: [], assessments: [], paths: [], resourceType: kind === "练习组合" ? "练习组合" : "教材", edition: "", publisher: "", examYear: "", session: "", paperCode: "", files: [] }
+export function emptyDocument(id: string, kind: Document["kind"], title: string, owner: string, author: string, course: string, period: number | null, directory: Group[] = groups): Document {
+  return { id, kind, title, owner, author, course, version: 1, source: "", sourceVersion: "", language: "中文", years: "", objectives: "", prerequisites: "", notes: "", scope: "whole", unitIds: [], share: emptyAccess(owner, directory), copyPolicy: "retain", restricted: false, archived: false, budget: null, reserve: 0, period, items: [], assessments: [], paths: [], resourceType: kind === "练习组合" ? "练习组合" : "教材", edition: "", publisher: "", examYear: "", session: "", paperCode: "", files: [] }
 }
 export function leafItems(doc: Pick<Document,"items">) { const parents = new Set(doc.items.map(i => i.parentId)); return doc.items.filter(i => !parents.has(i.id)) }
 export function totals(doc: Document) {

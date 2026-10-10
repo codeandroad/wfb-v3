@@ -11,7 +11,7 @@ import { WeekGrid } from "@/components/timetable/week-grid"
 import { useTimetable } from "@/lib/timetable/store"
 import { addDays, fmtDate, PERIODS, WEEKDAYS, weekStartOf, type ProjectedEntry } from "@/lib/timetable/data"
 import { useResearchContext } from "@/lib/research/context"
-import { canLeadGroup, groups, type GroupScheduleSlot } from "@/lib/research/model"
+import { canLeadGroup, type GroupScheduleSlot } from "@/lib/research/model"
 import { Panel, RField, RSelect } from "./primitives"
 import { ScheduleDays } from "./schedule-days"
 
@@ -25,7 +25,7 @@ export function GroupSchedule({ group }: { group: string }) {
   const [message, setMessage] = useState("")
   const leader = canLeadGroup(state, actor, group)
   const canEdit = leader && editing
-  const groupName = groups.find(g => g.id === group)?.name ?? "科组"
+  const groupName = state.groups.find(g => g.id === group)?.name ?? "教研组"
   const slots = (state.groupSchedules ?? []).filter(s => s.group === group)
   const entries: ProjectedEntry[] = slots.map(s => ({ key: s.id, weekday: s.weekday, periodId: s.periodId, className: s.title, subject: groupName.replace("组", ""), room: s.room, kind: "activity", date: addDays(week, s.weekday - 1), teacherId: `research:${group}` }))
   function save(value: GroupScheduleSlot) {

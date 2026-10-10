@@ -2,14 +2,21 @@
 
 import { Badge, Field, Input, Sheet } from "@/components/kit"
 import { Button } from "@/components/ui/button"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { FieldGroup, FieldLegend, FieldSet } from "@/components/ui/field"
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
+import { applyStaffDutyCommand, createResearchDuty, dutyDateValid, isResearchDuty, manageableResearchGroups } from "@/lib/school/duty-model"
+import { useStaffDutyContext } from "@/lib/school/staff-store"
+import { ResponsibilityDirectorySheet } from "./responsibility-directory-sheet"
 import { cn } from "@/lib/utils"
 import {
   DEMO_TODAY,
   DUTIES_BY_ROLE,
   DUTY_BY_KEY,
   SCOPE_CANDIDATES,
-  STAFF,
+  researchScopeConfig,
   SYSTEM_ROLE_LABEL,
+  type ScopeConfig,
   type DutyKey,
   type ScopeCandidate,
   type StaffProfile,
@@ -70,20 +77,22 @@ export function DutyArrangeSheet(props: ArrangeProps) {
       ? ["course_material", "course_structure"]
       : (Object.keys(DUTY_BY_KEY) as DutyKey[])
 
-  const initialDuty = presetDuty ?? allowedKeys[0]
-  const [staffId, setStaffId] = useState(staff?.id ?? "")
+  const dutyContext = useStaffDutyContext()
+  const initialDuty = presetDuty ?? (allowedKeys.includes("research_participate") ? "research_participate" : allowedKeys[0])
+  const [staffId, setStaffId] = useState(staff?.id ?? dutyContext.people.find(person => person.name === presetPerson)?.id ?? "")
+  const [directoryOpen, setDirectoryOpen] = useState(false)
   // 角色下的职责为多选：可同时勾选多项，每项各自维护负责范围
   const [dutyKeys, setDutyKeys] = useState<DutyKey[]>([initialDuty])
   const [scopeByDuty, setScopeByDuty] = useState<Record<string, ScopeCandidate[]>>(() => {
     if (!presetScope) return {}
-    const cfg = SCOPE_CANDIDATES[initialDuty]
+    const cfg = isResearchDuty(initialDuty) ? researchScopeConfig(dutyContext.state.groups) : SCOPE_CANDIDATES[initialDuty]
     if (cfg.mode === "fixed") return {}
     const hit = cfg.items.find((c) => c.id === presetScope && !c.disabled)
     return hit ? { [initialDuty]: [hit] } : {}
   })
   const [queryByDuty, setQueryByDuty] = useState<Record<string, string>>({})
   const [guideOpen, setGuideOpen] = useState<Record<string, boolean>>({})
-  const [start, setStart] = useState(() => (DEMO_TODAY > defaultTenureFrom() ? DEMO_TODAY : defaultTenureFrom()))
+  const [start, setStart] = useState(() => isResearchDuty(initialDuty) ? dutyContext.actor.date : DEMO_TODAY > defaultTenureFrom() ? DEMO_TODAY : defaultTenureFrom())
   const [hasEnd, setHasEnd] = useState(false)
   const [end, setEnd] = useState("")
   const [done, setDone] = useState(false)
@@ -98,9 +107,9 @@ export function DutyArrangeSheet(props: ArrangeProps) {
   const [commitError, setCommitError] = useState<string | null>(null)
   const [token] = useState(() => `tk-${Math.random().toString(36).slice(2)}`)
 
-  const selectedStaff = useMemo(() => STAFF.find((s) => s.id === staffId) ?? staff ?? null, [staffId, staff])
+  const selectedStaff = useMemo(() => dutyContext.people.find(person => person.id === staffId) ?? null, [staffId, dutyContext.people])
   const personName = selectedStaff?.name ?? presetPerson ?? null
-  const accountNotOpened = selectedStaff ? selectedStaff.accountStatus === "none" : !!presetPerson
+  const accountNotOpened = selectedStaff ? selectedStaff.accountStatus !== "enabled" : !!presetPerson
   const teacherId = selectedStaff ? teacherIdForStaff(selectedStaff.id) : null
   const period = { from: start, to: hasEnd ? end || null : null }
   const targetsByKey = useMemo(() => new Map(teachingTargets(teaching).map((t) => [t.key, t])), [teaching])
@@ -113,24 +122,40 @@ export function DutyArrangeSheet(props: ArrangeProps) {
     })
   }
 
+  function scopeConfig(k: DutyKey) {
+    if (!isResearchDuty(k)) return SCOPE_CANDIDATES[k]
+    const cfg = researchScopeConfig(dutyContext.state.groups)
+    const allowed = manageableResearchGroups(dutyContext.state, dutyContext.people, dutyContext.actor, k)
+    return { ...cfg, items: cfg.items.map(item => ({ ...item, disabled: item.disabled || !allowed.includes(item.id), disabledReason: item.disabledReason ?? (!allowed.includes(item.id) ? "不在当前身份的职责安排范围内" : undefined) })) }
+  }
   function hasScopeFor(k: DutyKey) {
     if (isTeachDuty(k)) return !!teacherId && canAppoint && (teachSel[k]?.length ?? 0) > 0 && !teachInvalid(k)
-    const cfg = SCOPE_CANDIDATES[k]
+    const cfg = scopeConfig(k)
     if (cfg.mode === "fixed") return true
-    return (scopeByDuty[k]?.length ?? 0) > 0
+    const selected = effectiveScope(k)
+    if (isResearchDuty(k)) return dutyContext.ready && !dutyContext.error && !!selectedStaff && selectedStaff.status !== "left" && selectedStaff.systemRoles.includes(DUTY_BY_KEY[k].role) && selected.length > 0 && selected.every(item => !item.disabled)
+    return selected.length > 0
   }
   function effectiveScope(k: DutyKey) {
-    const cfg = SCOPE_CANDIDATES[k]
-    return cfg.mode === "fixed" ? cfg.items : (scopeByDuty[k] ?? [])
+    const cfg = scopeConfig(k)
+    return cfg.mode === "fixed" ? cfg.items : (scopeByDuty[k] ?? []).map(item => cfg.items.find(candidate => candidate.id === item.id)).filter((item): item is ScopeCandidate => !!item)
   }
 
+  const researchSelected = dutyKeys.some(isResearchDuty)
   const anyPrimaryConflict = dutyKeys.includes("head_primary") && !!existingPrimaryHead
   const allHaveScope = dutyKeys.length > 0 && dutyKeys.every(hasScopeFor)
-  const canConfirm = !!personName && allHaveScope && !anyPrimaryConflict
+  const datesValid = dutyDateValid(start) && (!hasEnd || dutyDateValid(end) && end >= start)
+  const researchAssignments = dutyKeys.filter(isResearchDuty).flatMap(key => effectiveScope(key).map(scope => createResearchDuty(`${token}:${key}:${scope.id}`, staffId, key, scope.id, start, hasEnd ? end : undefined, dutyContext.state.groups)))
+  let researchValidation = ""
+  if (researchSelected && allHaveScope && datesValid) {
+    try { applyStaffDutyCommand(dutyContext.state, dutyContext.actor, { type: "arrange", assignments: researchAssignments }, dutyContext.people) }
+    catch (error) { researchValidation = error instanceof Error ? error.message : "请核对职责任期与负责对象。" }
+  }
+  const canConfirm = !!personName && allHaveScope && datesValid && !anyPrimaryConflict && !researchValidation
 
   function toggleDuty(k: DutyKey) {
     const removing = dutyKeys.includes(k)
-    setDutyKeys((prev) => (removing ? prev.filter((x) => x !== k) : [...prev, k]))
+    setDutyKeys(prev => removing ? prev.filter(key => key !== k) : [...prev.filter(key => isResearchDuty(key) === isResearchDuty(k)), k])
     if (removing) {
       setScopeByDuty((s) => {
         const n = { ...s }
@@ -146,8 +171,8 @@ export function DutyArrangeSheet(props: ArrangeProps) {
   }
 
   function toggleScope(k: DutyKey, c: ScopeCandidate) {
-    if (c.disabled) return
-    const cfg = SCOPE_CANDIDATES[k]
+    if (c.disabled && !(scopeByDuty[k] ?? []).some(item => item.id === c.id)) return
+    const cfg = scopeConfig(k)
     setScopeByDuty((prev) => {
       const cur = prev[k] ?? []
       const exists = cur.some((x) => x.id === c.id)
@@ -168,6 +193,13 @@ export function DutyArrangeSheet(props: ArrangeProps) {
 
   function confirm() {
     setCommitError(null)
+    if (!canConfirm) return
+    if (researchSelected) {
+      const result = dutyContext.command({ type: "arrange", assignments: researchAssignments })
+      if (!result.ok) return setCommitError(result.error)
+      setDone(true)
+      return
+    }
     const teachKeys = dutyKeys.filter(isTeachDuty)
     if (teachKeys.length && teacherId) {
       const assigns = teachKeys.flatMap((k) =>
@@ -209,16 +241,17 @@ export function DutyArrangeSheet(props: ArrangeProps) {
   }
 
   if (!open) return null
+  if (directoryOpen) return <ResponsibilityDirectorySheet onClose={() => setDirectoryOpen(false)} />
 
   return (
     <Sheet
       open={open}
       onClose={close}
-      title={done ? "安排结果（示例状态）" : title}
+      title={done ? researchSelected ? "职责安排结果" : "安排结果（示例状态）" : title}
       desc={
         done
-          ? "以下为预设示例结果，未写入真实系统，也不联动其他页面。"
-          : "填写人员、角色下的职责（可多选）、各自负责范围与生效时间，每个已选职责单独预览工作安排与系统访问。"
+          ? researchSelected ? "已保存本机演示职责；教职工详情与我的教研使用同一份任期记录，尚未接入正式服务端。" : "以下为预设示例结果，未写入真实系统。"
+          : "选择人员、职责模板、各自负责对象与生效时间。教研组是工作对象，不是人事二级部门。"
       }
       width="max-w-xl"
       footer={
@@ -276,6 +309,7 @@ export function DutyArrangeSheet(props: ArrangeProps) {
           start={start}
           end={hasEnd ? end : undefined}
           accountNotOpened={accountNotOpened}
+          persisted={researchSelected}
         />
       ) : (
         <div className="space-y-5">
@@ -294,7 +328,7 @@ export function DutyArrangeSheet(props: ArrangeProps) {
                   className="w-full rounded-lg border border-input bg-card px-3 py-2 text-[14px] text-foreground shadow-sm outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/25"
                 >
                   <option value="">选择人员…</option>
-                  {STAFF.filter((s) => s.status !== "left").map((s) => (
+                  {dutyContext.people.filter(person => person.status !== "left").map((s) => (
                     <option key={s.id} value={s.id}>
                       {s.name}（{s.employeeNo}）
                     </option>
@@ -310,49 +344,26 @@ export function DutyArrangeSheet(props: ArrangeProps) {
           </Section>
 
           {/* B 角色（下辖职责可多选） */}
-          <Section step="角色">
-            <p className="mb-2 text-xs text-muted-foreground">
-              按角色分组；同一角色下的职责并不互斥，可同时勾选多项。每勾选一项，下方会单独出现它的负责范围与预览。
-            </p>
-            <div className="space-y-2">
-              {DUTIES_BY_ROLE.filter((g) => g.duties.some((d) => allowedKeys.includes(d.key))).map((g) => (
-                <div key={g.role}>
-                  <p className="mb-1.5 text-xs font-medium text-muted-foreground">{SYSTEM_ROLE_LABEL[g.role]}</p>
-                  <div className="grid gap-1.5 sm:grid-cols-2">
-                    {g.duties
-                      .filter((d) => allowedKeys.includes(d.key))
-                      .map((d) => {
-                        const active = dutyKeys.includes(d.key)
-                        return (
-                          <button
-                            key={d.key}
-                            onClick={() => toggleDuty(d.key)}
-                            aria-pressed={active}
-                            className={cn(
-                              "flex items-start gap-2 rounded-lg border p-2.5 text-left transition-colors",
-                              active ? "border-primary bg-accent/50" : "border-border hover:border-primary/40",
-                            )}
-                          >
-                            <span
-                              className={cn(
-                                "mt-0.5 flex size-4 shrink-0 items-center justify-center rounded border",
-                                active ? "border-primary bg-primary text-primary-foreground" : "border-input bg-card",
-                              )}
-                              aria-hidden
-                            >
-                              {active ? <Check className="size-3" /> : null}
-                            </span>
-                            <span className="min-w-0">
-                              <span className="text-[13px] font-medium">{d.label}</span>
-                              <span className="mt-0.5 block text-xs text-muted-foreground">{d.blurb}</span>
-                            </span>
-                          </button>
-                        )
-                      })}
-                  </div>
-                </div>
-              ))}
-            </div>
+          <Section step="职责模板">
+            <p className="mb-2 text-sm leading-relaxed text-muted-foreground">模板决定工作边界；负责对象决定在哪个教研组或具体范围内履职。教研职责可多选、可跨组，与任课等其他职责分次确认，避免跨业务部分保存。</p>
+            <FieldGroup>
+              {DUTIES_BY_ROLE.filter(group => group.duties.some(duty => allowedKeys.includes(duty.key))).map(group => {
+                const keys = group.duties.filter(duty => allowedKeys.includes(duty.key)).map(duty => duty.key)
+                const selected = dutyKeys.filter(key => keys.includes(key))
+                return <FieldSet key={group.role}>
+                  <FieldLegend variant="label">{SYSTEM_ROLE_LABEL[group.role]}资格对应的职责</FieldLegend>
+                  <ToggleGroup multiple variant="outline" aria-label={`${SYSTEM_ROLE_LABEL[group.role]}职责模板`} value={selected} className="grid w-full gap-2 sm:grid-cols-2" onValueChange={values => {
+                    const key = values.find(value => !selected.includes(value as DutyKey)) ?? selected.find(value => !values.includes(value))
+                    if (key) toggleDuty(key as DutyKey)
+                  }}>
+                    {group.duties.filter(duty => allowedKeys.includes(duty.key)).map(duty => <ToggleGroupItem key={duty.key} value={duty.key} aria-label={duty.label} data-testid={`duty-template-${duty.key}`} className="h-auto min-w-0 items-start justify-start whitespace-normal">
+                      <span className="flex min-w-0 flex-col gap-1 text-left"><span>{duty.label}</span><span className="text-sm leading-relaxed text-muted-foreground">{duty.blurb}</span></span>
+                    </ToggleGroupItem>)}
+                  </ToggleGroup>
+                </FieldSet>
+              })}
+            </FieldGroup>
+            <Button type="button" size="sm" variant="ghost" onClick={() => setDirectoryOpen(true)}>查看／维护教研负责对象目录</Button>
             {dutyKeys.length === 0 ? (
               <p className="mt-2 text-xs text-[#a5561e]">请至少勾选一项职责。</p>
             ) : (
@@ -381,6 +392,9 @@ export function DutyArrangeSheet(props: ArrangeProps) {
             </div>
           </Section>
 
+          {!datesValid && <Alert variant="destructive"><AlertTitle>生效时间无效</AlertTitle><AlertDescription>请填写真实开始日期；指定结束日期时必须填写，且不得早于开始日期。</AlertDescription></Alert>}
+          {researchSelected && (dutyContext.error || researchValidation) && <Alert variant="destructive"><AlertTitle>职责暂不能安排</AlertTitle><AlertDescription>{dutyContext.error || researchValidation}</AlertDescription></Alert>}
+          {researchSelected && selectedStaff && !dutyKeys.filter(isResearchDuty).every(key => selectedStaff.systemRoles.includes(DUTY_BY_KEY[key].role)) && <Alert><AlertTitle>所需任职资格尚未具备</AlertTitle><AlertDescription>请先由有权人员核验资格；本次不会自动补授系统角色或开通账号。</AlertDescription></Alert>}
           {/* D 每个已选职责：负责范围 + 预览 */}
           <Section step="职责明细">
             {dutyKeys.length === 0 ? (
@@ -420,7 +434,8 @@ export function DutyArrangeSheet(props: ArrangeProps) {
                   <DutyDetailCard
                     key={k}
                     dutyKey={k}
-                    selected={scopeByDuty[k] ?? []}
+                    scopeConfig={scopeConfig(k)}
+                    selected={effectiveScope(k)}
                     query={queryByDuty[k] ?? ""}
                     onQuery={(v) => setQueryByDuty((s) => ({ ...s, [k]: v }))}
                     onToggleScope={(c) => toggleScope(k, c)}
@@ -455,6 +470,7 @@ function Section({ step, children }: { step: string; children: React.ReactNode }
 
 function DutyDetailCard({
   dutyKey,
+  scopeConfig,
   selected,
   query,
   onQuery,
@@ -469,6 +485,7 @@ function DutyDetailCard({
   end,
 }: {
   dutyKey: DutyKey
+  scopeConfig: ScopeConfig
   selected: ScopeCandidate[]
   query: string
   onQuery: (v: string) => void
@@ -483,7 +500,7 @@ function DutyDetailCard({
   end?: string
 }) {
   const def = DUTY_BY_KEY[dutyKey]
-  const scopeCfg = SCOPE_CANDIDATES[dutyKey]
+  const scopeCfg = scopeConfig
   const isFixed = scopeCfg.mode === "fixed"
   const effectiveSelected = isFixed ? scopeCfg.items : selected
   const scopeText = effectiveSelected.map((c) => c.label).join("、")
@@ -525,7 +542,7 @@ function DutyDetailCard({
 
       {/* 负责范围 */}
       <div className="mt-3">
-        <p className="mb-1.5 text-xs font-semibold text-foreground">负责范围</p>
+        <p className="mb-1.5 text-sm font-semibold text-foreground">{isResearchDuty(dutyKey) ? "负责对象" : "负责范围"}</p>
         {isFixed ? (
           <div className="rounded-lg border border-border bg-muted/40 p-3">
             <div className="flex items-center gap-2 text-[13px] font-medium text-foreground">
@@ -585,6 +602,8 @@ function DutyDetailCard({
                       <li key={c.id}>
                         <button
                           onClick={() => onToggleScope(c)}
+                          aria-pressed={picked}
+                          aria-label={`${def.label} · ${c.label}`}
                           disabled={c.disabled}
                           className={cn(
                             "flex w-full items-start justify-between gap-3 px-3 py-2.5 text-left transition-colors",
@@ -647,6 +666,7 @@ function DutyDetailCard({
           accountNotOpened={accountNotOpened}
           hasScope={hasScope}
           emptyHint={scopeCfg.emptyHint}
+          strictQualification={isResearchDuty(dutyKey)}
         />
       </div>
     </div>
@@ -699,6 +719,7 @@ function PreviewBlock({
   accountNotOpened,
   hasScope,
   emptyHint,
+  strictQualification = false,
 }: {
   staffName?: string | null
   dutyLabel: string
@@ -712,6 +733,7 @@ function PreviewBlock({
   accountNotOpened: boolean
   hasScope: boolean
   emptyHint: string
+  strictQualification?: boolean
 }) {
   return (
     <div className="space-y-3 rounded-xl border border-border bg-muted/30 p-4">
@@ -736,7 +758,7 @@ function PreviewBlock({
           <div className="rounded-lg border border-[#bcdcc8] bg-[#f3f9f5] p-3">
             <p className="text-[12.5px] font-semibold text-[#256a49]">工作安排</p>
             <p className="mt-1 text-[12.5px] text-foreground">
-              登记本项任命；{needsQualification ? `并补充 ${role}资格（仅本项所需，不授予其他角色或全校权限）。` : "所需资格已具备。"}
+              登记本项职责；{needsQualification ? strictQualification ? `缺少 ${role}资格，不能提交；不会自动补授资格。` : `并补充 ${role}资格（仅本项所需，不授予其他角色或全校权限）。` : "所需资格已具备。"}
             </p>
           </div>
 
@@ -795,18 +817,20 @@ function ResultView({
   start,
   end,
   accountNotOpened,
+  persisted = false,
 }: {
   staffName: string
   results: { key: string; dutyLabel: string; role: string; scope: string; needsQualification: boolean }[]
   start: string
   end?: string
   accountNotOpened: boolean
+  persisted?: boolean
 }) {
   return (
     <div className="space-y-4">
       <div className="rounded-xl border border-[#bcdcc8] bg-[#f3f9f5] p-4">
         <Badge tone={accountNotOpened ? "warning" : "success"}>
-          {accountNotOpened ? "任命已登记 · 访问待开通（示例）" : "任命已登记 · 访问可用（示例）"}
+          {persisted ? "职责已保存 · 按任期与账号状态核验访问" : accountNotOpened ? "任命已登记 · 访问待开通（示例）" : "任命已登记 · 访问可用（示例）"}
         </Badge>
         <p className="mt-2 text-[14px] font-semibold">{staffName}</p>
         <p className="mt-1 text-[13px] text-muted-foreground">
@@ -842,7 +866,7 @@ function ResultView({
       </div>
 
       <p className="text-xs text-muted-foreground">
-        这是预设示例结果，不发送请求、不建立实际来源，也不更新其他页面的人数或统计。无账号任命为目标样态，当前后端仍需完善。
+        {persisted ? "已保存到本机演示的统一职责记录，教职工职责与我的教研即时联动；每个负责对象单独保留任期。未生效、已结束或账号不可用时不会授予访问，尚未接入正式服务端。" : "这是预设示例结果，不建立真实系统访问来源。当前后端仍需完善。"}
       </p>
     </div>
   )

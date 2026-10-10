@@ -1,4 +1,5 @@
 import { emptyAccess, emptyDocument, emptyItem, referenceFor, type ResearchState, type Criterion } from "./model"
+import { staffDutySeed } from "@/lib/school/duty-model"
 
 export function researchSeed(period: number | null = null): ResearchState {
   const syllabus = emptyDocument("syllabus-demo","大纲","函数教学要求 · 共建示例","math","u-lin","C101",null)
@@ -44,23 +45,15 @@ $$s=ut+\frac12at^2$$`, notes: "器材检查、采样误差及安全要求由活�
   const documents = [syllabus,plan,textbook,second,answer,paper,physics,physicsPlan,personal,bundle]
   const criterion = (id: string,kind: Criterion["kind"]): Criterion => ({ id, group: "math", title: `${kind} · 组内共建示例`, kind, version: 1, source: "校内自定合成示例；A＝优秀，沿用系统字典，不是官方分数线", notes: "推荐不等于教师已经采用，不改写存量评价。", recommended: true, dimensions: [{ id: "dimension-1", name: kind === "课堂表现方案" ? "推理与表达" : "完成与解释", meaning: "以实际观察或作业内容为依据，不代表出勤或提交状态。" }], levels: [{ id: "A", code: "A", label: "优秀", guide: "能完整解释推理，表达准确。" },{ id: "B", code: "B", label: "良好", guide: "基本达成，少量提示后完成。" },{ id: "C", code: "C", label: "合格", guide: "部分达成，仍需巩固。" },{ id: "D", code: "D", label: "待改进", guide: "需要针对性支持。" }], documentId: null, itemId: null, maxScore: null, scoring: "", testName: "", thresholds: [] })
   return {
-    schema: 2, documents, revisions: Object.fromEntries(documents.map(d => [`${d.id}@1`,structuredClone(d)])), drafts: {},
-    appointments: [
-      { id: "app-lin-math", staff: "u-lin", group: "math", role: "组长", start: "2026-09-01", end: "2027-07-31" },
-      { id: "app-lin-physics", staff: "u-lin", group: "physics", role: "成员", start: "2026-09-01", end: "2027-07-31" },
-      { id: "app-chen-physics", staff: "u-chen", group: "physics", role: "组长", start: "2026-09-01", end: "2027-07-31" },
-      { id: "app-zhou-math", staff: "u-zhou", group: "math", role: "成员", start: "2026-09-01", end: "2027-07-31" },
-      { id: "app-wang-math", staff: "u-wang", group: "math", role: "成员", start: "2026-09-01", end: "2027-07-31" },
-      { id: "app-zhou-expired", staff: "u-zhou", group: "physics", role: "成员", start: "2025-09-01", end: "2026-07-31" },
-      { id: "app-zhou-future", staff: "u-zhou", group: "physics", role: "成员", start: "2027-09-01", end: "2028-07-31" },
-    ],
+    schema: 3, documents, revisions: Object.fromEntries(documents.map(d => [`${d.id}@1`,structuredClone(d)])), drafts: {},
+    staffDuties: staffDutySeed().assignments, groups: staffDutySeed().groups,
     groupSchedules: [
       { id: "math-tue4", group: "math", weekday: 2, periodId: "m4", title: "数学教研", room: "D110" },
       { id: "math-tue5", group: "math", weekday: 2, periodId: "m5", title: "数学教研", room: "D110" },
       { id: "math-thu6", group: "math", weekday: 4, periodId: "a1", title: "数学教研", room: "D110" },
       { id: "math-thu7", group: "math", weekday: 4, periodId: "a2", title: "数学教研", room: "D110" },
     ],
-    forms: {}, grants: [{ staff: "u-lin", group: "math", mode: "统筹", start: "2026-09-01", end: "2027-07-31" },{ staff: "u-lin", group: "physics", mode: "统筹", start: "2026-09-01", end: "2027-07-31" },{ staff: "u-xu", group: "math", mode: "查看", start: "2026-09-01", end: "2027-07-31" }],
+    forms: {},
     schoolTasks: [{ id: "school-task-1", title: "学期教学内容整理", groups: ["math","physics"], due: "2026-11-01", requirements: "各组引用本组已有大纲或教学计划；牵头提交，不要求教师另填报告。", acceptance: false, createdBy: "u-lin", createdAt: "2026-09-01" }],
     tasks: ["math","physics"].map(group => ({ id: `task-${group}`, title: "学期教学内容整理", group, parent: null, schoolTaskId: "school-task-1", course: "", owner: "", collaborators: [], submitters: [], due: "2026-11-01", mode: "牵头提交", requirements: "引用已有成果即可。", acceptance: false, status: "待承接", outcomes: [], acceptedNote: "" })),
     activities: [{ id: "activity-demo", group: "math", title: "函数教学导入 · 独立试讲", type: "独立试讲", owner: "u-lin", course: "C101", taskId: null, start: "2026-10-15T15:15", end: "2026-10-15T15:55", participants: ["u-lin","u-zhou","u-wang"], lesson: null, materials: [{ documentId: "plan-demo", version: 1 }], conclusion: "", share: emptyAccess("math"), responses: {}, attendance: {}, criterionId: null, trials: [], version: 1 }],

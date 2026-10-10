@@ -2,6 +2,8 @@
 // 四层含义：系统角色（资格）→ 岗位（人事）→ 业务职责（工作类型）→ 负责范围（对象）。
 // 每一项职责与其“负责范围”逐项配对；技术来源仅在高级依据中出现。
 
+import { RESEARCH_GROUPS } from "@/lib/school/responsibility-scopes"
+
 export const DEMO_TODAY = "2026-09-23"
 
 /* ============================================================
@@ -48,6 +50,10 @@ export type DutyKey =
   | "teaching_class_mgmt"
   | "substitute_mgmt"
   | "timetable_mgmt"
+  | "research_lead"
+  | "research_participate"
+  | "research_manage"
+  | "research_view"
 
 export interface DutyTypeDef {
   key: DutyKey
@@ -61,6 +67,46 @@ export interface DutyTypeDef {
 }
 
 export const DUTY_TYPES: DutyTypeDef[] = [
+  {
+    key: "research_lead",
+    label: "教研组长",
+    role: "SUBJECT_TEACHER",
+    blurb: "负责指定教研组的公共资料、教研安排与工作分工。",
+    scopeKind: "具体教研组（同一任期每组最多一位组长，可暂缺）",
+    canDo: ["维护本组公共大纲、教学计划、资源与评价依据", "维护本组教研课表、活动、通知与任务分工", "承接本组学校教研任务"],
+    cannotDo: ["任命组长或教师", "管理其他教研组", "改写教师个人资料、私人草稿或教学记录"],
+    arrangeableBy: "由学校有权人员通过安排职责办理；组长不因本职责取得人员任命权",
+  },
+  {
+    key: "research_participate",
+    label: "教研参与教师",
+    role: "SUBJECT_TEACHER",
+    blurb: "在指定教研组内使用获授权资料，参与活动并完成本人分工。",
+    scopeKind: "具体教研组（可参与多个组，不从任课或部门自动推定）",
+    canDo: ["查看并选用获授权的组内资料与评价依据", "维护本人教学资料与调整版，不改写公共原稿", "参与受邀活动、讨论反馈并提交本人负责的成果"],
+    cannotDo: ["改写组内公共资料或其他教师个人内容", "维护本组教研课表、通知与人员分工", "任命人员或自动获取其他组资料"],
+    arrangeableBy: "由学校有权人员通过安排职责办理",
+  },
+  {
+    key: "research_manage",
+    label: "学校教研统筹",
+    role: "TEACHING_MANAGER",
+    blurb: "在明确负责的教研组内协调学校任务与教研人员安排。",
+    scopeKind: "明确获准统筹的教研组，不是全校或所有教学部门",
+    canDo: ["向负责教研组下发学校任务、查看正式提交成果", "协调本范围的学校支持事项", "在负责范围内安排教研组长与参与教师职责"],
+    cannotDo: ["改写组内公共资料或教师私人内容", "自动成为组长或参与教师", "转授统筹职责、扩大自己的负责范围"],
+    arrangeableBy: "由学校管理员明确安排；不从教务资格、部门或组长身份自动取得",
+  },
+  {
+    key: "research_view",
+    label: "学校教研查看",
+    role: "TEACHING_MANAGER",
+    blurb: "在明确负责对象内查看教研概况与获准公开的工作成果。",
+    scopeKind: "获准查看的具体教研组",
+    canDo: ["查看负责教研组概况与正式提交成果", "读取对学校开放的资料"],
+    cannotDo: ["安排人员、下发任务或验收成果", "编辑组内资料或加入组内协作", "查看受限答案、私人草稿与学生记录"],
+    arrangeableBy: "由学校管理员明确安排",
+  },
   {
     key: "school_admin",
     label: "学校管理",
@@ -184,7 +230,7 @@ export const DUTY_TYPES: DutyTypeDef[] = [
     key: "timetable_mgmt",
     label: "课表管理",
     role: "TEACHING_MANAGER",
-    blurb: "维护并发布本校学校课表，处理全校性的调课与停课安排���",
+    blurb: "维护并发布本校学校课表，处理全校性的调课与停课安排�����",
     scopeKind: "本校学校课表（节次、课次安排、调课 / 停课）",
     canDo: [
       "维护学校课表的节次与课次安排",
@@ -447,7 +493,7 @@ export const STAFF_STATUS_TONE: Record<StaffStatus, "success" | "warning" | "neu
 }
 
 // 部门 / 职务属于人事信息，与系统角色、具体职责相互独立（无职称、职级、部门树）
-export const DEPARTMENTS = ["数学组", "物理组", "英语组", "教务处", "行政部"] as const
+export const DEPARTMENTS = ["校长室", "办公室", "教学部", "教务部", "学生部", "后勤部"] as const
 export const JOB_TITLES = ["教师", "教务主任", "行政助理"] as const
 
 export type AccountStatus = "none" | "pending" | "enabled" | "disabled" | "revoked"
@@ -490,6 +536,8 @@ export interface DutyRecord {
   cannotDo?: string[] // 覆盖默认“不包含”
   note?: string
   basis: DutyBasis[] // 高级依据（默认折叠）；同一职责的多来源在此合并
+  scopeRefs?: { kind: "research_group"; id: string }[]
+  history?: HistoryItem[]
 }
 
 export function dutyCanDo(d: DutyRecord): string[] {
@@ -561,7 +609,7 @@ export const STAFF: StaffProfile[] = [
     id: "u-lin",
     name: "示例林老师",
     employeeNo: "TGS202109001E",
-    department: "数学组",
+    department: "教学部",
     jobTitle: "教师",
     joinedAt: "2021-09-01",
     gender: "女",
@@ -630,7 +678,7 @@ export const STAFF: StaffProfile[] = [
     id: "u-wang",
     name: "示例王老师",
     employeeNo: "TGS202309001E",
-    department: "数学组",
+    department: "教学部",
     jobTitle: "教师",
     joinedAt: "2023-09-01",
     gender: "男",
@@ -661,7 +709,7 @@ export const STAFF: StaffProfile[] = [
     id: "u-chen",
     name: "示例陈老师",
     employeeNo: "TGS201809001E",
-    department: "物理组",
+    department: "教学部",
     jobTitle: "教师",
     joinedAt: "2018-09-01",
     gender: "男",
@@ -679,7 +727,7 @@ export const STAFF: StaffProfile[] = [
     id: "u-zhou",
     name: "示例周老师",
     employeeNo: "TGS202209001E",
-    department: "物理组",
+    department: "教学部",
     jobTitle: "教师",
     joinedAt: "2022-09-01",
     gender: "女",
@@ -724,7 +772,7 @@ export const STAFF: StaffProfile[] = [
     id: "u-wu",
     name: "示例吴老师",
     employeeNo: "TGS202309002E",
-    department: "英语组",
+    department: "教学部",
     jobTitle: "教师",
     joinedAt: "2023-09-01",
     gender: "女",
@@ -760,7 +808,7 @@ export const STAFF: StaffProfile[] = [
     id: "u-xu",
     name: "示例许老师",
     employeeNo: "TGS201909001E",
-    department: "教务处",
+    department: "教务部",
     jobTitle: "教务主任",
     joinedAt: "2019-09-01",
     gender: "男",
@@ -781,7 +829,7 @@ export const STAFF: StaffProfile[] = [
     id: "u-lu",
     name: "示例陆老师",
     employeeNo: "TGS202009001E",
-    department: "教务处",
+    department: "教务部",
     jobTitle: "教务员",
     joinedAt: "2020-09-01",
     gender: "女",
@@ -802,7 +850,7 @@ export const STAFF: StaffProfile[] = [
     id: "u-qian",
     name: "示例钱老师",
     employeeNo: "TGS201709001E",
-    department: "数学组",
+    department: "教学部",
     jobTitle: "教师",
     joinedAt: "2017-09-01",
     gender: "男",
@@ -825,7 +873,7 @@ export const STAFF: StaffProfile[] = [
     id: "u-zhao",
     name: "示例赵老师",
     employeeNo: "TGS201509001E",
-    department: "行政部",
+    department: "办公室",
     jobTitle: "行政助理",
     joinedAt: "2015-09-01",
     gender: "男",
@@ -859,7 +907,7 @@ export const STAFF: StaffProfile[] = [
     id: "u-he",
     name: "示例何老师",
     employeeNo: "TGS202608001E",
-    department: "英语组",
+    department: "教学部",
     jobTitle: "教师",
     joinedAt: "2026-08-20",
     gender: "女",
@@ -1006,7 +1054,7 @@ export const ACCOUNTS: AccountRecord[] = [
     accessExplains: [
       {
         action: "查看任一教学班成绩",
-        scope: "教学班（无具体对象）",
+        scope: "教学班��无具体对象）",
         conditions: [
           { label: "员工资格", value: "任课教师资格 · 有效", ok: true },
           { label: "业务任命", value: "无任课 / 代课任命", ok: false },
@@ -1199,7 +1247,7 @@ export const ACCOUNTS: AccountRecord[] = [
     accessTone: "neutral",
     systemRoles: [],
     lastLogin: "2026-09-18 20:12",
-    note: "四个系统角色皆空、且以账号自助为唯一来源的示例：可���录并管理自身账号，但没有任何业务能力（不任课、不带班、不治理、不教务）。",
+    note: "四个系统角色皆空、且以账号自助��唯一来源的示例：可���录并管理自身账号，但没有任何业务能力（不任课、不带班、不治理、不教务）。",
     history: [{ date: "2026-09-05", text: "账号创建（仅自助，无业务角色）" }],
     sessions: [{ id: "S-10", device: "Safari · iPhone", location: "校外网络", lastActive: "2026-09-18 20:12", current: true }],
     accessExplains: [
@@ -1262,7 +1310,29 @@ export interface ScopeConfig {
   fixedNote?: string // fixed 模式说明
 }
 
+export function researchScopeConfig(items = RESEARCH_GROUPS): ScopeConfig {
+  return {
+    mode: "search",
+    multi: true,
+    objectNoun: "教研组",
+    searchPlaceholder: "搜索教研组（如 数学、英语）",
+    emptyHint: "请选择已有教研组；每个负责对象分别保留任期",
+    items: items.map(group => ({
+      id: group.id,
+      label: group.name,
+      parentPath: "教研负责对象",
+      meta: `归口 ${group.department} · 非二级部门`,
+      disabled: !group.active,
+      disabledReason: group.active ? undefined : "负责对象已停用，历史记录仍保留",
+    })),
+  }
+}
+
 export const SCOPE_CANDIDATES: Record<DutyKey, ScopeConfig> = {
+  research_lead: researchScopeConfig(),
+  research_participate: researchScopeConfig(),
+  research_manage: researchScopeConfig(),
+  research_view: researchScopeConfig(),
   head_primary: {
     mode: "search",
     multi: false,
@@ -1296,7 +1366,7 @@ export const SCOPE_CANDIDATES: Record<DutyKey, ScopeConfig> = {
     searchPlaceholder: "搜索教学班 · 单元（如 数学A班 P1）",
     emptyHint: "先搜索并选择“教学班 · 单元”，可多选",
     items: [
-      { id: "tc-mathA-p1", label: "数学A班 · P1", parentPath: "CAIE数学 / 数学A班", meta: "纯数学 Pure 1" },
+      { id: "tc-mathA-p1", label: "���学A班 · P1", parentPath: "CAIE数学 / 数学A班", meta: "纯数学 Pure 1" },
       { id: "tc-mathA-s1", label: "数学A班 · S1", parentPath: "CAIE数学 / 数学A班", meta: "统计 Statistics 1" },
       { id: "tc-mathB-p1", label: "数学B班 · P1", parentPath: "CAIE数学 / 数学B班", meta: "与数学A班 P1 同名不同班，注意区分" },
       { id: "tc-phyA-full", label: "物理A班 · 整门课程", parentPath: "CAIE物理 / 物理A班", meta: "选整门课程，不预设默认单元" },
@@ -1629,7 +1699,7 @@ export const ASSOCIATION_CASES: AssociationCase[] = [
       { label: "既有账号", value: "该档案暂无在用账号", state: "match" },
       { label: "登录名", value: "受邀人尚未设置", state: "review" },
     ],
-    advisory: "各项一致，建议在受邀人接受并设置登录名后确认关联；确认为人工动��，系统不自动完成。",
+    advisory: "各项一致，建议在受邀人接受并设置登录名���确认关联；确认为人工动��，系统不自动完成。",
   },
   {
     id: "assoc-conflict",
