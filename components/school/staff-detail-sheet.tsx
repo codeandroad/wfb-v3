@@ -178,28 +178,12 @@ export function StaffDetailSheet({ staff, endedDutyIds, onClose, onOpenDuty, onA
           {canManage ? <MoreInfo staff={staff} /> : null}
 
           <div>
-            <p className="mb-2 text-[13px] font-semibold">任职资格</p>
-            {staff.systemRoles.length ? (
-              <div className="flex flex-wrap gap-1.5">
-                {staff.systemRoles.map((r) => (
-                  <RoleBadge key={r} role={r} />
-                ))}
-              </div>
-            ) : (
-              <p className="text-[13px] text-muted-foreground">当前无任职资格。</p>
-            )}
-            <p className="mt-2 text-xs text-muted-foreground">
-              人事侧的合法资格，是安排职责的前提；本身不等于已有实际负责对象，也不等于账号已开通。
-            </p>
-          </div>
-
-          <div>
             <p className="mb-2 text-[13px] font-semibold">
               关联账号角色<span className="ml-1 text-xs font-normal text-muted-foreground">（只读摘要��</span>
             </p>
             {staff.accountStatus === "none" ? (
               <p className="rounded-lg border border-dashed border-border p-3 text-[12.5px] text-muted-foreground">
-                账号未开通，暂无关联账号角色。人事资格不会自动成为已生效的账号角色；需通过开通账号并授权后才产生。
+                账号未开通，暂无关联账号角色。职责可以先安排；开通与授权仍需单独办理，本次不会自动创建账号或补授角色。
               </p>
             ) : staff.systemRoles.length ? (
               <div className="flex flex-wrap gap-1.5">
@@ -262,7 +246,6 @@ export function StaffDetailSheet({ staff, endedDutyIds, onClose, onOpenDuty, onA
         <div className="flex flex-col gap-3">
           <InfoNote>教研工作在此统一安排：同一教研组的组长与参与教师职责可以同时存在，分别按各自任期生效，也可单独结束。教研组不是二级人事部门，不从任课自动归组。</InfoNote>
           {duties.some(duty => duty.history?.some(item => item.text.startsWith("撤销错误的职责互斥修正"))) && <InfoNote>此前错误裁剪且未被后续修改的参与职责已按原始备份恢复。其他职责的正常结束与修订未被覆盖，恢复依据保留在职责历史中。</InfoNote>}
-          {staff.qualificationNote ? <InfoNote>{staff.qualificationNote}</InfoNote> : null}
 
           {currentDuties.length ? (
             currentDuties.map((d) => <DutyCard key={d.id} duty={d} onOpen={() => onOpenDuty(d)} />)

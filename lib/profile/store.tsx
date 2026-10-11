@@ -73,10 +73,9 @@ export { STAFF_TEACHER_ID, staffIdForTeacher } from "@/lib/demo/staff"
 export function isActiveStaff(s: StaffProfile): boolean {
   return s.status !== "left" && s.accountStatus === "enabled"
 }
-// 教师主页适用于具备任课或班主任角色、且账号可正常使用的教职工
+// 主页沿用教职工在职、账号与可见性规则，不以角色资格作为前置条件。
 export function hasTeacherHomepage(s: StaffProfile): boolean {
-  const teachingRole = s.systemRoles.includes("SUBJECT_TEACHER") || s.systemRoles.includes("HOMEROOM_TEACHER")
-  return teachingRole && isActiveStaff(s)
+  return isActiveStaff(s)
 }
 export function homepageEligible(staffId: string): boolean {
   const s = staffById(staffId)

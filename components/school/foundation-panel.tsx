@@ -243,7 +243,7 @@ function JobsTab({ canMaintain, scenario }: { canMaintain: boolean; scenario: Sc
           />
           {!canMaintain ? <div className="mt-3"><NoPermissionBanner /></div> : null}
           <p className="mt-2 text-xs text-muted-foreground/70">
-            职务是人事资料，不自动建立系统角色或访问资格。“校长”不自动授学校管理员，“教师”不自动授任课资格。
+            职务是人事资料，不自动建立职责或访问权限。“校长”不自动获得学校管理权，“教师”不自动指派任教目标。
           </p>
         </div>
 

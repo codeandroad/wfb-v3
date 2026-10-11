@@ -147,14 +147,14 @@ export function restoreCoexistingResearchDuties(state: StaffDutyState, backup: S
 
 export function schoolDutyManager(people: StaffProfile[], actor: DutyActor) {
   const person = people.find(item => item.id === actor.staff)
-  return actor.enabled && !!person && person.status !== "left" && person.accountStatus === "enabled" && person.systemRoles.includes("SCHOOL_ADMIN") && person.duties.some(duty => duty.type === "school_admin" && dutyEffective(duty, actor.date))
+  return actor.enabled && !!person && person.status !== "left" && person.accountStatus === "enabled" && person.duties.some(duty => duty.type === "school_admin" && dutyEffective(duty, actor.date))
 }
 
 export function manageableResearchGroups(state: StaffDutyState, people: StaffProfile[], actor: DutyActor, type: ResearchDutyKey = "research_participate", includeInactive = false) {
   const me = people.find(person => person.id === actor.staff)
   if (!actor.enabled || !me || me.status === "left" || me.accountStatus !== "enabled" || !dutyDateValid(actor.date)) return []
   if (schoolDutyManager(people, actor)) return state.groups.filter(group => group.active || includeInactive).map(group => group.id)
-  if (type === "research_manage" || type === "research_view" || !me.systemRoles.includes("TEACHING_MANAGER")) return []
+  if (type === "research_manage" || type === "research_view") return []
   return [...new Set(state.assignments.filter(duty => duty.staffId === actor.staff && duty.type === "research_manage" && dutyEffective(duty, actor.date)).flatMap(duty => duty.scopeRefs.map(ref => ref.id)))].filter(id => state.groups.some(group => group.id === id && (group.active || includeInactive)))
 }
 
@@ -219,7 +219,6 @@ export function applyStaffDutyCommand(state: StaffDutyState, actor: DutyActor, c
     const groupId = assignment.scopeRefs[0]?.id
     requireCondition(manageableResearchGroups(next, people, actor, assignment.type, command.type === "end").includes(groupId), "没有该负责对象的职责安排权；组长、查看职责或人事部门不授予任命权。")
     requireCondition(command.type === "end" || target.status !== "left", "离职人员仅可结束已有职责，不能新增、修订或延长任期。")
-    requireCondition(command.type === "end" || target.systemRoles.includes(DUTY_BY_KEY[assignment.type].role), "该人员缺少本职责所需的任职资格；不会自动授予资格或开通账号。")
     const error = staffDutyValidationError(next, assignment, previous, command.type)
     requireCondition(!error, error)
     const saved = createResearchDuty(assignment.id, assignment.staffId, assignment.type, groupId, assignment.start, assignment.end, next.groups)

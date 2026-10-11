@@ -35,7 +35,6 @@ export const TARGET_SAMPLE: Partial<Record<SheetCode, Candidate[]>> = {
   ],
   "14": [{ id: "T-GUA-1", label: "示例家长甲", context: "关联学生：示例学生一", phone: "137****5566" }],
   "16": [{ id: "T-AC-10-1", label: "10年级1班", context: "第一学期 · 正式" }],
-  "12": [{ id: "T-Q-1", label: "任课资格 · 示例教职工甲", context: "TGS202609001E · 长期" }],
   "19": [{ id: "T-TC-MATH-A", label: "10年级数学A", context: "学科：数学 · 课程：空" }],
   "21": [{ id: "T-DIV-P1", label: "P1", context: "10年级数学A · INHERIT" }],
 }
