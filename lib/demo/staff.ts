@@ -1,5 +1,5 @@
 // 教职工 · 具体职责 · 账号与权限 — 合成演示数据（仅交互原型，非生产初始化）
-// 四层含义：系统角色（资格）→ 岗位（人事）→ 业务职责（工作类型）→ 负责范围（对象）。
+// 岗位为人事资料；业务职责与负责对象独立登记，系统角色保留为账号信息，不作为前置资格。
 // 每一项职责与其“负责范围”逐项配对；技术来源仅在高级依据中出现。
 
 import { RESEARCH_GROUPS } from "@/lib/school/responsibility-scopes"
@@ -27,10 +27,10 @@ export const SYSTEM_ROLE_LABEL: Record<SystemRoleCode, string> = {
 }
 
 export const SYSTEM_ROLE_DESC: Record<SystemRoleCode, string> = {
-  SCHOOL_ADMIN: "授权体系中的治理资格；据此可安排学校管理类职责。",
-  SUBJECT_TEACHER: "任课资格；据此可安排主要任课、共同任课、代课、教学协作。",
-  HOMEROOM_TEACHER: "班主任资格；据此可安排主班主任、辅助班主任。",
-  TEACHING_MANAGER: "教务管理资格；本校统一使用“标准教务配置”，据此可安排课程资料/结构维护、教学班管理、代课管理与课表管理。",
+  SCHOOL_ADMIN: "保留的账号管理角色；具体办理权限以有效学校管理职责为准，不作为被安排人员的资格前提。",
+  SUBJECT_TEACHER: "保留的账号教学角色；任教安排直接登记人员、教学目标与任期，不要求先授予此角色。",
+  HOMEROOM_TEACHER: "保留的账号班级管理角色；班主任安排直接登记人员、行政班与任期，不要求先授予此角色。",
+  TEACHING_MANAGER: "保留的账号教务角色；具体管理事项按有效职责与负责范围办理，不要求先授予此角色。",
 }
 
 /* ============================================================
@@ -95,7 +95,7 @@ export const DUTY_TYPES: DutyTypeDef[] = [
     scopeKind: "明确获准统筹的教研组，不是全校或所有教学部门",
     canDo: ["向负责教研组下发学校任务、查看正式提交成果", "协调本范围的学校支持事项", "在负责范围内安排教研组长与参与教师职责"],
     cannotDo: ["改写组内公共资料或教师私人内容", "自动成为组长或参与教师", "转授统筹职责、扩大自己的负责范围"],
-    arrangeableBy: "由学校管理员明确安排；不从教务资格、部门或组长身份自动取得",
+    arrangeableBy: "由学校管理员明确安排；不从账号角色、部门或组长身份自动取得",
   },
   {
     key: "research_view",
@@ -211,15 +211,15 @@ export const DUTY_TYPES: DutyTypeDef[] = [
     key: "substitute_mgmt",
     label: "代课管理",
     role: "TEACHING_MANAGER",
-    blurb: "在已授范围内为获准教学目标安排符合资格的代课教师。",
+    blurb: "在已授范围内为获准教学目标安排在职的代课教师。",
     scopeKind: "已授教学目标；明确课次 / 期间与必要工作范围",
     canDo: [
-      "为获准教学目标安排符合资格的代课教师",
+      "为获准教学目标安排在职的代课教师",
       "指定课次 / 期间与必要工作范围",
       "在已授范围内直接办理，无需学校管理员逐次审批",
     ],
     cannotDo: [
-      "授予管理员 / 教师资格",
+      "授予管理员 / 教师账号角色",
       "永久替换主岗、任命班主任、办理离职",
       "读取前任私人稿件或完整个人课表",
       "账号换绑或全校学生主档管理",
@@ -255,6 +255,14 @@ export const DUTIES_BY_ROLE: { role: SystemRoleCode; duties: DutyTypeDef[] }[] =
   role,
   duties: DUTY_TYPES.filter((d) => d.role === role),
 }))
+
+export const DUTY_GROUPS = [
+  { key: "research", label: "教研工作", keys: ["research_lead", "research_participate", "research_manage", "research_view"] },
+  { key: "teaching", label: "任教安排", keys: ["primary_teach", "co_teach", "substitute", "teach_collab"] },
+  { key: "homeroom", label: "班级管理", keys: ["head_primary", "head_assistant"] },
+  { key: "teaching-management", label: "教学管理", keys: ["course_material", "course_structure", "teaching_class_mgmt", "substitute_mgmt", "timetable_mgmt"] },
+  { key: "school", label: "学校管理", keys: ["school_admin"] },
+].map(group => ({ key: group.key, label: group.label, duties: DUTY_TYPES.filter(duty => group.keys.some(key => key === duty.key)) }))
 
 /* ============================================================
  * 标准教务配置（本校统一）
@@ -301,9 +309,9 @@ export const STANDARD_TM_GRANTED: TmConfigItem[] = [
   {
     key: "substitute_mgmt",
     duty: "代课管理",
-    actions: ["为获准教学目标安排符合资格的代课教师", "指定课次 / 期间与必要工作范围", "在已授范围内直接办理，无需学校管理员逐次审批"],
+    actions: ["为获准教学目标安排在职的代课教师", "指定课次 / 期间与必要工作范围", "在已授范围内直接办理，无需学校管理员逐次审批"],
     scope: "共同范围：本校已授教学目标（如 高一数学A班 → P1）",
-    excludes: ["授予管理员 / 教师资格", "永久替换主岗", "读取前任私人稿件", "账号换绑或全校学生主档"],
+    excludes: ["授予管理员 / 教师账号角色", "永久替换主岗", "读取前任私人稿件", "账号换绑或全校学生主档"],
   },
   {
     key: "timetable_mgmt",
@@ -332,7 +340,7 @@ export function STANDARD_TM_DUTIES(idPrefix: string): DutyRecord[] {
 
 // 规划职责（只读说明，本轮不授予、不列入可授予选择）
 export const STANDARD_TM_PLANNED: { duty: string; note: string }[] = [
-  { duty: "授课出勤核查", note: "仅职责说明；不含上下班考勤、在线时长、薪资或扣分。" },
+  { duty: "授课出勤核��", note: "仅职责说明；不含上下班考勤、在线时长、薪资或扣分。" },
   { duty: "学生事件登记", note: "仅范围解释；不顺带新增请假审批平台。" },
   { duty: "会议组织、教务公告", note: "两项分别说明对象与受众；本轮不开会议 / 公告事务页面。" },
   { duty: "听课协调、记录审阅", note: "两项独立能力；协调不等于反思全文读取，隐私边界不因统一配置放开。" },
@@ -359,25 +367,18 @@ export const SUBSTITUTE_PREVIEW: SubstitutePreview = {
   operator: "示例许老师",
   operatorRole: "仅教务管理 · 标准教务配置（本人无学校管理员、无本人任课角色）",
   canDo: [
-    "为获准教学目标安排符合资格的代课教师",
+    "为获准教学目标安排在职的代课教师",
     "明确课次 / 期间与必要工作范围",
   ],
   method: "在已授范围内直接安排，无需学校管理员逐次审批。",
   scopeExample: "高一数学A班 → P1；明确课次或期间（示例：第 6–8 周）。",
-  replacementExample: "已有有效授课资格的示例陈老师。",
+  replacementExample: "在职的示例陈老师；按教学目标、课次与期间直接登记。",
   excludes: [
-    "任意授予管理员 / 教师资格",
+    "任意授予管理员 / 教师账号角色",
     "永久主岗替换、班主任任命、离职办理",
     "读取前任私人稿件或完整个人课表",
     "账号换绑或全校学生档案管理",
   ],
-}
-
-// “接替教师资格不满足”的说明示例
-export const SUBSTITUTE_UNQUALIFIED = {
-  candidate: "示例孙老师（无对应授课资格）",
-  reason: "所选接替教师缺少该教学目标所需的任课资格。",
-  note: "不能为继续办理而“自动授予教师角色”；教务本人没有任课资格也不是本处的错误。资格授予属于另行的正式任命治理。",
 }
 
 /* ============================================================
@@ -588,7 +589,7 @@ export interface StaffProfile {
   username?: string
   accountStatus: AccountStatus
   isCurrent?: boolean
-  qualificationNote?: string // 有资格但无实际职责时的说明
+  qualificationNote?: string // 仅兼容历史档案，不参与职责安排或访问判断
   statusNote?: string // 请假 / 离职对使用的影响
   history: HistoryItem[]
   // 更多资料（可选，个人补充）——按字段权限与个人显示设置展示，列表默认不展示
@@ -719,7 +720,7 @@ export const STAFF: StaffProfile[] = [
     username: "chen.example",
     accountStatus: "enabled",
     systemRoles: ["SUBJECT_TEACHER"],
-    qualificationNote: "已有任课教师资格，暂未安排任教。",
+    qualificationNote: "暂未安排任教。",
     history: [{ date: "2018-09-01", text: "入职 · 物理教学岗" }],
     duties: [],
   },
@@ -917,7 +918,7 @@ export const STAFF: StaffProfile[] = [
     username: "he.example",
     accountStatus: "enabled",
     systemRoles: ["SUBJECT_TEACHER"],
-    qualificationNote: "新入职，已有任课教师资格，暂未安排任教。",
+    qualificationNote: "新入职，暂未安排任教。",
     history: [{ date: "2026-08-20", text: "入职 · 英语教学岗" }],
     duties: [],
   },
@@ -1025,7 +1026,6 @@ export const ACCOUNTS: AccountRecord[] = [
         action: "查看并录入 数学A班 · P1 单元成绩",
         scope: "教学班 数学A班 · 单元 P1",
         conditions: [
-          { label: "员工资格", value: "任课教师资格 · 有效", ok: true },
           { label: "业务任命", value: "主要任课：数学A班 · P1", ok: true },
           { label: "账号关联", value: "已关联 示例林老师", ok: true },
           { label: "本校访问来源", value: "员工职责依赖来源 · 有效", ok: true },
@@ -1048,7 +1048,7 @@ export const ACCOUNTS: AccountRecord[] = [
     accessTone: "neutral",
     systemRoles: ["SUBJECT_TEACHER"],
     lastLogin: "2026-09-22 15:03",
-    note: "有任课教师资格，暂未安排任教。账号可登录，但没有可执行的任教事项。",
+    note: "暂未安排任教。账号可登录，但没有可执行的任教事项。",
     history: [{ date: "2018-09-02", text: "账号激活" }],
     sessions: [{ id: "S-3", device: "Chrome · Windows", location: "校内网络", lastActive: "2026-09-22 15:03", current: true }],
     accessExplains: [
@@ -1056,13 +1056,12 @@ export const ACCOUNTS: AccountRecord[] = [
         action: "查看任一教学班成绩",
         scope: "教学班��无具体对象）",
         conditions: [
-          { label: "员工资格", value: "任课教师资格 · 有效", ok: true },
           { label: "业务任命", value: "无任课 / 代课任命", ok: false },
           { label: "账号关联", value: "已关联 示例陈老师", ok: true },
           { label: "本校访问来源", value: "员工职责依赖来源 · 有效", ok: true },
           { label: "账号状态", value: "已启用", ok: true },
         ],
-        conclusion: "缺少业务任命（没有具体教学班 / 单元） → 有资格但无可执行目标",
+        conclusion: "缺少业务任命（没有具体教学班 / 单元） → 无可执行任教目标",
         conclusionOk: false,
       },
     ],
@@ -1157,7 +1156,6 @@ export const ACCOUNTS: AccountRecord[] = [
         action: "查看任一教学班成绩",
         scope: "教学班（无具体对象）",
         conditions: [
-          { label: "员工资格", value: "未关联档案 · 以账号基础资格计", ok: true },
           { label: "业务任命", value: "无任课 / 代课任命", ok: false },
           { label: "账号关联", value: "未关联教职工", ok: false },
           { label: "本校访问来源", value: "有限基础来源 · 有效", ok: true },
@@ -1602,7 +1600,7 @@ export const INVITE_RECORDS: InviteRecord[] = [
     person: "示例孙老师",
     personSub: "TGS202509001E · 综合组／教师",
     roles: ["SUBJECT_TEACHER"],
-    workPlan: "暂不安排任教（仅拟开通任课资格）",
+    workPlan: "暂不安排任教（仅拟开通账号）",
     status: "expired",
     emailStatus: "sent",
     emailTo: "s***@example.edu",

@@ -164,5 +164,69 @@ async function filePlan(rows, csv = false) {
     assert(legacy.file.sheets[0].unknownCols.includes("特长"))
     assert.equal(legacy.plan.totals.block, 0)
   })
+  const { SHEET, PRESETS, dependsOn, TEMPLATE_VERSION } = require("../lib/import/schema.ts")
+  const { buildTemplateBytes, buildWorkbookBytes } = require("../lib/import/workbook-out.ts")
+  const appointmentData = {
+    "18": [{ id: "HEAD-DIRECT", staff: "@existing:T-EMP-1", klass: "@existing:T-AC-10-1", role: "主", start: "2026-09-01" }],
+    "23": [{ id: "TEACH-DIRECT", staff: "@existing:T-EMP-1", tc: "@existing:T-TC-MATH-A", target: "整科", work: "主讲", start: "2026-09-01" }],
+    "24": [{ id: "MANAGE-DIRECT", staff: "@existing:T-EMP-1", duty: "课表维护", target: "学校", targetRef: "标准教务配置", start: "2026-09-01" }],
+  }
+  const relationPlan = async bytes => {
+    const file = await parseFile(new File([bytes], "appointments.xlsx"))
+    return { file, plan: buildPlan({ file, sheetState: defaultSheetState(file), overrides: {}, excluded: [] }) }
+  }
+  check("new templates retire qualifications without adding a prerequisite to any appointment", () => {
+    assert.equal(SHEET["12"].role, "meta")
+    assert.equal(SHEET["12"].fields.length, 0)
+    for (const code of ["18", "23", "24"]) {
+      assert.equal(dependsOn(code).includes("12"), false)
+      assert.equal(SHEET[code].fields.some(field => field.key === "qual"), false)
+    }
+    const book = XLSX.read(buildTemplateBytes(PRESETS.find(preset => preset.id === "full").sheets), { type: "array" })
+    assert.equal(book.SheetNames.includes("12_任职资格"), false)
+    for (const name of ["18_班主任任命", "23_任教安排", "24_管理委派"]) {
+      assert.equal(XLSX.utils.sheet_to_json(book.Sheets[name], { header: 1 })[0].some(label => /资格/.test(label)), false)
+    }
+  })
+  const directBytes = buildWorkbookBytes(appointmentData, "无前置资格的任命回归测试")
+  const direct = await relationPlan(directBytes)
+  check("real XLSX appointments without a qualification column have no qualification blocks or pending checks", () => {
+    assert.equal(direct.file.version, TEMPLATE_VERSION)
+    assert.equal(direct.plan.sheets.length, 3)
+    assert.equal(direct.plan.totals.block, 0)
+    for (const sheet of direct.plan.sheets) {
+      assert.equal(sheet.parsed.missingRequired.length, 0)
+      assert.equal("qual" in sheet.rows[0].values, false)
+      assert.equal(sheet.rows.flatMap(row => row.issues).some(issue => /资格/.test(issue.title) || issue.refSheet === "12"), false)
+    }
+    assert(direct.plan.sheets.some(sheet => sheet.rows.some(row => row.issues.some(issue => /办理权限|委派权限/.test(issue.title)))))
+  })
+  const oldBook = XLSX.read(directBytes, { type: "array" })
+  XLSX.utils.sheet_add_aoa(oldBook.Sheets["00_使用说明"], [["模板版本", "WFB-IMPORT-PROTO-1.1"]], { origin: "A2" })
+  XLSX.utils.book_append_sheet(oldBook, XLSX.utils.json_to_sheet([{ 资格标识: "Q-OLD", 员工引用: "OTHER-EMPLOYEE", 资格类型: "已停用类型", 起始日期: "not-a-date" }]), "12_任职资格")
+  XLSX.utils.sheet_add_aoa(oldBook.Sheets["18_班主任任命"], [["资格引用"], ["Q-MISSING"]], { origin: "H1" })
+  XLSX.utils.sheet_add_aoa(oldBook.Sheets["23_任教安排"], [["资格引用"], ["Q-OLD"]], { origin: "J1" })
+  const old = await relationPlan(XLSX.write(oldBook, { type: "array", bookType: "xlsx" }))
+  check("legacy 1.1 qualification sheets and stale references are ignored without blocking appointments", () => {
+    assert.equal(old.file.versionStatus, "ok")
+    assert(old.plan.metaSheets.some(sheet => sheet.code === "12"))
+    assert.equal(old.plan.sheets.some(sheet => sheet.code === "12"), false)
+    assert.equal(old.plan.totals.block, 0)
+    for (const sheet of old.plan.sheets) {
+      assert.equal("qual" in sheet.rows[0].values, false)
+      assert.equal(sheet.rows.flatMap(row => row.issues).some(issue => issue.refSheet === "12"), false)
+    }
+  })
+  const duplicateHeads = await relationPlan(buildWorkbookBytes({ "18": [...appointmentData["18"], { ...appointmentData["18"][0], id: "HEAD-CONFLICT" }] }, "主班主任冲突回归测试"))
+  check("removing qualifications does not remove overlapping principal homeroom checks", () => {
+    assert(duplicateHeads.plan.sheets[0].rows.some(row => row.issues.some(issue => issue.title === "主班主任冲突" && issue.level === "block")))
+  })
+  const wrongDivision = await relationPlan(buildWorkbookBytes({
+    "21": [{ id: "DIV-OTHER", tc: "OTHER-CLASS", name: "其他班分工", mode: "INHERIT" }],
+    "23": [{ ...appointmentData["23"][0], target: "分工", div: "DIV-OTHER" }],
+  }, "教学目标归属回归测试"))
+  check("removing qualifications does not allow assignments to a division in another class", () => {
+    assert(wrongDivision.plan.sheets.find(sheet => sheet.code === "23").rows[0].issues.some(issue => issue.title === "分工不属于该教学班" && issue.level === "block"))
+  })
   console.log(`${checks} checks passed`)
 })().catch((error) => { console.error(error); process.exitCode = 1 })

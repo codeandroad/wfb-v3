@@ -87,7 +87,7 @@ export function AccountDetailSheet({ accountId, endedDutyIds, onClose, onOpenDut
                   </div>
                 ))
               ) : (
-                <InfoNote>关联人员当前无进行中的职责；如有资格未任教，请在教职工列表查看。</InfoNote>
+                <InfoNote>关联人员当前无进行中的职责；可由有权人员在教职工列表安排具体职责、负责对象与任期。</InfoNote>
               )
             ) : (
               <InfoNote>该账号未关联教职工档案，没有依赖员工职责的任命；其访问以“{ACCESS_ORIGIN_LABEL[acc.origin]}”为准，见“访问说明”。</InfoNote>
@@ -111,10 +111,10 @@ export function AccountDetailSheet({ accountId, endedDutyIds, onClose, onOpenDut
                       ))}
                     </div>
                   ) : (
-                    <p className="text-xs text-muted-foreground">当前无系统角色资格（历史保留）。</p>
+                    <p className="text-xs text-muted-foreground">当前无系统角色记录（历史保留）。</p>
                   )}
                   <p className="mt-2 text-xs text-muted-foreground">
-                    系统角色是账号的底层资格；缺少某项时此处显示缺什么，不提供一键全量补权。
+                    系统角色仅保留为账号信息，不再作为安排职责的前置资格；职责办理不自动补授角色。
                   </p>
                 </div>
               ) : null}
@@ -125,7 +125,7 @@ export function AccountDetailSheet({ accountId, endedDutyIds, onClose, onOpenDut
         {tab === "access" ? (
           <div className="space-y-4">
             <p className="text-[12.5px] text-muted-foreground">
-              访问由多项条件同时成立决定：员工资格、业务任命、账号关联、本校访问来源、账号状态。任一不成立即不可执行，此处显示缺哪一项。
+              访问仍按有效职责、负责范围、任期、账号关联、本校访问来源与账号状态判断，不再核验独立任职资格；缺少实际安排不等于开放全校访问。
             </p>
             {acc.accessExplains?.length ? (
               acc.accessExplains.map((ex) => <AccessExplainCard key={ex.action} ex={ex} />)

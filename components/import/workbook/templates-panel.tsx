@@ -59,12 +59,12 @@ export function TemplatesPanel({ initialPreset, onUseSample }: { initialPreset?:
         />
         <div className="flex flex-col gap-4 p-5">
           <Notice tone="neutral">
-            XLSX 可含多个工作表，未填写的表可忽略；CSV 只能放单一类型（表名按文件名识别）。日期写 YYYY-MM-DD；编号、电话按文本保存前导零。选项和元数据不是授权，资格与任命需按学校合法办理。
+            XLSX 可含多个工作表，未填写的表可忽略；CSV 只能放单一类型（表名按文件名识别）。日期写 YYYY-MM-DD；编号、电话按文本保存前导零。职责直接关联人员、负责对象与任期，不要求资格表；经办者办理权限仍需核验。
           </Notice>
           {outside.length ? (
             <Notice tone="info">
               本组引用 {outside.map(sheetTitle).join("、")}：不必同批上传，可引用目标学校已有对象（待匹配）。
-              {preset.sheets.includes("23") ? " 任教安排依赖员工、任职资格与真实教学目标（教学班或分工）。" : ""}
+              {preset.sheets.includes("23") ? " 任教安排只关联人员与真实教学目标（教学班或分工），不依赖资格记录。" : ""}
             </Notice>
           ) : null}
 

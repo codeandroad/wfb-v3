@@ -408,11 +408,7 @@ function StaffRow({
         ) : (
           <div className="text-[13px] text-muted-foreground">
             暂未安排职责
-            {staff.systemRoles.length ? (
-              <span className="mt-0.5 block text-xs text-muted-foreground/70">
-                已有{staff.systemRoles.map((r) => SYSTEM_ROLE_LABEL[r]).join("、")}资格
-              </span>
-            ) : null}
+
           </div>
         )}
       </td>

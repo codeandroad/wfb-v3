@@ -158,7 +158,7 @@ export function StaffFormFields({ state, set, hideNumber = false }: { state: Sta
         </ExperienceSection>
 
         <Field label="兴趣爱好"><div className="flex flex-wrap gap-2">{INTEREST_SUGGESTIONS.map((tag) => <Button key={tag} type="button" size="sm" variant={state.interests.includes(tag) ? "default" : "outline"} onClick={() => set("interests", state.interests.includes(tag) ? state.interests.filter((item) => item !== tag) : [...state.interests, tag])}>{tag}</Button>)}</div><Input className="mt-2" value={state.interestExtra} onChange={(event) => set("interestExtra", event.target.value)} placeholder="可补充其他，逗号分隔" /></Field>
-        <p className="text-xs text-muted-foreground">背景资料可全部留空，不自动公开到教师主页或普通名单，也不改变资格、职责或在职状态。</p>
+        <p className="text-xs text-muted-foreground">背景资料可全部留空，不自动公开到教师主页或普通名单，也不改变职责、账号角色或在职状态。</p>
       </div> : null}
     </div>
   </div>

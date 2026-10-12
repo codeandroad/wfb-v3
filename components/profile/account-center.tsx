@@ -116,7 +116,7 @@ export function AccountCenter() {
                 ))}
               </ul>
             ) : (
-              <p className="text-[13px] text-muted-foreground">{me.qualificationNote ?? "暂无职责。"}</p>
+              <p className="text-[13px] text-muted-foreground">暂无职责。可由有权人员安排具体职责、负责对象与任期。</p>
             )}
           </div>
         </div>

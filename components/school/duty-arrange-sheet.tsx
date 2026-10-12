@@ -11,11 +11,10 @@ import { ResponsibilityDirectorySheet } from "./responsibility-directory-sheet"
 import { cn } from "@/lib/utils"
 import {
   DEMO_TODAY,
-  DUTIES_BY_ROLE,
+  DUTY_GROUPS,
   DUTY_BY_KEY,
   SCOPE_CANDIDATES,
   researchScopeConfig,
-  SYSTEM_ROLE_LABEL,
   type ScopeConfig,
   type DutyKey,
   type ScopeCandidate,
@@ -81,7 +80,7 @@ export function DutyArrangeSheet(props: ArrangeProps) {
   const initialDuty = presetDuty ?? (allowedKeys.includes("research_participate") ? "research_participate" : allowedKeys[0])
   const [staffId, setStaffId] = useState(staff?.id ?? dutyContext.people.find(person => person.name === presetPerson)?.id ?? "")
   const [directoryOpen, setDirectoryOpen] = useState(false)
-  // 角色下的职责为多选：可同时勾选多项，每项各自维护负责范围
+  // 业务分类下的职责为多选：可同时勾选多项，每项各自维护负责范围
   const [dutyKeys, setDutyKeys] = useState<DutyKey[]>([initialDuty])
   const [scopeByDuty, setScopeByDuty] = useState<Record<string, ScopeCandidate[]>>(() => {
     if (!presetScope) return {}
@@ -133,7 +132,7 @@ export function DutyArrangeSheet(props: ArrangeProps) {
     const cfg = scopeConfig(k)
     if (cfg.mode === "fixed") return true
     const selected = effectiveScope(k)
-    if (isResearchDuty(k)) return dutyContext.ready && !dutyContext.error && !!selectedStaff && selectedStaff.status !== "left" && selectedStaff.systemRoles.includes(DUTY_BY_KEY[k].role) && selected.length > 0 && selected.every(item => !item.disabled)
+    if (isResearchDuty(k)) return dutyContext.ready && !dutyContext.error && !!selectedStaff && selectedStaff.status !== "left" && selected.length > 0 && selected.every(item => !item.disabled)
     return selected.length > 0
   }
   function effectiveScope(k: DutyKey) {
@@ -223,13 +222,11 @@ export function DutyArrangeSheet(props: ArrangeProps) {
     return {
       key: k,
       dutyLabel: def.label,
-      role: SYSTEM_ROLE_LABEL[def.role],
       scope: isTeachDuty(k)
         ? (teachSel[k] ?? []).map(teachLabel).join("、")
         : effectiveScope(k)
             .map((c) => c.label)
             .join("、"),
-      needsQualification: selectedStaff ? !selectedStaff.systemRoles.includes(def.role) : false,
     }
   })
 
@@ -343,16 +340,16 @@ export function DutyArrangeSheet(props: ArrangeProps) {
             )}
           </Section>
 
-          {/* B 角色（下辖职责可多选） */}
+          {/* B 业务分类（下辖职责可多选） */}
           <Section step="职责模板">
             <p className="mb-2 text-sm leading-relaxed text-muted-foreground">模板决定工作边界；负责对象决定在哪个教研组或具体范围内履职。教研职责可多选、可跨组，与任课等其他职责分次确认，避免跨业务部分保存。</p>
             <FieldGroup>
-              {DUTIES_BY_ROLE.filter(group => group.duties.some(duty => allowedKeys.includes(duty.key))).map(group => {
+              {DUTY_GROUPS.filter(group => group.duties.some(duty => allowedKeys.includes(duty.key))).map(group => {
                 const keys = group.duties.filter(duty => allowedKeys.includes(duty.key)).map(duty => duty.key)
                 const selected = dutyKeys.filter(key => keys.includes(key))
-                return <FieldSet key={group.role}>
-                  <FieldLegend variant="label">{SYSTEM_ROLE_LABEL[group.role]}资格对应的职责</FieldLegend>
-                  <ToggleGroup multiple variant="outline" aria-label={`${SYSTEM_ROLE_LABEL[group.role]}职责模板`} value={selected} className="grid w-full gap-2 sm:grid-cols-2" onValueChange={values => {
+                return <FieldSet key={group.key}>
+                  <FieldLegend variant="label">{group.label}</FieldLegend>
+                  <ToggleGroup multiple variant="outline" aria-label={`${group.label}职责模板`} value={selected} className="grid w-full gap-2 sm:grid-cols-2" onValueChange={values => {
                     const key = values.find(value => !selected.includes(value as DutyKey)) ?? selected.find(value => !values.includes(value))
                     if (key) toggleDuty(key as DutyKey)
                   }}>
@@ -394,7 +391,6 @@ export function DutyArrangeSheet(props: ArrangeProps) {
 
           {!datesValid && <Alert variant="destructive"><AlertTitle>生效时间无效</AlertTitle><AlertDescription>请填写真实开始日期；指定结束日期时必须填写，且不得早于开始日期。</AlertDescription></Alert>}
           {researchSelected && (dutyContext.error || researchValidation) && <Alert variant="destructive"><AlertTitle>职责暂不能安排</AlertTitle><AlertDescription>{dutyContext.error || researchValidation}</AlertDescription></Alert>}
-          {researchSelected && selectedStaff && !dutyKeys.filter(isResearchDuty).every(key => selectedStaff.systemRoles.includes(DUTY_BY_KEY[key].role)) && <Alert><AlertTitle>所需任职资格尚未具备</AlertTitle><AlertDescription>请先由有权人员核验资格；本次不会自动补授系统角色或开通账号。</AlertDescription></Alert>}
           {/* D 每个已选职责：负责范围 + 预览 */}
           <Section step="职责明细">
             {dutyKeys.length === 0 ? (
@@ -443,7 +439,6 @@ export function DutyArrangeSheet(props: ArrangeProps) {
                     onToggleGuide={() => setGuideOpen((s) => ({ ...s, [k]: !s[k] }))}
                     personName={personName}
                     accountNotOpened={accountNotOpened}
-                    selectedStaff={selectedStaff}
                     existingPrimaryHead={existingPrimaryHead}
                     start={start}
                     end={hasEnd ? end : undefined}
@@ -479,7 +474,6 @@ function DutyDetailCard({
   onToggleGuide,
   personName,
   accountNotOpened,
-  selectedStaff,
   existingPrimaryHead,
   start,
   end,
@@ -494,7 +488,6 @@ function DutyDetailCard({
   onToggleGuide: () => void
   personName?: string | null
   accountNotOpened: boolean
-  selectedStaff: StaffProfile | null
   existingPrimaryHead?: string
   start: string
   end?: string
@@ -505,7 +498,6 @@ function DutyDetailCard({
   const effectiveSelected = isFixed ? scopeCfg.items : selected
   const scopeText = effectiveSelected.map((c) => c.label).join("、")
   const hasScope = isFixed || selected.length > 0
-  const needsQualification = selectedStaff ? !selectedStaff.systemRoles.includes(def.role) : false
   const primaryConflict = dutyKey === "head_primary" && !!existingPrimaryHead
 
   const filtered = useMemo(() => {
@@ -520,7 +512,7 @@ function DutyDetailCard({
         <div className="min-w-0">
           <p className="text-[13px] font-semibold text-foreground">{def.label}</p>
           <p className="mt-0.5 text-xs text-muted-foreground">
-            {SYSTEM_ROLE_LABEL[def.role]} · 对象类型：{scopeCfg.objectNoun}
+            对象类型：{scopeCfg.objectNoun}
           </p>
         </div>
         <button
@@ -661,12 +653,9 @@ function DutyDetailCard({
           end={end}
           canDo={def.canDo}
           cannotDo={def.cannotDo}
-          needsQualification={needsQualification}
-          role={SYSTEM_ROLE_LABEL[def.role]}
           accountNotOpened={accountNotOpened}
           hasScope={hasScope}
           emptyHint={scopeCfg.emptyHint}
-          strictQualification={isResearchDuty(dutyKey)}
         />
       </div>
     </div>
@@ -714,12 +703,9 @@ function PreviewBlock({
   end,
   canDo,
   cannotDo,
-  needsQualification,
-  role,
   accountNotOpened,
   hasScope,
   emptyHint,
-  strictQualification = false,
 }: {
   staffName?: string | null
   dutyLabel: string
@@ -728,12 +714,9 @@ function PreviewBlock({
   end?: string
   canDo: string[]
   cannotDo: string[]
-  needsQualification: boolean
-  role: string
   accountNotOpened: boolean
   hasScope: boolean
   emptyHint: string
-  strictQualification?: boolean
 }) {
   return (
     <div className="space-y-3 rounded-xl border border-border bg-muted/30 p-4">
@@ -758,7 +741,7 @@ function PreviewBlock({
           <div className="rounded-lg border border-[#bcdcc8] bg-[#f3f9f5] p-3">
             <p className="text-[12.5px] font-semibold text-[#256a49]">工作安排</p>
             <p className="mt-1 text-[12.5px] text-foreground">
-              登记本项职责；{needsQualification ? strictQualification ? `缺少 ${role}资格，不能提交；不会自动补授资格。` : `并补充 ${role}资格（仅本项所需，不授予其他角色或全校权限）。` : "所需资格已具备。"}
+              按所选负责对象与生效时间登记本项职责；不要求前置任职资格，也不自动变更账号角色。
             </p>
           </div>
 
@@ -776,7 +759,7 @@ function PreviewBlock({
               </p>
             ) : (
               <p className="mt-1 text-[12.5px] text-muted-foreground">
-                按批准配置处理必要的访问来源；在资格、关联、任命、来源及期间等条件有效时可用。
+                按有效职责、负责对象、任期与账号状态核验访问；不以任职资格作为前置条件。
               </p>
             )}
           </div>
@@ -820,7 +803,7 @@ function ResultView({
   persisted = false,
 }: {
   staffName: string
-  results: { key: string; dutyLabel: string; role: string; scope: string; needsQualification: boolean }[]
+  results: { key: string; dutyLabel: string; scope: string }[]
   start: string
   end?: string
   accountNotOpened: boolean
@@ -844,7 +827,7 @@ function ResultView({
           <p className="mt-0.5 text-muted-foreground">负责范围：{r.scope || "（未选择对象）"}</p>
           <p className="mt-1.5 font-semibold text-foreground">工作安排</p>
           <p className="mt-0.5 text-muted-foreground">
-            已登记本项任命。{r.needsQualification ? `已同时补充 ${r.role}资格（仅本项所需）。` : "所需资格已具备。"}
+            已登记本项职责与负责范围；未创建账号，也未增删账号角色。
           </p>
         </div>
       ))}

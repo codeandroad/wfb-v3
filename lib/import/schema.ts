@@ -1,8 +1,8 @@
 // 多工作表导入的原型字段合同（依据 03_WORKBOOK_BLUEPRINT 草案）。
 // 这是原型格式，不是现有后台已经接受的正式模板。
 
-export const TEMPLATE_VERSION = "WFB-IMPORT-PROTO-1.1"
-export const SUPPORTED_VERSIONS = [TEMPLATE_VERSION]
+export const TEMPLATE_VERSION = "WFB-IMPORT-PROTO-1.2"
+export const SUPPORTED_VERSIONS = [TEMPLATE_VERSION, "WFB-IMPORT-PROTO-1.1"]
 
 export type SheetCode =
   | "00" | "01" | "02" | "03" | "04" | "05" | "06" | "07" | "08" | "09" | "10"
@@ -28,7 +28,7 @@ export type GroupId = "base" | "catalog" | "people" | "admin" | "teaching" | "fa
 export const GROUPS: { id: GroupId; label: string; desc: string }[] = [
   { id: "base", label: "基础", desc: "学校信息、学年学期、部门、职务、教室" },
   { id: "catalog", label: "课程目录", desc: "学科、课程、官方单元定义及关系" },
-  { id: "people", label: "人员", desc: "教职工、任职资格、学生" },
+  { id: "people", label: "人员", desc: "教职工、学生" },
   { id: "admin", label: "行政", desc: "行政班、行政名单、班主任任命" },
   { id: "teaching", label: "教学", desc: "教学班、独立名单、实际分工、任教安排" },
   { id: "family", label: "家校", desc: "家长/监护人、学生家长关系" },
@@ -76,7 +76,7 @@ export const SHEETS: SheetDef[] = [
     fields: [id("部门标识"), f("name", "名称", "text", req), f("status", "启用状态", "enum", { options: STATUS })],
   },
   {
-    code: "05", name: "职务", group: "base", role: "object", unit: "个职务", guard: "人事名称，不是系统角色或资格",
+    code: "05", name: "职务", group: "base", role: "object", unit: "个职务", guard: "人事名称，不是系统角色或职责",
     fields: [id("职务标识"), f("name", "名称", "text", req), f("status", "启用状态", "enum", { options: STATUS })],
   },
   {
@@ -114,8 +114,8 @@ export const SHEETS: SheetDef[] = [
     ],
   },
   {
-    code: "12", name: "任职资格", group: "people", role: "relation", unit: "项资格", guard: "员工＋经办者合法授予能力；不是membership角色",
-    fields: [id("资格标识"), f("staff", "员工引用", "ref", { required: true, ref: "11" }), f("kind", "资格类型", "enum", { required: true, options: ["任课资格", "班主任资格", "管理资格"] }), f("start", "起始日期", "date", req), f("end", "结束日期", "date")],
+    code: "12", name: "任职资格", group: "meta", role: "meta", unit: "", guard: "历史表已停用，仅兼容旧文件；不导入，也不参与任命校验",
+    fields: [],
   },
   {
     code: "13", name: "学生", group: "people", role: "object", unit: "名学生", guard: "不自动猜生日/国籍或课程路径；行政班关系独立",
@@ -139,7 +139,7 @@ export const SHEETS: SheetDef[] = [
   },
   {
     code: "18", name: "班主任任命", group: "admin", role: "relation", unit: "项班主任任命", guard: "同时最多一主、可多辅；无账号是明确待登录访问状态",
-    fields: [id("任命标识"), f("staff", "员工引用", "ref", { required: true, ref: "11" }), f("qual", "资格引用", "ref", { required: true, ref: "12" }), f("klass", "行政班引用", "ref", { required: true, ref: "16" }), f("role", "主/辅助", "enum", { required: true, options: ["主", "辅助"] }), f("start", "开始日期", "date", req), f("end", "结束日期", "date")],
+    fields: [id("任命标识"), f("staff", "员工引用", "ref", { required: true, ref: "11" }), f("klass", "行政班引用", "ref", { required: true, ref: "16" }), f("role", "主/辅助", "enum", { required: true, options: ["主", "辅助"] }), f("start", "开始日期", "date", req), f("end", "结束日期", "date")],
   },
   {
     code: "19", name: "教学班", group: "teaching", role: "object", unit: "个教学班", guard: "学科必要；课程和排课归属可空；归属不推导学生",
@@ -151,7 +151,7 @@ export const SHEETS: SheetDef[] = [
   },
   {
     code: "21", name: "教学分工", group: "teaching", role: "object", unit: "个实际分工", guard: "实际分工可无官方定义；不建立伪默认单元",
-    fields: [id("分工标识"), f("tc", "教学班引用", "ref", { required: true, ref: "19" }), f("name", "分工登记名称", "text", req), f("short", "简称", "text"), f("mode", "名单模式", "enum", { required: true, options: ["INHERIT", "EXPLICIT_SUBSET"] }), f("unit", "官方单元关联", "ref", { ref: "09" })],
+    fields: [id("分工标识"), f("tc", "教学班引用", "ref", { required: true, ref: "19" }), f("name", "分工登记名称", "text", req), f("short", "简称", "text"), f("mode", "名单模式", "enum", { required: true, options: ["INHERIT", "EXPLICIT_SUBSET"] }), f("unit", "��方单元关联", "ref", { ref: "09" })],
   },
   {
     code: "22", name: "分工指定学生", group: "teaching", role: "relation", unit: "条子集关系", guard: "仅EXPLICIT_SUBSET；必须属于同一父班名单",
@@ -159,11 +159,11 @@ export const SHEETS: SheetDef[] = [
   },
   {
     code: "23", name: "任教安排", group: "teaching", role: "relation", unit: "项任教安排", guard: "整科不填分工；分工目标必须填；多教师多行，不自动把首行当负责人",
-    fields: [id("任命标识"), f("staff", "员工引用", "ref", { required: true, ref: "11" }), f("qual", "资格引用", "ref", { required: true, ref: "12" }), f("tc", "教学班引用", "ref", { required: true, ref: "19" }), f("target", "目标类型", "enum", { required: true, options: ["整科", "分工"] }), f("div", "分工引用", "ref", { ref: "21" }), f("work", "工作类型", "enum", { required: true, options: ["主讲", "协同", "助教"] }), f("start", "开始日期", "date", req), f("end", "结束日期", "date")],
+    fields: [id("任命标识"), f("staff", "员工引用", "ref", { required: true, ref: "11" }), f("tc", "教学班引用", "ref", { required: true, ref: "19" }), f("target", "目标类型", "enum", { required: true, options: ["整科", "分工"] }), f("div", "分工引用", "ref", { ref: "21" }), f("work", "工作类型", "enum", { required: true, options: ["主讲", "协同", "助教"] }), f("start", "开始日期", "date", req), f("end", "结束日期", "date")],
   },
   {
     code: "24", name: "管理委派", group: "prep", role: "relation", unit: "项管理委派", guard: "只有已实现和操作者可授事项；保护最后管理员",
-    fields: [id("委派标识"), f("staff", "员工引用", "ref", { required: true, ref: "11" }), f("qual", "资格引用", "ref", { ref: "12" }), f("duty", "具体职责", "text", req), f("target", "目标类型", "enum", { required: true, options: ["学科", "年级", "学校"] }), f("targetRef", "目标引用/标准配置", "text", req), f("start", "开始日期", "date", req), f("end", "结束日期", "date")],
+    fields: [id("委派标识"), f("staff", "员工引用", "ref", { required: true, ref: "11" }), f("duty", "具体职责", "text", req), f("target", "目标类型", "enum", { required: true, options: ["学科", "年级", "学校"] }), f("targetRef", "目标引用/标准配置", "text", req), f("start", "开始日期", "date", req), f("end", "结束日期", "date")],
   },
   {
     code: "25", name: "开户准备", group: "prep", role: "relation", unit: "项开户准备", guard: "只是待办理方案，不激活账号、不含密码/token，不自动发邀请",
@@ -219,12 +219,12 @@ export interface Preset {
 export const PRESETS: Preset[] = [
   { id: "students", label: "单独学生", desc: "只有学生档案，没有跨表关系", sheets: ["13"] },
   { id: "admin-roster", label: "学生与行政名单", desc: "已有班级时可只引用行政班", sheets: ["13", "16", "17"] },
-  { id: "people-base", label: "人员与基础选项", desc: "部门、职务、教室与教职工；资格按需", sheets: ["04", "05", "06", "11", "12"] },
+  { id: "people-base", label: "人员与基础选项", desc: "部门、职务、教室与教职工；职责另行安排", sheets: ["04", "05", "06", "11"] },
   { id: "teaching", label: "教学组织", desc: "课程可选，不强迫官方单元", sheets: ["07", "19", "20", "21", "22", "23"] },
   { id: "family", label: "家校联系", desc: "引用已有学生，不重复建立学生", sheets: ["14", "15"] },
   {
     id: "full", label: "完整学校基础", desc: "01—25 的必要集合；学校课表独立可选",
-    sheets: ["01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25"],
+    sheets: ["01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25"],
   },
   { id: "timetable", label: "学校课表（可选）", desc: "既有课表合同扩展，导入为待确认学校版本", sheets: ["26", "27"] },
 ]

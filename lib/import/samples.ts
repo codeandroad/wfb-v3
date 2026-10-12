@@ -43,13 +43,6 @@ const FULL: SampleData = {
     { id: "EMP03", name: "示例教职工丙", firstDate: "2025-02-17", no: "", dept: "DEP02", title: "JOB01", email: "", phone: "" },
     { id: "EMP04", name: "示例教职工丁", firstDate: "2026-08-20", no: "", dept: "", title: "JOB02", email: "ding@example.edu", phone: "" },
   ],
-  "12": [
-    { id: "Q01", staff: "EMP01", kind: "任课资格", start: "2026-09-01" },
-    { id: "Q02", staff: "EMP01", kind: "班主任资格", start: "2026-09-01" },
-    { id: "Q03", staff: "EMP02", kind: "任课资格", start: "2026-09-01" },
-    { id: "Q04", staff: "EMP03", kind: "任课资格", start: "2026-09-01" },
-    { id: "Q05", staff: "EMP02", kind: "班主任资格", start: "2026-09-01" },
-  ],
   "13": [
     { id: "STU01", name: "示例学生一", firstDate: "2026-09-01", no: "", grade: "10年级" },
     { id: "STU02", name: "示例学生二", firstDate: "2026-09-01", no: "", grade: "10年级" },
@@ -75,8 +68,8 @@ const FULL: SampleData = {
     { klass: "AC01", student: "STU04", start: "2026-09-01", state: "待确认" },
   ],
   "18": [
-    { id: "HRT01", staff: "EMP01", qual: "Q02", klass: "AC01", role: "主", ...T1 },
-    { id: "HRT02", staff: "EMP02", qual: "Q05", klass: "AC01", role: "辅助", ...T1 },
+    { id: "HRT01", staff: "EMP01", klass: "AC01", role: "主", ...T1 },
+    { id: "HRT02", staff: "EMP02", klass: "AC01", role: "辅助", ...T1 },
   ],
   "19": [
     { id: "TC01", term: "TR01", subject: "SUB01", name: "10年级数学A", short: "数学A", homeClass: "AC01", course: "" },
@@ -97,11 +90,11 @@ const FULL: SampleData = {
     { div: "DIV02", student: "STU02", ...T1 },
   ],
   "23": [
-    { id: "TA01", staff: "EMP01", qual: "Q01", tc: "TC01", target: "分工", div: "DIV01", work: "主讲", ...T1 },
-    { id: "TA02", staff: "EMP02", qual: "Q03", tc: "TC01", target: "分工", div: "DIV02", work: "主讲", ...T1 },
-    { id: "TA03", staff: "EMP03", qual: "Q04", tc: "TC02", target: "整科", div: "", work: "主讲", ...T1 },
+    { id: "TA01", staff: "EMP01", tc: "TC01", target: "分工", div: "DIV01", work: "主讲", ...T1 },
+    { id: "TA02", staff: "EMP02", tc: "TC01", target: "分工", div: "DIV02", work: "主讲", ...T1 },
+    { id: "TA03", staff: "EMP03", tc: "TC02", target: "整科", div: "", work: "主讲", ...T1 },
   ],
-  "24": [{ id: "DLG01", staff: "EMP04", qual: "", duty: "课表维护", target: "学校", targetRef: "标准教务配置", start: "2026-09-01" }],
+  "24": [{ id: "DLG01", staff: "EMP04", duty: "课表维护", target: "学校", targetRef: "标准教务配置", start: "2026-09-01" }],
   "25": [
     { staff: "EMP01", role: "教师", preset: "", channel: "邀请链接" },
     { staff: "EMP04", role: "教务", preset: "标准教务配置", channel: "邀请码" },
@@ -121,9 +114,9 @@ const WITH_ISSUES: SampleData = {
     { id: "STU05", name: "示例学生五", firstDate: "2026-09-01", no: "tgs202609031s", grade: "10年级" },
   ],
   "14": [...FULL["14"]!, { id: "GUA04", name: "示例家长甲", phone: "13900000009", email: "" }],
-  "18": [...FULL["18"]!, { id: "HRT03", staff: "EMP02", qual: "Q05", klass: "AC01", role: "主", ...T1 }],
+  "18": [...FULL["18"]!, { id: "HRT03", staff: "EMP02", klass: "AC01", role: "主", ...T1 }],
   "22": [...FULL["22"]!, { div: "DIV02", student: "STU04", ...T1 }],
-  "24": [...FULL["24"]!, { id: "DLG02", staff: "EMP02", qual: "", duty: "全校人事审批", target: "学校", targetRef: "全部", start: "2026-09-01" }],
+  "24": [...FULL["24"]!, { id: "DLG02", staff: "EMP02", duty: "全校人事审批", target: "学校", targetRef: "全部", start: "2026-09-01" }],
 }
 
 export interface SampleDef {
@@ -136,14 +129,14 @@ export interface SampleDef {
 }
 
 export const SAMPLES: SampleDef[] = [
-  { id: "full", label: "完整合成示例（无阻断）", fileName: "示例_完整学校基础.xlsx", desc: "01—25 全部表，含 P1 继承 / S1 子集与多家长多子女", data: FULL },
+  { id: "full", label: "完整合成示例（无阻断）", fileName: "示例_完整学校基础.xlsx", desc: "完整基础集合（不含已停用资格表），含 P1 继承 / S1 子集与多家长多子女", data: FULL },
   { id: "issues", label: "含问题示例", fileName: "示例_含问题.xlsx", desc: "部门引用缺失、主班主任冲突、学生不在父班、同名家长、无权职责、编号错误", data: WITH_ISSUES },
   { id: "rooms", label: "单表：教室", fileName: "示例_教室.xlsx", desc: "只有 06 教室，无课程/学生依赖", data: pick(["06"]) },
   { id: "staff-dept", label: "部门＋职务＋员工", fileName: "示例_部门职务员工.xlsx", desc: "同批引用，员工编号留空预览自动", data: pick(["04", "05", "11"]) },
-  { id: "people-first", label: "分批①人员", fileName: "示例_分批1_人员.xlsx", desc: "先导入员工和学生", data: pick(["04", "05", "11", "12", "13"]) },
+  { id: "people-first", label: "分批①人员", fileName: "示例_分批1_人员.xlsx", desc: "先导入员工和学生", data: pick(["04", "05", "11", "13"]) },
   { id: "teaching-later", label: "分批②教学关系", fileName: "示例_分批2_教学.xlsx", desc: "引用已有员工/学生，不重复上传", data: pick(["07", "19", "20", "21", "22", "23"]) },
-  { id: "hrt", label: "员工无账号＋班主任任命", fileName: "示例_班主任任命.xlsx", desc: "资格与任命已登记，访问待开户", data: pick(["03", "11", "12", "13", "16", "17", "18"]) },
-  { id: "teaching", label: "教学班：有学科无课程", fileName: "示例_教学班P1S1.xlsx", desc: "P1 继承、S1 指定子集", data: pick(["03", "07", "11", "12", "13", "19", "20", "21", "22", "23"]) },
+  { id: "hrt", label: "员工无账号＋班主任任命", fileName: "示例_班主任任命.xlsx", desc: "直接登记人员与任命，访问待开户", data: pick(["03", "11", "13", "16", "17", "18"]) },
+  { id: "teaching", label: "教学班：有学科无课程", fileName: "示例_教学班P1S1.xlsx", desc: "P1 继承、S1 指定子集", data: pick(["03", "07", "11", "13", "19", "20", "21", "22", "23"]) },
   { id: "family", label: "多家长/多子女", fileName: "示例_家校关系.xlsx", desc: "引用已有学生；关系数与人数分开", data: pick(["14", "15"]) },
   {
     id: "numbering", label: "编号错误", fileName: "示例_编号错误.xlsx", desc: "格式、大小写、年月、已占用与本文件重复",

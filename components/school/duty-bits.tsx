@@ -106,7 +106,7 @@ export function AdvancedBasis({ duty }: { duty: DutyRecord }) {
       {open ? (
         <div className="border-t border-border px-3 py-2.5">
           <p className="mb-2 text-xs text-muted-foreground">
-            以下为支撑本项职责的底层角色资格、配置版本与技术来源；同一职责的多条来源在此合并，不在主界面重复成多张卡片。
+            以下为本项职责保留的历史角色、配置版本与登记来源，不作为安排职责的资格前提；同一职责的多条来源在此合并。
           </p>
           <div className="space-y-1.5">
             {duty.basis.map((b, i) => (

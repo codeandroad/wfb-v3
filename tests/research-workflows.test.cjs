@@ -189,7 +189,7 @@ const assignmentFor = (task, questions = []) => ({
   assert.match(workspace, /data-testid="research-workspace"/)
 })
 
-test("research staffing uses qualified, enabled, group-scoped duty arrangers, not leaders or viewers", () => {
+test("research staffing uses enabled, group-scoped duty arrangers, not leaders or viewers", () => {
   const state = seed()
   const assignment = dutyModel.createResearchDuty("duty-permission-test", "u-he", "research_participate", "physics", "2026-09-30")
   const action = { type: "arrange", assignments: [assignment] }
@@ -201,6 +201,64 @@ test("research staffing uses qualified, enabled, group-scoped duty arrangers, no
   assert.throws(() => dutyCommand(scoped, action), /安排权/)
   assert.equal(dutyCommand(state, action).staffDuties.find(duty => duty.id === assignment.id).staffId, "u-he")
   assert.throws(() => command(state, { type: "appointment", appointment: {} }), /停用|安排职责/)
+})
+
+test("every research template can be arranged, revised and ended without role qualifications", () => {
+  const people = structuredClone(STAFF).map(person => ({ ...person, systemRoles: [] }))
+  const before = structuredClone(people)
+  const administrator = people.find(person => dutyModel.schoolDutyManager(people, actor(person.id)))
+  assert(administrator, "the existing school management duty remains the arranging authority")
+  let state = seed()
+  for (const type of dutyModel.RESEARCH_DUTY_KEYS) {
+    const assignment = dutyModel.createResearchDuty(`no-qualification:${type}`, "u-wang", type, "physics", "2027-08-01")
+    state = dutyCommand(state, { type: "arrange", assignments: [assignment] }, administrator.id, actor().date, people)
+    const saved = state.staffDuties.find(duty => duty.id === assignment.id)
+    state = dutyCommand(state, { type: "revise", assignment: { ...saved, end: "2028-07-31" }, expected: saved }, administrator.id, actor().date, people)
+    const revised = state.staffDuties.find(duty => duty.id === assignment.id)
+    state = dutyCommand(state, { type: "end", assignment: { ...revised, end: "2027-09-30" }, expected: revised }, administrator.id, actor().date, people)
+    assert.equal(state.staffDuties.find(duty => duty.id === assignment.id).end, "2027-09-30")
+    assert.equal(state.staffDuties.find(duty => duty.id === assignment.id).history.length, 3)
+  }
+  assert.deepEqual(people, before, "arranging duties does not grant roles or activate accounts")
+  assert.equal(people.find(person => person.id === "u-wang").accountStatus, "none")
+})
+
+test("arranging authority comes from effective scoped duties, not system role labels", () => {
+  const people = structuredClone(STAFF).map(person => ({ ...person, systemRoles: [] }))
+  const state = seed()
+  const assignment = dutyModel.createResearchDuty("scope-without-qualification", "u-he", "research_participate", "physics", "2026-09-30")
+  const action = { type: "arrange", assignments: [assignment] }
+  assert(dutyCommand(state, action, "u-lin", actor().date, people).staffDuties.some(duty => duty.id === assignment.id))
+  const outOfScope = { ...state, staffDuties: state.staffDuties.filter(duty => duty.type !== "research_manage" || duty.scopeRefs[0].id === "math") }
+  assert.throws(() => dutyCommand(outOfScope, action, "u-lin", actor().date, people), /安排权/)
+  assert.throws(() => dutyCommand(state, action, "u-lin", "2028-01-01", people), /安排权/)
+  assert.throws(() => dutyCommand(state, { type: "arrange", assignments: [{ ...assignment, type: "research_manage" }] }, "u-lin", actor().date, people), /安排权/)
+  const roleOnly = people.map(person => person.id === "u-he" ? { ...person, systemRoles: ["SCHOOL_ADMIN", "TEACHING_MANAGER"] } : person)
+  assert.equal(dutyModel.schoolDutyManager(roleOnly, actor("u-he")), false)
+  assert.throws(() => dutyCommand(state, action, "u-he", actor().date, roleOnly), /安排权/)
+  const disabled = people.map(person => person.id === "u-lin" ? { ...person, accountStatus: "disabled" } : person)
+  assert.throws(() => dutyCommand(state, action, "u-lin", actor().date, disabled), /账号/)
+})
+
+test("duty template groups are complete business categories without qualification UI", () => {
+  const { DUTY_GROUPS, DUTY_TYPES } = require("../lib/demo/staff.ts")
+  const grouped = DUTY_GROUPS.flatMap(group => group.duties.map(duty => duty.key))
+  assert.equal(new Set(grouped).size, grouped.length)
+  assert.deepEqual([...grouped].sort(), DUTY_TYPES.map(duty => duty.key).sort())
+  const arrange = fs.readFileSync(path.join(root, "components/school/duty-arrange-sheet.tsx"), "utf8")
+  assert.match(arrange, /DUTY_GROUPS/)
+  assert.doesNotMatch(arrange, /needsQualification|strictQualification|所需任职资格尚未具备|资格对应的职责|systemRoles\.includes/)
+  assert.doesNotMatch(fs.readFileSync(path.join(root, "lib/school/duty-model.ts"), "utf8"), /systemRoles\.includes/)
+})
+
+test("staff homepages do not require teaching roles while account and privacy rules remain", () => {
+  const { hasTeacherHomepage, homepageAccess, DEFAULT_SETTINGS } = require("../lib/profile/store.tsx")
+  const person = { ...STAFF.find(person => person.id === "u-lin"), systemRoles: [] }
+  assert.equal(hasTeacherHomepage(person), true)
+  assert.equal(hasTeacherHomepage({ ...person, status: "left" }), false)
+  for (const accountStatus of ["none", "pending", "disabled", "revoked"]) assert.equal(hasTeacherHomepage({ ...person, accountStatus }), false)
+  assert.deepEqual(homepageAccess({ kind: "staff", staffId: "u-chen" }, "u-lin", { ...DEFAULT_SETTINGS, visibility: "self" }), { ok: false, reason: "private" })
+  assert.deepEqual(homepageAccess({ kind: "parent" }, "u-lin", DEFAULT_SETTINGS), { ok: false, reason: "not_staff" })
 })
 
 test("template, object and tenure share one duty record; ending one group preserves other work and history", () => {
@@ -261,19 +319,26 @@ test("duty storage checks live staff, allows offline registration and remains at
   const { getResearch, saveResearch } = require("../lib/research/store.ts")
   const { createStaff, getStaffList } = require("../lib/school/staff-store.ts")
   const { getStaffDuties, commitStaffDuty } = require("../lib/school/duty-store.ts")
-  const qualified = getStaffList(actor().date).find(person => person.id === "u-he")
-  const offline = createStaff({ ...qualified, id: "duty-test-offline-qualified", name: "无账号资格测试教师", employeeNo: "", accountName: undefined, accountStatus: "none", duties: [], history: [] })
+  const person = getStaffList(actor().date).find(person => person.id === "u-he")
+  const offline = createStaff({ ...person, id: "duty-test-offline-no-roles", name: "无账号无角色测试人员", employeeNo: "", accountName: undefined, accountStatus: "none", systemRoles: [], duties: [], history: [] })
   const assignment = dutyModel.createResearchDuty("duty-store-test", offline.id, "research_participate", "physics", "2026-09-30")
   const arrange = value => commitStaffDuty(actor(), { type: "arrange", assignments: [value] }, getStaffList(actor().date))
   assert.match(arrange({ ...assignment, staffId: "missing-staff" }).error, /人员不存在/)
   assert.match(arrange({ ...assignment, staffId: "u-qian" }).error, /离职/)
-  assert.match(arrange({ ...assignment, staffId: "u-xu" }).error, /资格/)
-  assert.match(arrange({ ...assignment, staffId: "u-wang" }).error, /资格/)
+  for (const staffId of ["u-xu", "u-wang"]) {
+    const before = getStaffList(actor().date).find(person => person.id === staffId)
+    const direct = { ...assignment, id: `${assignment.id}:${staffId}`, staffId }
+    assert.equal(arrange(direct).ok, true)
+    const after = getStaffList(actor().date).find(person => person.id === staffId)
+    assert(after.duties.some(duty => duty.id === direct.id))
+    assert.deepEqual(after.systemRoles, before.systemRoles)
+    assert.equal(after.accountStatus, before.accountStatus)
+  }
   assert.equal(arrange(assignment).ok, true)
   const registered = getStaffList(actor().date).find(person => person.id === offline.id)
   assert(registered.duties.some(duty => duty.id === assignment.id))
   assert.equal(registered.accountStatus, "none")
-  assert.deepEqual(registered.systemRoles, qualified.systemRoles)
+  assert.deepEqual(registered.systemRoles, [])
   assert.equal(model.canViewGroup(getResearch(), { ...actor(offline.id), enabled: false }, "physics"), false)
   const before = structuredClone(getStaffDuties())
   const saved = before.assignments.find(duty => duty.id === assignment.id)
@@ -789,7 +854,7 @@ test("flat responsibility objects keep stable references through renaming and di
   assert.throws(() => dutyCommand(seed(), { type: "save-group", group: original, expected: original }, "u-chen"), /有权人员/)
 })
 
- test("disabled responsibility objects permit scoped duty endings without new grants or qualification bypasses", () => {
+test("disabled responsibility objects permit scoped duty endings without granting unarranged authority", () => {
   const initial = seed()
   const state = { ...initial, groups: initial.groups.map(group => group.id === "math" ? { ...group, active: false } : group) }
   const dutyState = { schema: 1, assignments: state.staffDuties, groups: state.groups }
@@ -802,8 +867,10 @@ test("flat responsibility objects keep stable references through renaming and di
   assert.deepEqual(ended.documents, state.documents)
   assert.equal(model.canViewGroup(ended, actor("u-zhou"), "math"), false)
   assert.throws(() => dutyCommand(state, { type: "revise", assignment: { ...member, end: "2027-06-30" }, expected: member }), /安排权/)
-  const unqualified = STAFF.map(person => person.id === "u-lin" ? { ...person, systemRoles: person.systemRoles.filter(role => role !== "TEACHING_MANAGER") } : person)
-  assert.throws(() => dutyCommand(state, ending, "u-lin", actor().date, unqualified), /安排权/)
+  const noRoles = STAFF.map(person => ({ ...person, systemRoles: [] }))
+  assert.equal(dutyCommand(state, ending, "u-lin", actor().date, noRoles).staffDuties.find(duty => duty.id === member.id).end, actor().date)
+  const noAuthority = { ...state, staffDuties: state.staffDuties.filter(duty => duty.staffId !== "u-lin" || duty.type !== "research_manage") }
+  assert.throws(() => dutyCommand(noAuthority, ending, "u-lin", actor().date, noRoles), /安排权/)
   const grant = state.staffDuties.find(duty => duty.id === "grant-xu-math")
   const endGrant = { type: "end", assignment: { ...grant, end: actor().date }, expected: grant }
   assert.throws(() => dutyCommand(state, endGrant), /安排权/)

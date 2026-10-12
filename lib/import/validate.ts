@@ -259,7 +259,7 @@ export function buildPlan(input: PlanInput): Plan {
           if (fd.required) push("block", fd, `${fd.label}为必填`, `第 ${r.line} 行「${fd.label}」为空。`, ["edit", "exclude-row"])
           continue
         }
-        if (fd.kind === "date" && !isRealDate(v)) push("block", fd, "日期格式错误", `「${v}」不是有效日期，应为 YYYY-MM-DD 的真实日期。`, ["edit"])
+        if (fd.kind === "date" && !isRealDate(v)) push("block", fd, "日期格式错误", `「${v}」不是有���日期，应为 YYYY-MM-DD 的真实日期。`, ["edit"])
         if (fd.kind === "month" && !yyyymmOf(v)) push("block", fd, "年月格式错误", "请填写真实 YYYY-MM 年月；已有准确具体日期可保留。", ["edit"])
         if (fd.kind === "partialDate" && !validBackgroundDate(v)) push("block", fd, "时间格式错误", "请填写年份或年月，不补造日期。", ["edit"])
         if (fd.kind === "time" && !/^\d{2}:\d{2}$/.test(v)) push("block", fd, "时间格式错误", `「${v}」应为 HH:MM。`, ["edit"])
@@ -327,7 +327,7 @@ export function buildPlan(input: PlanInput): Plan {
         }
       }
 
-      if (code === "11" && workRangeInvalid(values.workStart, values.workEnd)) push("block", def.fields.find((field) => field.key === "workEnd") ?? null, "结束时间早于开始时间", "请修正对应的过往工作经历。", ["edit"])
+      if (code === "11" && workRangeInvalid(values.workStart, values.workEnd)) push("block", def.fields.find((field) => field.key === "workEnd") ?? null, "结束时间早于开始时间", "请修正���应的过往工作经历。", ["edit"])
 
       // 同名不同身份
       if ((code === "11" || code === "13" || code === "14") && values.name) {
@@ -367,15 +367,9 @@ export function buildPlan(input: PlanInput): Plan {
         }
       }
       if (code === "18") {
-        const q = values.qual ? lookup("12", values.qual) : undefined
-        if (q && q.staff !== values.staff) push("block", def.fields.find((x) => x.key === "qual") ?? null, "资格不属于该员工", `资格 ${values.qual} 属于 ${q.staff}，不是 ${values.staff}。`, ["edit"])
-        if (q && q.kind !== "班主任资格") push("block", def.fields.find((x) => x.key === "qual") ?? null, "资格类型不符", `班主任任命需要“班主任资格”，${values.qual} 为“${q.kind}”。`, ["edit"])
         if (values.role === "主") {
           const clash = rows.find((o) => o.status !== "excluded" && o.values.klass === values.klass && o.values.role === "主" && overlap(values.start, values.end, o.values.start, o.values.end))
           if (clash) push("block", def.fields.find((x) => x.key === "role") ?? null, "主班主任冲突", `${values.klass} 在第 ${clash.line} 行已有同期主班主任 ${clash.values.staff}。同时最多一位主班主任，可有多位辅助。`, ["edit", "exclude-row"])
-        }
-        if (!q && values.qual && !values.qual.startsWith(EXISTING_PREFIX) && stateOf("12") !== "import") {
-          // 资格来自已有对象时由后端核验
         }
         push("pending", null, "任命办理权限待核验", "文件不是授权证明。需要后端确认经办者有权办理班主任任命；员工无账号时登记为“访问待开户”。", [])
       }
@@ -404,9 +398,6 @@ export function buildPlan(input: PlanInput): Plan {
         if (values.target === "分工" && !values.div) push("block", def.fields.find((x) => x.key === "div") ?? null, "分工目标缺少分工引用", "目标类型为分工时必须填写分工引用。", ["edit"])
         const d = values.div ? lookup("21", values.div) : undefined
         if (d && d.tc !== values.tc) push("block", def.fields.find((x) => x.key === "div") ?? null, "分工不属于该教学班", `${values.div} 属于 ${d.tc}，不是 ${values.tc}。`, ["edit"])
-        const q = values.qual ? lookup("12", values.qual) : undefined
-        if (q && q.kind !== "任课资格") push("block", def.fields.find((x) => x.key === "qual") ?? null, "资格类型不符", `任教安排需要“任课资格”，${values.qual} 为“${q.kind}”。`, ["edit"])
-        if (q && q.staff !== values.staff) push("block", def.fields.find((x) => x.key === "qual") ?? null, "资格不属于该员工", `资格 ${values.qual} 属于 ${q.staff}。`, ["edit"])
         push("pending", null, "任命办理权限待核验", "需要后端确认经办者可办理该任教安排；多教师按多行登记，不自动以首行为负责人。", [])
       }
       if (code === "24") {

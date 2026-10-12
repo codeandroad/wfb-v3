@@ -17,7 +17,6 @@ import {
   STANDARD_TM_PLANNED,
   STANDARD_TM_STAFF_IDS,
   SUBSTITUTE_PREVIEW,
-  SUBSTITUTE_UNQUALIFIED,
   SYSTEM_ROLES,
   SYSTEM_ROLE_DESC,
   SYSTEM_ROLE_LABEL,
@@ -404,7 +403,7 @@ function DutyGuide() {
             <span>账号不可用时，职责保留但当前不可使用。</span>
           </div>
           <p className="mt-3 text-xs text-muted-foreground">
-            系统角色资格：{SYSTEM_ROLE_DESC[def.role]}
+            账号角色信息（非安排前提）：{SYSTEM_ROLE_DESC[def.role]}
           </p>
         </Card>
 
@@ -420,13 +419,13 @@ function DutyGuide() {
               body="教 P1 不等于可以修改全校 CAIE 数学目录；两项职责需分别安排。"
             />
             <Contrast
-              title="课程资料维护 vs 课程结构维护"
+              title="课程资料维�� vs 课程结构维护"
               body="校内说明 / 资源，不等于课程启停、官方身份、课程—单元结构或全校字典。"
             />
           </div>
           <InfoNote>
             <span className="mt-3 block">
-              说明页描述“可能允许的边界”；具体某人是否允许，以其教职工详情中的实际职责与状态为准。
+              说明页描述“可能允许的边界”；具体某人是否允许，以其教职��详情中的实际职责与状态为准。
             </span>
           </InfoNote>
         </Card>
@@ -492,7 +491,7 @@ function StandardTeachingConfig({ onOpenStaff }: { onOpenStaff: (id: string) => 
             ))}
           </div>
           <p className="mt-2 text-xs text-muted-foreground/70">
-            某人的资格失效 / 离职 / 暂停单独判断，不会改写他人记录；“谁负责哪项日常工作”是分工说明，不是隐藏的另一份权限配置。
+            某人的任期结束 / 离职 / 暂停单独判断，不会改写他人记录；“谁负责哪项日常工作”是分工说明，不是隐藏的另一份权限配置。
           </p>
         </div>
 
@@ -577,14 +576,9 @@ function StandardTeachingConfig({ onOpenStaff }: { onOpenStaff: (id: string) => 
               ))}
             </ul>
           </div>
-          <div className="rounded-lg border border-[#e6d4a8] bg-[#fbf7ee] p-3">
-            <p className="text-xs font-semibold text-[#7a5514]">资格不满足时（示例拒绝）</p>
-            <p className="mt-1.5 text-[12.5px] text-[#7a5514]">
-              接替人选：{SUBSTITUTE_UNQUALIFIED.candidate}
-            </p>
-            <p className="mt-1 text-[12.5px] text-[#7a5514]">{SUBSTITUTE_UNQUALIFIED.reason}</p>
-            <p className="mt-1 text-[12.5px] text-[#7a5514]/80">{SUBSTITUTE_UNQUALIFIED.note}</p>
-          </div>
+          <InfoNote>
+            安排代课不再要求接替人先具备任课资格。仍需选择在职人员、明确教学目标与课次或期间，并由具有代课管理职责的人员在负责范围内办理。
+          </InfoNote>
         </div>
       </Card>
 
@@ -592,7 +586,7 @@ function StandardTeachingConfig({ onOpenStaff }: { onOpenStaff: (id: string) => 
       <Card className="p-5">
         <h3 className="text-[14px] font-semibold">规划职责（本轮不纳入统一配置）</h3>
         <p className="mt-1.5 text-[13px] text-muted-foreground">
-          以下职责本轮仅保留边界说明，不擅自补入标准配置，也不作为可授予选项；敏感能力（听课反思全文、积分规则、账号授予等）不因统一配置放开。
+          以下职责本轮仅保留边界说明，不���自补入标准配置，也不作为可授予选项；敏感能力（听课反思全文、积分规则、账号授予等）不因统一配置放开。
         </p>
         <div className="mt-3 space-y-2">
           {STANDARD_TM_PLANNED.map((p) => (
@@ -724,7 +718,7 @@ function AdminTenurePanel() {
           保护针对正常业务与可预见的期限配置：不允许撤权、解绑、停用、注销等绕过同一保护。待激活管理员、未来任命、仅有管理员标签的受限账号不计入接替。
         </InfoNote>
         <InfoNote>
-          v0 只呈现固定场景，不计算治理覆盖区间。真实实现须核对可用治理来源、membership、账号及适用资格 / 任命的期间，不只看角色名称或账号数量。
+          v0 只呈现固定场景，不计算治理覆盖区间。真实实现须核对可用治理来源、membership、账号及管理任命的期间，不只看角色名称或账号数量。
         </InfoNote>
       </div>
     </div>
