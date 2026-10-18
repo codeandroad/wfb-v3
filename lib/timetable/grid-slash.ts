@@ -173,9 +173,7 @@ function encode(value: string | null | undefined): string {
 
 export function serializeRecord(record: ParsedRecord, view: GridView = record.view): string {
   if (!["TEACHER", "CLASS"].includes(view)) fail("VIEW_REQUIRED", "未知布局。", 0)
-  let name = record.name
-  if (record.kindHint === "ACTIVITY") name = "活动:" + name
-  else if (/^(活动|课程)[:：]/u.test(name)) name = "课程:" + name
+  const name = /^(活动|课程)[:：]/u.test(record.name) ? "课程:" + record.name : record.name
   const fields =
     view === "TEACHER"
       ? [name, record.locationText, record.unitGroupShortName]

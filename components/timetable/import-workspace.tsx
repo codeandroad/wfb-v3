@@ -172,7 +172,7 @@ export function ImportWorkspace({ mode }: { mode: "school" | "personal" }) {
       if (r.isActivity) subject = "活动"
       if (needsClass) {
         const key = `cls:${r.raw.name}`
-        const fix = classFixes[key] ?? (r.activitySuggested ? ({ kind: "activity" } as ClassFix) : undefined)
+        const fix = classFixes[key]
         if (!fix) {
           map.set(r.id, { state: "needs", groupKey: key })
           continue
@@ -248,7 +248,7 @@ export function ImportWorkspace({ mode }: { mode: "school" | "personal" }) {
             <p className="text-[13px] leading-relaxed text-muted-foreground">
               上传网格式 .xlsx（行=课节，列=星期）。安排格用半角 <code className="rounded bg-muted px-1">/</code> 分隔：
               教师视角 <code className="rounded bg-muted px-1">教学对象/地点/分工</code>，班级视角{" "}
-              <code className="rounded bg-muted px-1">教学对象/教师/地点/分工</code>。源布局、教师与字段顺序会自动识别；时间以系统作息为准。
+              <code className="rounded bg-muted px-1">教学对象/教师/地点/分工</code>。教学对象可直接填写教学班或活动名称。源布局、教师与字段顺序会自动识别；时间以系统作息为准。
             </p>
           </div>
           <input
@@ -514,14 +514,14 @@ function ResolvePanel({
   onTeacherFix: (key: string, fix: TeacherFix) => void
 }) {
   // 分组：需要处理的 + 已处理过的（便于改主意）
-  const groups = new Map<string, { key: string; kind: "cls" | "tch"; label: string; records: ImportRecord[]; suggested: boolean; ambiguous: boolean }>()
+  const groups = new Map<string, { key: string; kind: "cls" | "tch"; label: string; records: ImportRecord[]; ambiguous: boolean }>()
   for (const r of records) {
     if (r.status === "error") continue
     const keys: { key: string; kind: "cls" | "tch"; label: string }[] = []
     if (r.teacherStatus !== "ok") keys.push({ key: `tch:${r.raw.teacherText ?? ""}`, kind: "tch", label: r.raw.teacherText || "（未写教师）" })
     if (!r.isActivity && r.classStatus !== "ok") keys.push({ key: `cls:${r.raw.name}`, kind: "cls", label: r.raw.name })
     for (const k of keys) {
-      const g = groups.get(k.key) ?? { ...k, records: [], suggested: r.activitySuggested, ambiguous: r.classStatus === "ambiguous" }
+      const g = groups.get(k.key) ?? { ...k, records: [], ambiguous: r.classStatus === "ambiguous" }
       g.records.push(r)
       groups.set(k.key, g)
     }
@@ -546,7 +546,7 @@ function ResolvePanel({
           </div>
           <ul className="divide-y divide-border">
             {[...groups.values()].map((g) => {
-              const cf = g.kind === "cls" ? classFixes[g.key] ?? (g.suggested ? ({ kind: "activity" } as ClassFix) : undefined) : undefined
+              const cf = g.kind === "cls" ? classFixes[g.key] : undefined
               const tf = g.kind === "tch" ? teacherFixes[g.key] : undefined
               const resolved = g.kind === "cls" ? !!cf : !!tf
               const value =
@@ -568,7 +568,7 @@ function ResolvePanel({
                       <span className={`size-2 shrink-0 rounded-full ${resolved ? "bg-primary" : "bg-amber-500"}`} aria-hidden />
                       <span className="font-medium text-foreground">{g.label}</span>
                       <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">
-                        {g.kind === "tch" ? "教师未登记" : g.ambiguous ? "名称对应多个教学班" : g.suggested ? "疑似非课程活动" : "教学班未登记"}
+                        {g.kind === "tch" ? "教师未登记" : g.ambiguous ? "名称对应多个教学班" : "教学班未登记"}
                       </span>
                       <span className="text-[12px] text-muted-foreground">{g.records.length} 节</span>
                     </div>
