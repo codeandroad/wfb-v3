@@ -1,0 +1,96 @@
+{
+  "date": "2026-10-19",
+  "baseline": "42ba585f5e5b351c7beb333c15bdbb4e2e0c580f",
+  "branch": "main",
+  "incremental_implementation_sha256": "4000a0fe20a3f2b3749b04f49a552eeb751e50fc3828afc44ac4b363e36d6709",
+  "implementation_files": [
+    {
+      "path": "app/(app)/timetable/demo/math-qa/page.tsx",
+      "sha256": "fe90ab0fdec2b158eeb7121749c0e8b94881e33d7a98aac6652abced720118a9"
+    },
+    {
+      "path": "components/timetable/demo-bar.tsx",
+      "sha256": "a9a19e9f6275049cebf8ff668ce483ff7f31503b05003f6fc51e221015000f54"
+    },
+    {
+      "path": "components/timetable/math-qa-demo.tsx",
+      "sha256": "d399150900fb92607456b2e250053c4e890a68be6375d4097ffd4b58e64e8e23"
+    },
+    {
+      "path": "components/timetable/week-grid.tsx",
+      "sha256": "77f383f0587fb484741a69b9bb7a26c34b8a04b1de51da3980535148be907062"
+    },
+    {
+      "path": "lib/timetable/data.ts",
+      "sha256": "eb12b6c010568832fa7a494ea9666369e560ad45ccf8ccd13083fadc3bc533ca"
+    },
+    {
+      "path": "lib/timetable/math-qa-demo.ts",
+      "sha256": "95f0e3e310a13b42c140e8506311c294c7821b84922213bd8f36bf27dcc24fc0"
+    }
+  ],
+  "test_files": [
+    {
+      "path": "tests/timetable-math-qa-demo.test.cjs",
+      "sha256": "e3853b6cff637dd25b373da2368507d99a7646e437a8a7d238bf083132f3ca54"
+    }
+  ],
+  "checks": {
+    "typecheck": "PASS",
+    "tests": {
+      "status": "PASS",
+      "count": 221,
+      "failed": 0,
+      "new_demo_tests": 7
+    },
+    "build": "PASS",
+    "diff_check": "PASS",
+    "routes_http": {
+      "/timetable/demo/math-qa": {
+        "status": 200,
+        "bytes": 63403,
+        "contains_demo_title": true,
+        "contains_four_teacher_summary": true
+      },
+      "/timetable": {
+        "status": 200,
+        "bytes": 92452,
+        "contains_demo_link": true
+      },
+      "/timetable/my": {
+        "status": 200,
+        "bytes": 89115
+      }
+    },
+    "browser_interaction_visual": "NOT_RUN (prior browser automation denial respected)",
+    "parent_make_check": "NOT_RUN (no Makefile target in wfb-v3)"
+  },
+  "independent_review": {
+    "path": "docs/reviews/2026-10-19-math-qa-demo.md",
+    "status": "PASS (no remaining required fixes)",
+    "matches_implementation": true,
+    "regression_tests": 149,
+    "extra_real_component_ssr": "PASS",
+    "typecheck": "PASS",
+    "diff_check": "PASS"
+  },
+  "manual_acceptance": "PENDING",
+  "data_preservation": "Dedicated read-only fixture; no change to school teacher directory, releases, templates, saved schedules, shared clock/week or preferences. Command/storage sentinels cover SSR and component event paths, not browser hydration.",
+  "git_action": "UNCOMMITTED_NOT_PUSHED",
+  "logs": {
+    ".local-artifacts/math-qa-demo/build.log": "80a5770c58131680563f28d7b4370a3f38cbdc666c9f9955cf71d0f258096f2f",
+    ".local-artifacts/math-qa-demo/diff-check.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".local-artifacts/math-qa-demo/http.json": "1ca6681ddb26f88620dcf82aab1d357fe03326bd04b092ff70ffea8f66fb5f14",
+    ".local-artifacts/math-qa-demo/implementation-manifest.txt": "4000a0fe20a3f2b3749b04f49a552eeb751e50fc3828afc44ac4b363e36d6709",
+    ".local-artifacts/math-qa-demo/reviewer-before.json": "bee6307ab1c94d0ac63bfa5a6e6211e670ef643803e433da3f6f8d59397a65ff",
+    ".local-artifacts/math-qa-demo/reviewer-boundary.log": "42be54316169c0865e87bf4c74eaf96b9d92af27188b413bdab03f32cfdbe504",
+    ".local-artifacts/math-qa-demo/reviewer-demo-ssr.cjs": "689dba14bdd685d946155e4f30d435e4a774a8192f6d88f4c6a857104b1db4a6",
+    ".local-artifacts/math-qa-demo/reviewer-demo-ssr.log": "fb2553c74cb104c0e846d2b6b32afbad9fc6680c1bb1442f4135f29c02b00364",
+    ".local-artifacts/math-qa-demo/reviewer-diff-check.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".local-artifacts/math-qa-demo/reviewer-implementation-manifest.txt": "4000a0fe20a3f2b3749b04f49a552eeb751e50fc3828afc44ac4b363e36d6709",
+    ".local-artifacts/math-qa-demo/reviewer-tests.log": "de86746984a5f07b578b16346570f7cd006a251bcb9abd265e6a1a474bea44d1",
+    ".local-artifacts/math-qa-demo/reviewer-typecheck.log": "64df126360f2c182f554158445ba352f03a5961c3d1bd96e8926905078dac25b",
+    ".local-artifacts/math-qa-demo/tests.log": "72554ea3300aea69fe8b98093aceeb2d7ac647cf7dea675cbdc57960db585bf9",
+    ".local-artifacts/math-qa-demo/typecheck.log": "71322f3a5e902c7c296ca827d919591ea7b30265f382923d16c5ea0a8440b9e8"
+  }
+}

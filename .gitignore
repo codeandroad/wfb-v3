@@ -17,3 +17,6 @@ node_modules
 # Generated Next.js and TypeScript files
 next-env.d.ts
 *.tsbuildinfo
+
+# Local verification logs
+.local-artifacts/

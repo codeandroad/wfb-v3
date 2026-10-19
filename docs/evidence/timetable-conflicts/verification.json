@@ -1,0 +1,70 @@
+{
+  "date": "2026-10-19",
+  "baseline": "42ba585f5e5b351c7beb333c15bdbb4e2e0c580f",
+  "incremental_implementation_sha256": "1eabd49a958881c71da4020f267964bdcbaaeed93fea81a31542af3641bbcaef",
+  "review_matches": true,
+  "implementation_files": [
+    {
+      "path": "app/(app)/timetable/my/page.tsx",
+      "sha256": "9bbe688c29dcaa81f463758cb65d23dd3f34022ddfa45bf764c83afbe864241a"
+    },
+    {
+      "path": "components/timetable/overview-panel.tsx",
+      "sha256": "8b7aeda6b0a606cba1ee10a78649673349eb0357c4622829a4c463278f5554bd"
+    },
+    {
+      "path": "components/timetable/week-grid.tsx",
+      "sha256": "8ace045459f0d23291b8bf8f2897d7036bb6688f290b614d2fdc922d6ca88ba4"
+    },
+    {
+      "path": "lib/timetable/conflict-display.ts",
+      "sha256": "f320e4adbc18197371383f1a10b7e6495f761ed0c5b0601980f7294435b6358a"
+    },
+    {
+      "path": "lib/timetable/data.ts",
+      "sha256": "d3ccf4f58c452a07600b90f17007db691d34f59b2eb37c4cf757926e70c60356"
+    }
+  ],
+  "test_files": [
+    {
+      "path": "tests/timetable-conflicts.test.cjs",
+      "sha256": "25b9cc89ddb045e84fb0d5439f96a44280e4470e1668f07b1408b605569bad72"
+    },
+    {
+      "path": "tests/research-workflows.test.cjs",
+      "sha256": "4c4b3f04d9a9bbc8aea03af12915b9bef6ba07c42dfc6c7d5d61f6b353d366f8"
+    }
+  ],
+  "checks": {
+    "typecheck": "PASS",
+    "tests": {
+      "status": "PASS",
+      "count": 108,
+      "failed": 0,
+      "new_conflict_tests": 14
+    },
+    "build": "PASS",
+    "diff_check": "PASS",
+    "routes_http": {
+      "/timetable": 200,
+      "/timetable/my": 200,
+      "/research?group=math&tab=schedule": 200,
+      "/homework": 200
+    },
+    "browser_interaction_visual": "NOT_RUN",
+    "parent_make_check": "NOT_RUN (no Makefile target in wfb-v3)"
+  },
+  "review": "docs/reviews/2026-10-19-timetable-conflicts.md",
+  "manual_acceptance": "PENDING",
+  "git_action": "UNCOMMITTED_NOT_PUSHED",
+  "logs": {
+    ".local-artifacts/timetable-display/conflicts-tests-initial.log": "cc16ead6a2d7d31520d86c4fff41b227aae846301f7b70126a8465c6ffd6804a",
+    ".local-artifacts/timetable-display/conflicts-tests-final.log": "f106624e2ce2b0bd2dc03c4a22202ec0bb683d434b562729e47de188a86d7c7a",
+    ".local-artifacts/timetable-display/conflicts-build.log": "86396720d2ec1c983b78e31682f937269b442d716e45fc0abcfb7d3bf62de3d2"
+  },
+  "failure_and_fix": [
+    "Initial suite failed one isolated research timetable SSR test because its harness omitted TeachingProvider; matched the real app provider tree without removing assertions.",
+    "Independent review TC-01: legacy studentGroup overrode disjoint/cross-domain/empty rosters; removed group shortcut for display student assessment, added three regression cases.",
+    "Independent review TC-02: task membership was used before successful load; null roster now represents not ready/load error."
+  ]
+}

@@ -1,0 +1,50 @@
+{
+  "date": "2026-10-19",
+  "baseline": "42ba585f5e5b351c7beb333c15bdbb4e2e0c580f",
+  "incremental_implementation_sha256": "51f44035f13a489861fe31bf6ba3685feefcc99c4f810a42f7bdc4c86ef1c2f9",
+  "review_matches": true,
+  "implementation_files": [
+    {
+      "path": "components/timetable/display-settings.tsx",
+      "sha256": "f4d6147a125ae06c4b0059af18e7cb1708c78694184a821043e8ee32e9632d45"
+    },
+    {
+      "path": "components/timetable/week-grid.tsx",
+      "sha256": "b4e94be9371e880da5cdb5984d9e79841487a966db00100256eba334e3573d96"
+    },
+    {
+      "path": "lib/timetable/display.ts",
+      "sha256": "b511d4fbf9e60469988ab45428237961d98ceb5c50e61211d8d3f5eefcc504ab"
+    }
+  ],
+  "test_file": {
+    "path": "tests/timetable-card-text.test.cjs",
+    "sha256": "1e5650f2043550d32222c90e539ab031be981dfb345ea74f306aa2f1f5327d16"
+  },
+  "checks": {
+    "typecheck": "PASS",
+    "tests": {
+      "status": "PASS",
+      "count": 124,
+      "failed": 0,
+      "new_card_text_tests": 7
+    },
+    "build": "PASS",
+    "diff_check": "PASS",
+    "routes_http": {
+      "/timetable": 200,
+      "/timetable/my": 200
+    },
+    "browser_interaction_visual": "NOT_RUN",
+    "parent_make_check": "NOT_RUN (no Makefile target in wfb-v3)"
+  },
+  "review": "docs/reviews/2026-10-19-timetable-card-text.md",
+  "manual_acceptance": "PENDING",
+  "interpretation": "CONFIRMED by Owner: separate color/font styling of teacher name and office/classroom text inside the card.",
+  "git_action": "UNCOMMITTED_NOT_PUSHED",
+  "logs": {
+    ".local-artifacts/timetable-card-text/tests.log": "e086cec23ba1d653cb880162d268cb6978fdd21a65529d590453678618e2804e",
+    ".local-artifacts/timetable-card-text/build.log": "7ef6db15505486ffdcfbf9a1ee9acc981d254bc543e78665ec7802a9f21f109a"
+  },
+  "clarification_update": "Documentation only; implementation and recorded verification unchanged. Manual visual acceptance remains PENDING."
+}

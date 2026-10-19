@@ -1,0 +1,48 @@
+{
+  "date": "2026-10-19",
+  "baseline": "42ba585f5e5b351c7beb333c15bdbb4e2e0c580f",
+  "incremental_implementation_sha256": "3b932eab8646369387431f1671d4fdbcfe1500ae5005001ea79db4d98dc33b0a",
+  "review_matches": true,
+  "implementation_files": [
+    {
+      "path": "components/timetable/display-settings.tsx",
+      "sha256": "c0b127b12a9ed359ad8a78c4a4aea969662ba4ea373b18243a5d82d89102995d"
+    },
+    {
+      "path": "components/timetable/week-grid.tsx",
+      "sha256": "5f70558b19f07d2b9b590691d02c9d4c6fb01a410f55ab2017eb679a65561c8f"
+    },
+    {
+      "path": "lib/timetable/display.ts",
+      "sha256": "c5684551efb8219bfa86e159e4f5bbc52211a50d5c9a99d1be71833c769dae0e"
+    }
+  ],
+  "test_file": {
+    "path": "tests/timetable-teacher-appearance.test.cjs",
+    "sha256": "a7b2cdfdc73db0900b8edae46f90005ec6bbca12a7c60edb7c388104696ccc05"
+  },
+  "checks": {
+    "typecheck": "PASS",
+    "tests": {
+      "status": "PASS",
+      "count": 117,
+      "failed": 0,
+      "new_teacher_appearance_tests": 9
+    },
+    "build": "PASS",
+    "diff_check": "PASS",
+    "routes_http": {
+      "/timetable": 200,
+      "/timetable/my": 200
+    },
+    "browser_interaction_visual": "NOT_RUN",
+    "parent_make_check": "NOT_RUN (no Makefile target in wfb-v3)"
+  },
+  "review": "docs/reviews/2026-10-19-admin-teacher-appearance.md",
+  "manual_acceptance": "PENDING",
+  "git_action": "UNCOMMITTED_NOT_PUSHED",
+  "logs": {
+    ".local-artifacts/admin-teacher-appearance/tests.log": "f84409745f6ed43efe8fa3ec2e9fa89ca752f3ca7eb0496f8072b639ddec7ce2",
+    ".local-artifacts/admin-teacher-appearance/build.log": "8e175248a043b183a94a8a4a5fc2f749f4695219f184493e38a13b2922c76751"
+  }
+}

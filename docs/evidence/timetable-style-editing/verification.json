@@ -1,0 +1,97 @@
+{
+  "date": "2026-10-19",
+  "baseline": "42ba585f5e5b351c7beb333c15bdbb4e2e0c580f",
+  "incremental_implementation_sha256": "ab862e8e030fe626d2620eeeda8247c9074b388624d7eec011977461d24f4f84",
+  "implementation_files": [
+    {
+      "path": "components/mt/day-cards-view.tsx",
+      "sha256": "e170820b1c963df42e59a2e02abe94a4826aad0b7cd3285cc5434160e5dbe054"
+    },
+    {
+      "path": "components/mt/style-color-input.tsx",
+      "sha256": "e98d15be3b17cc2b5323de158c0dd8f82bfe9a12cc3ee5300605312db864aa83"
+    },
+    {
+      "path": "components/mt/teacher-prefs.tsx",
+      "sha256": "ac78d15c6764247ac789e9f2956ca6280e603f551abff1c398708d27f606dbb5"
+    },
+    {
+      "path": "components/mt/use-style-drafts.ts",
+      "sha256": "5085e1d9d07af91c9864cecd621ce6f306a0cbe1ded4e22297f8dcb6bb61f6e3"
+    },
+    {
+      "path": "components/mt/week-schedule.tsx",
+      "sha256": "5d21ddba5b61c37aee270224dee72d0287cb5489317b48c1d854c334008fc171"
+    },
+    {
+      "path": "components/timetable/display-settings.tsx",
+      "sha256": "3dc5181d8838c5eea929930229bd14a664a30c7da3e0c489add4000927f72d5b"
+    },
+    {
+      "path": "components/timetable/week-grid.tsx",
+      "sha256": "d1d3829b9f275f28efbe6c5595b01d89a7df128d4b4c880a5f056d8af50037ce"
+    },
+    {
+      "path": "lib/timetable/display.ts",
+      "sha256": "530e35c55b1a07a2b00c2b41135a5faa1e32be1988ebeb296db641618e2688f0"
+    },
+    {
+      "path": "lib/timetable/teacher-appearance.ts",
+      "sha256": "3e389fb73c9c001d6c669234d07c3f3b7bee9a06360a3a0d8f09b66e7db668c2"
+    }
+  ],
+  "test_files": [
+    {
+      "path": "tests/timetable-teacher-parts.test.cjs",
+      "sha256": "0b92f703b6edf2409b676c5c6f75969b4aeb2dd47bb4101bf65dfe16654ed020"
+    },
+    {
+      "path": "tests/timetable-style-drafts.test.cjs",
+      "sha256": "ca11413b33e369c667382564f547224e6f51225711e56fc6c24ea1bd18951f85"
+    },
+    {
+      "path": "tests/timetable-card-text.test.cjs",
+      "sha256": "a2005470a1a4466dee98930b828dfc72e37bbbc0033915febd656e7fc44d7fab"
+    }
+  ],
+  "checks": {
+    "typecheck": "PASS",
+    "tests": {
+      "status": "PASS",
+      "count": 167,
+      "failed": 0,
+      "new_tests": 32,
+      "teacher_parts": 16,
+      "style_drafts": 16
+    },
+    "build": "PASS",
+    "diff_check": "PASS",
+    "routes_http": {
+      "/timetable": 200,
+      "/timetable/my": 200,
+      "/teaching": 200
+    },
+    "browser_interaction_visual": "NOT_RUN",
+    "parent_make_check": "NOT_RUN (no Makefile target in wfb-v3)"
+  },
+  "review": "docs/reviews/2026-10-19-timetable-style-editing.md",
+  "review_status": "PASS (no remaining required fixes)",
+  "review_matches": true,
+  "manual_acceptance": "PENDING",
+  "git_action": "UNCOMMITTED_NOT_PUSHED",
+  "first_run_failure": "One existing missing-room assertion expected old text; updated expectation to user-requested terminology. Assertion retained; final run passes.",
+  "logs": {
+    ".local-artifacts/timetable-style-editing/build.log": "1005e8614ea294ee130b6ffba3851a98d4f31633d62f7d826d34f56e1ca959cf",
+    ".local-artifacts/timetable-style-editing/first-tests.log": "c7a26bcc18f5eeb1288490af85dd8bf2c39e837de76c2764cef279980e47b519",
+    ".local-artifacts/timetable-style-editing/http.json": "aba5de52abc01a812dd0a9c286525ef9e133d5f78d3171017782d974c4e302e3",
+    ".local-artifacts/timetable-style-editing/implementation-manifest.txt": "ab862e8e030fe626d2620eeeda8247c9074b388624d7eec011977461d24f4f84",
+    ".local-artifacts/timetable-style-editing/tests.log": "9a64c23e99e8cb7661f6584d651fd99627df63cd3b8492cf9c5498838ae73fe7",
+    ".local-artifacts/timetable-style-editing/typecheck.log": "71322f3a5e902c7c296ca827d919591ea7b30265f382923d16c5ea0a8440b9e8"
+  },
+  "independent_review_checks": {
+    "regression_tests": 87,
+    "typecheck": "PASS",
+    "diff_check": "PASS",
+    "real_component_ssr": "PASS"
+  }
+}

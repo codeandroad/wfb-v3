@@ -99,10 +99,11 @@ test("rendered daily timetable removes empty cards and follows shared slot moves
   const { DemoProvider } = require("../lib/demo/store.tsx")
   const { MtProvider } = require("../lib/mt/store.tsx")
   const { TimetableProvider } = require("../lib/timetable/store.tsx")
+  const { TeachingProvider } = require("../lib/teaching/store.tsx")
   const { ScheduleDays } = require("../components/research/schedule-days.tsx")
   const { GroupSchedule } = require("../components/research/group-schedule.tsx")
   const { addDays } = require("../lib/timetable/data.ts")
-  const renderUI = child => renderToStaticMarkup(createElement(DemoProvider, null, createElement(MtProvider, null, createElement(TimetableProvider, null, child))))
+  const renderUI = child => renderToStaticMarkup(createElement(DemoProvider, null, createElement(TeachingProvider, null, createElement(MtProvider, null, createElement(TimetableProvider, null, child)))))
   const week = "2026-10-12"
   const render = state => renderUI(createElement(ScheduleDays, {
     group: "math", week,

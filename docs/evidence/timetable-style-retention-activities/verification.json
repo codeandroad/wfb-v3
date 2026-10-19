@@ -1,0 +1,108 @@
+{
+  "date": "2026-10-19",
+  "baseline": "42ba585f5e5b351c7beb333c15bdbb4e2e0c580f",
+  "branch": "main",
+  "incremental_implementation_sha256": "cf97e1416d6d1fd7c5394587910759e5ff889b559f7e57f3ce1c2882311c092e",
+  "implementation_files": [
+    {
+      "path": "components/mt/style-color-input.tsx",
+      "sha256": "48d51ee866d2ebdda58ab7203a76bb5a6cb17952f0ba4828a625e756fc9e9b32"
+    },
+    {
+      "path": "components/mt/use-style-drafts.ts",
+      "sha256": "da83d10d9f681eb266ba6fc4cb71acb96667ca764006b34849660b4616d93ecf"
+    },
+    {
+      "path": "components/timetable/card-filters.tsx",
+      "sha256": "4a17fbe0b0645ae927dee63bdcadb000743ecbe9309df38c66dd54964134364c"
+    },
+    {
+      "path": "components/timetable/display-settings.tsx",
+      "sha256": "8a8de605f5df39de1fc7434eae3a0094725d1ba7af254c5fbdd3e45e654366d2"
+    },
+    {
+      "path": "components/timetable/overview-panel.tsx",
+      "sha256": "3bfb87f5ac40a647a706201e17d7e581d1a98c53d30c36e22655f259592b5bbc"
+    },
+    {
+      "path": "components/timetable/week-grid.tsx",
+      "sha256": "4f5f48ac879c9fc609797e7d0eed825434a76bbc4d2aeebab63d4e2939b46371"
+    },
+    {
+      "path": "lib/timetable/activities.ts",
+      "sha256": "b6d1474741ff03121905bc11e9bc059db99fd26406925a67840c5ec99d6d0a8a"
+    },
+    {
+      "path": "lib/timetable/conflict-display.ts",
+      "sha256": "b85d6f378ecb234edbfb1cf56005f37ec36281f492dded1c8caf3a4c25b1cf5f"
+    },
+    {
+      "path": "lib/timetable/display.ts",
+      "sha256": "cd27a678453441118a223217c71586642acf679646e571fbf5e0f477165188b5"
+    }
+  ],
+  "test_files": [
+    {
+      "path": "tests/timetable-style-drafts.test.cjs",
+      "sha256": "d33d9f8bbf204854857525d594cae24ec11f448e170244d200352eb5e062d0e8"
+    },
+    {
+      "path": "tests/timetable-style-editor-events.test.cjs",
+      "sha256": "a5eab9bce586c2dfc6003848ee915f63fa01f3f51caa81e576b311d9479e8b31"
+    },
+    {
+      "path": "tests/timetable-activity-browse.test.cjs",
+      "sha256": "560e0d6239a2d272fee72b7041bdba9709841f2f51753bc87722e354e6852a22"
+    }
+  ],
+  "checks": {
+    "typecheck": "PASS",
+    "tests": {
+      "status": "PASS",
+      "count": 200,
+      "failed": 0
+    },
+    "build": "PASS",
+    "diff_check": "PASS",
+    "routes_http": {
+      "/timetable": {
+        "status": 200,
+        "bytes": 91395
+      },
+      "/timetable/my": {
+        "status": 200,
+        "bytes": 88058
+      }
+    },
+    "browser_interaction_visual": "NOT_RUN (earlier tool denial respected; no alternate browser automation)",
+    "parent_make_check": "NOT_RUN (no Makefile target in wfb-v3)"
+  },
+  "independent_review": {
+    "path": "docs/reviews/2026-10-19-timetable-style-retention-activities.md",
+    "status": "PASS (no remaining required fixes)",
+    "matches_implementation": true,
+    "regression_tests": 128,
+    "actual_provider_event_paths": 4,
+    "typecheck": "PASS",
+    "diff_check": "PASS",
+    "fixed_findings": [
+      "R1: premature three-digit HEX expansion",
+      "R2: unprojected sidebar week count"
+    ]
+  },
+  "manual_acceptance": "PENDING",
+  "git_action": "UNCOMMITTED_NOT_PUSHED",
+  "logs": {
+    ".local-artifacts/timetable-style-retention-activities/build.log": "4693b57276174f269429fb043ee523246d4aa934f6a53bfc1edff42aecd10573",
+    ".local-artifacts/timetable-style-retention-activities/http.json": "c4f21d0e4e9f73a706ea5739be81e1b05fdae6cba1c9a7048e3e48f76dfaed87",
+    ".local-artifacts/timetable-style-retention-activities/implementation-manifest.txt": "cf97e1416d6d1fd7c5394587910759e5ff889b559f7e57f3ce1c2882311c092e",
+    ".local-artifacts/timetable-style-retention-activities/reviewer-counter-before.log": "e270207c2becbafeca7d269d7ba1f688508ea06a8f37328e11245569498e3adb",
+    ".local-artifacts/timetable-style-retention-activities/reviewer-hex-before.log": "199b89215d1fc674f2710a1a7f24c61fc6e25cd5e14a03e854ce46fb992122b9",
+    ".local-artifacts/timetable-style-retention-activities/reviewer-provider-harness.cjs": "4087faf0769988df41037a60f3bdd4e00771304c022d6cc9255ead5d0cc26820",
+    ".local-artifacts/timetable-style-retention-activities/reviewer-provider-harness.log": "f043fb31f4139dc9f2b8cbbe04475b0af45c93832a6f328e5e7a1e6bbd8cef24",
+    ".local-artifacts/timetable-style-retention-activities/reviewer-tests.log": "dd4a798fd64c70519c8289404dac66b7bf5ca42cd7ec4b235d06a542b56a2cbf",
+    ".local-artifacts/timetable-style-retention-activities/reviewer-typecheck.log": "64df126360f2c182f554158445ba352f03a5961c3d1bd96e8926905078dac25b",
+    ".local-artifacts/timetable-style-retention-activities/tests.log": "eef70a0fdbd0441f9f7be66e756b44278420903e26ced7f71adf799c127eb69a",
+    ".local-artifacts/timetable-style-retention-activities/typecheck.log": "71322f3a5e902c7c296ca827d919591ea7b30265f382923d16c5ea0a8440b9e8"
+  }
+}

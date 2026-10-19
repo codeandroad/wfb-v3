@@ -1,7 +1,19 @@
 # 我的教学 · 现行设计索引
 
+课表当前状态以2026-10-19完整汇总为准；其下同日分阶段条目属于历史快照，不倒写各阶段当时的核验结论。
+
 | 修订 | 目录 | 状态 |
 | --- | --- | --- |
+| 2026-10-19 课表全部改进汇总 | [最终设计与实现](2026-10-19-timetable-improvements/DESIGN_AND_IMPLEMENTATION.md) | 用户人工核验暂时接受（U-TT-20261019-01），授权提交推送；统一样式、颜色保留、筛选、归属与冲突、活动摘要、独立演示；交付状态见证据。 |
+| 2026-10-19 多人数学答疑独立演示 | [设计](2026-10-19-math-qa-demo/DESIGN.md) · [实施](2026-10-19-math-qa-demo/IMPLEMENTATION.md) | 独立4教师/4场所场景，复用摘要/筛选/详情，不写原数据；221项测试通过，人工核验PENDING，未提交。 |
+| 2026-10-19 多教师活动摘要卡 | [设计](2026-10-19-activity-summary-cards/DESIGN.md) · [实施](2026-10-19-activity-summary-cards/IMPLEMENTATION.md) | 同日期/同节次/同名活动摘要与完整名单，原样式与冲突保留；214项测试通过，人工核验PENDING，未提交。 |
+| 2026-10-19 颜色跨部位保留与教务活动浏览 | [设计](2026-10-19-timetable-style-retention-activities/DESIGN.md) · [实施](2026-10-19-timetable-style-retention-activities/IMPLEMENTATION.md) | 颜色完成后自动保存，新增全校活动目录/筛选，完整投影保留冲突；200项测试通过，人工核验PENDING，未提交。 |
+| 2026-10-19 活动统一课卡对象 | [设计](2026-10-19-activity-card-settings/DESIGN.md) · [实施](2026-10-19-activity-card-settings/IMPLEMENTATION.md) | 两侧活动并入整张课卡，旧配色与同名隔离保留；178项测试通过，人工核验PENDING，未提交。 |
+| 2026-10-19 颜色编辑与教师设置统一 | [设计](2026-10-19-timetable-style-editing/DESIGN.md) · [实施](2026-10-19-timetable-style-editing/IMPLEMENTATION.md) | 修复颜色候选互相覆盖，教师四部位控件统一，保留旧范围；167项测试通过，人工核验PENDING，未提交。 |
+| 2026-10-19 课卡外观与文字分离 | [设计](2026-10-19-timetable-surface/DESIGN.md) · [实施](2026-10-19-timetable-surface/IMPLEMENTATION.md) | 外观独立，三文字页同构，兼容旧配色；135项测试通过，人工核验PENDING，未提交。 |
+| 2026-10-19 课卡内教师与地点文字 | [设计](2026-10-19-timetable-card-text/DESIGN.md) · [实施](2026-10-19-timetable-card-text/IMPLEMENTATION.md) | 整张课卡下增加独立姓名/地点文字样式；124项测试通过，需求理解已确认，人工核验PENDING，未提交。 |
+| 2026-10-19 教务按教师设置样式 | [设计](2026-10-19-admin-teacher-appearance/DESIGN.md) · [实施](2026-10-19-admin-teacher-appearance/IMPLEMENTATION.md) | 教师默认与既有具体课卡/名称片段组合，按浏览者隔离；117项测试通过，人工核验PENDING，未提交。 |
+| 2026-10-19 行政班归属与冲突提示 | [设计](2026-10-19-timetable-conflicts/DESIGN.md) · [实施](2026-10-19-timetable-conflicts/IMPLEMENTATION.md) | 按明确归属汇总，真实冲突与待核对分别提示；108项机器测试通过，人工核验PENDING，未提交。 |
 | 2026-10-13 按最终 HTML 复刻 | [设计](2026-10-13-exact-html-replica/DESIGN.md) · [实施](2026-10-13-exact-html-replica/IMPLEMENTATION.md) | **2026-10-19已授权提交推送；视觉验收未另行标记通过**：按原DOM/CSS/完整内容重建大纲阅读、考核、真题库、组卷台及资源/计划，保留原外壳、作业与权限。 |
 | 2026-10-13 原 HTML 风格恢复 | [设计](2026-10-13-html-style-restoration/DESIGN.md) · [实施](2026-10-13-html-style-restoration/IMPLEMENTATION.md) | **历史机器核验记录；Owner反馈差异后由最终HTML复刻替代**：当时样式/流程检查通过，不代表Owner接受旧内容区。 |
 | 2026-10-13 我的教研与课程管理框架移植 | [设计](2026-10-13-research-course-migration/DESIGN.md) · [实施](2026-10-13-research-course-migration/IMPLEMENTATION.md) | **已实现并机器核验，待 Owner 人工核验，未提交**：原生教研工作区、课程五项分类、业务弹窗、课表与日志、群聊、真题原件和组卷；原左栏/顶部/作业管理保留。 |
@@ -29,3 +41,5 @@
 | r3 | `2026-09-30-my-teaching-prototype-r3/` | 历史基线：同源任务、整周反馈、逐生常规确认、独立作业、发布历史 |
 
 ���早修订中未被后续修订替代的要求继续有效；此前验收结论不做倒写。
+
+- 2026-10-19 [课表显示样式与筛选](2026-10-19-timetable-display/DESIGN.md)：可选名称片段样式、教务隔离设置、教师姓名及显示层筛选；人工核验待完成。

@@ -5,6 +5,8 @@
 // - 数据以“周模板 + 投影到实际日期”组织，保持紧凑；差异与冲突基于真实条目计算。
 // - 演示时区 Asia/Shanghai，演示时钟默认取该时区的真实当前时间。
 
+import { MATH_QA_DEMO_TEACHERS } from "./math-qa-demo"
+
 export const TERM_TAG = "2026T1"
 export const TERM_LABEL = "2026学年 第一学期"
 export const TIMEZONE = "Asia/Shanghai"
@@ -181,11 +183,14 @@ export const TEACHERS: Teacher[] = [
 ]
 
 export function teacherById(id: string): Teacher | undefined {
-  return TEACHERS.find((t) => t.id === id)
+  // Resolve standalone demo labels without adding these identities to the school teacher list.
+  return TEACHERS.find((t) => t.id === id) ?? MATH_QA_DEMO_TEACHERS.find((t) => t.id === id)
 }
 
 // 教务可查看的对象（教师 + 教学班）
 export interface TeachingClassRef {
+  /** Explicit administrative placement; independent of student destinations. */
+  placementHomeroomId: string | null
   id: string
   name: string
   subject: string
@@ -193,29 +198,30 @@ export interface TeachingClassRef {
 }
 
 export const TEACHING_CLASSES: TeachingClassRef[] = [
-  { id: "c-math-a", name: "高一1班 • 数学", subject: "数学", teacherIds: ["lin"] },
-  { id: "c-math-b", name: "高一2班 • 数学", subject: "数学", teacherIds: ["lin"] },
-  { id: "c-cs-b", name: "高一2班 • 计算机", subject: "计算机", teacherIds: ["lin"] },
-  { id: "c-phys-a", name: "高一1班 • 物理", subject: "物理", teacherIds: ["zhou"] },
-  { id: "c-chem-a", name: "高一1班 • 化学", subject: "化学", teacherIds: ["chen"] },
-  { id: "c-geo-a", name: "高一3班 • 地理", subject: "地理", teacherIds: ["shen"] },
-  { id: "c-eng-a", name: "高一1班 • 英语", subject: "英语", teacherIds: ["wang"] },
-  { id: "c-bio-a", name: "高二1班 • 生物", subject: "生物", teacherIds: ["li"] },
-  { id: "c-his-a", name: "高一2班 • 历史", subject: "历史", teacherIds: ["zhao"] },
+  { id: "c-math-a", placementHomeroomId: "ac-g1c1", name: "高一1班 • 数学", subject: "数学", teacherIds: ["lin"] },
+  { id: "c-math-b", placementHomeroomId: "ac-g1c2", name: "高一2班 • 数学", subject: "数学", teacherIds: ["lin"] },
+  { id: "c-cs-b", placementHomeroomId: "ac-g1c2", name: "高一2班 • 计算机", subject: "计算机", teacherIds: ["lin"] },
+  { id: "c-phys-a", placementHomeroomId: "ac-g1c1", name: "高一1班 • 物理", subject: "物理", teacherIds: ["zhou"] },
+  { id: "c-chem-a", placementHomeroomId: "ac-g1c1", name: "高一1班 • 化学", subject: "化学", teacherIds: ["chen"] },
+  { id: "c-geo-a", placementHomeroomId: "ac-g1c3", name: "高一3班 • 地理", subject: "地理", teacherIds: ["shen"] },
+  { id: "c-eng-a", placementHomeroomId: "ac-g1c1", name: "高一1班 • 英语", subject: "英语", teacherIds: ["wang"] },
+  { id: "c-bio-a", placementHomeroomId: "ac-g2c1", name: "高二1班 • 生物", subject: "生物", teacherIds: ["li"] },
+  { id: "c-his-a", placementHomeroomId: "ac-g1c2", name: "高一2班 • 历史", subject: "历史", teacherIds: ["zhao"] },
 ]
 
-// 行政班（教务对象之一）：按年级归属的自然班，其课表为所含教学任务的聚合只读视图
+// 行政班：按教学班明确归属汇总；不等同于走班学生的实际去向。
 export interface AdminClassRef {
+  teachingHomeroomId?: string
   id: string
   name: string
   grade: string
-  // 该行政班学生参与的教师课表来源（合成映射，用于聚合投影）
+  // 旧演示教师关联，仅保留对象选择兼容；不可据此聚合教师整张课表。
   memberTeacherIds: string[]
 }
 
 export const ADMIN_CLASSES: AdminClassRef[] = [
-  { id: "ac-g1c1", name: "高一(1)班", grade: "高一", memberTeacherIds: ["lin", "zhou", "shen", "wang"] },
-  { id: "ac-g1c2", name: "高一(2)班", grade: "高一", memberTeacherIds: ["lin", "zhou", "zhao"] },
+  { id: "ac-g1c1", teachingHomeroomId: "H1", name: "高一(1)班", grade: "高一", memberTeacherIds: ["lin", "zhou", "shen", "wang"] },
+  { id: "ac-g1c2", teachingHomeroomId: "H2", name: "高一(2)班", grade: "高一", memberTeacherIds: ["lin", "zhou", "zhao"] },
   { id: "ac-g2c1", name: "高二(1)班", grade: "高二", memberTeacherIds: ["chen", "li"] },
 ]
 
@@ -416,8 +422,8 @@ export interface DiffRow {
   key: string
   kind: DiffKind
   label: string // 课程标签，如 高一1班 • 数学 · P1
-  school?: { weekday: number; periodId: string; room: string | null }
-  personal?: { weekday: number; periodId: string; room: string | null }
+  school?: TemplateEntry
+  personal?: TemplateEntry
   text: string // 文字说明（正负变化都有文字，不靠颜色）
 }
 
@@ -483,13 +489,15 @@ export function detectConflicts(entries: ProjectedEntry[]): Conflict[] {
       const b = entries[j]
       if (a.date !== b.date) continue
       if (!periodsOverlap(a.periodId, b.periodId)) continue
-      // 明确共同授课（同 key）不算冲突
-      if (a.key === b.key) continue
+      // key 只在教师内唯一；仅跳过同一课次的重复投影。
+      if (a.key === b.key && a.teacherId === b.teacherId && a.periodId === b.periodId) continue
       if (a.teacherId === b.teacherId) {
         out.push({ type: "teacher", date: a.date, a, b, reason: "同一教师在重叠时间被安排两节独立课次" })
-      } else if (a.room && b.room && a.room === b.room) {
+      }
+      if (a.room && b.room && a.room === b.room) {
         out.push({ type: "room", date: a.date, a, b, reason: `教室 ${a.room} 在重叠时间被两节课次占用` })
-      } else if (a.studentGroup && b.studentGroup && a.studentGroup === b.studentGroup) {
+      }
+      if (a.studentGroup && b.studentGroup && a.studentGroup === b.studentGroup) {
         out.push({ type: "student", date: a.date, a, b, reason: "同一批学生在重叠时间被安排两节独立课次" })
       }
     }

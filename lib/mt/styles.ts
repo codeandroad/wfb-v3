@@ -61,21 +61,28 @@ export interface ResolvedStyle {
 }
 
 export function resolveStyle(biz: MtBiz, teacherId: string | null, task: STask): ResolvedStyle {
+  if (!teacherId) return resolveStyleChain({}, [])
+  return resolveStyleChain(biz.styles ?? {}, [
+    ["TASK", styleKey(teacherId, "TASK", task.id)],
+    ["CLASS", task.class_id ? styleKey(teacherId, "CLASS", task.class_id) : ""],
+    ["COURSE", task.course_id ? styleKey(teacherId, "COURSE", task.course_id) : ""],
+  ])
+}
+
+/** 单一显示部位使用相同色板、无染色及自动配套解析。 */
+export function resolvePreference(pref: StylePref = {}): ResolvedStyle {
+  return resolveStyleChain({ direct: pref }, [["TASK", "direct"]])
+}
+
+function resolveStyleChain(all: Record<string, StylePref>, chain: [StyleLevel, string][]): ResolvedStyle {
   const out: ResolvedStyle = { hex: null, colorLabel: null, weight: null, font: null, tagHex: null, bg: null, from: {} }
-  if (!teacherId) return out
-  const all = biz.styles ?? {}
-  const chain: [StyleLevel, string][] = [
-    ["TASK", task.id],
-    ["CLASS", task.class_id],
-    ["COURSE", task.course_id],
-  ]
   for (const [lvl, id] of chain) {
     if (!id) continue
-    const stored = all[styleKey(teacherId, lvl, id)]
+    const stored = all[id]
     if (!stored) continue
     const p: StylePref = {}
     for (const field of ["color", "bg", "weight", "font"] as const) {
-      const winner = chain.filter(([, targetId]) => !!targetId).map(([scope, targetId], index) => ({ scope, targetId, index, pref: all[styleKey(teacherId, scope, targetId)] })).filter(x => x.pref && (x.pref[field] !== undefined || x.pref.order?.[field] !== undefined)).sort((a, b) => (b.pref!.order?.[field] ?? 0) - (a.pref!.order?.[field] ?? 0) || a.index - b.index)[0]
+      const winner = chain.filter(([, targetId]) => !!targetId).map(([scope, targetId], index) => ({ scope, targetId, index, pref: all[targetId] })).filter(x => x.pref && (x.pref[field] !== undefined || x.pref.order?.[field] !== undefined)).sort((a, b) => (b.pref!.order?.[field] ?? 0) - (a.pref!.order?.[field] ?? 0) || a.index - b.index)[0]
       if (winner?.scope === lvl && winner.targetId === id) {
         Object.assign(p, { [field]: stored[field] })
         if (stored[field] === undefined) out.from[field] = lvl

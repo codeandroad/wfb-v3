@@ -1,0 +1,196 @@
+{
+  "date": "2026-10-19",
+  "baseline": "42ba585f5e5b351c7beb333c15bdbb4e2e0c580f",
+  "branch": "main",
+  "remote": "origin/main",
+  "owner_feedback": {
+    "id": "U-TT-20261019-01",
+    "quote": "好的，核验没发现问题，暂时可以接受",
+    "status": "CURRENT_PROTOTYPE_TEMPORARILY_ACCEPTED",
+    "authorization": "Consolidate timetable design and implementation, then commit and push",
+    "scope_note": "Does not imply all browser paths or production readiness were accepted"
+  },
+  "source_and_tests_sha256": "0b956f87a1ba5ddaf71eede01e2f8df4a9c501d99393325b0b61e9d298014fad",
+  "source_and_tests_files": [
+    {
+      "path": ".gitignore",
+      "sha256": "d45baec1fe3a44438a204cfe8ceace7efaa62177110dc4828aeef59b1662bc4e"
+    },
+    {
+      "path": "app/(app)/timetable/demo/math-qa/page.tsx",
+      "sha256": "fe90ab0fdec2b158eeb7121749c0e8b94881e33d7a98aac6652abced720118a9"
+    },
+    {
+      "path": "app/(app)/timetable/my/page.tsx",
+      "sha256": "9bbe688c29dcaa81f463758cb65d23dd3f34022ddfa45bf764c83afbe864241a"
+    },
+    {
+      "path": "components/mt/day-cards-view.tsx",
+      "sha256": "e170820b1c963df42e59a2e02abe94a4826aad0b7cd3285cc5434160e5dbe054"
+    },
+    {
+      "path": "components/mt/style-color-input.tsx",
+      "sha256": "48d51ee866d2ebdda58ab7203a76bb5a6cb17952f0ba4828a625e756fc9e9b32"
+    },
+    {
+      "path": "components/mt/task-list.tsx",
+      "sha256": "bacdf5dec84818b22d3e4ba8d3902353d8426458c98ebde97c330ff056214400"
+    },
+    {
+      "path": "components/mt/teacher-prefs.tsx",
+      "sha256": "ac78d15c6764247ac789e9f2956ca6280e603f551abff1c398708d27f606dbb5"
+    },
+    {
+      "path": "components/mt/use-style-drafts.ts",
+      "sha256": "da83d10d9f681eb266ba6fc4cb71acb96667ca764006b34849660b4616d93ecf"
+    },
+    {
+      "path": "components/mt/week-schedule.tsx",
+      "sha256": "5d21ddba5b61c37aee270224dee72d0287cb5489317b48c1d854c334008fc171"
+    },
+    {
+      "path": "components/timetable/activity-group-card.tsx",
+      "sha256": "3d3f5835a88596b342d0eeebf76ab437680e8bc62702df4094858de1eb8039e6"
+    },
+    {
+      "path": "components/timetable/card-filters.tsx",
+      "sha256": "4a17fbe0b0645ae927dee63bdcadb000743ecbe9309df38c66dd54964134364c"
+    },
+    {
+      "path": "components/timetable/demo-bar.tsx",
+      "sha256": "a9a19e9f6275049cebf8ff668ce483ff7f31503b05003f6fc51e221015000f54"
+    },
+    {
+      "path": "components/timetable/detail.tsx",
+      "sha256": "012eea961f02e0ae3e25ebe9f1e01c659fef2cd76b8be54ff195dabf8b22bf91"
+    },
+    {
+      "path": "components/timetable/display-settings.tsx",
+      "sha256": "8a8de605f5df39de1fc7434eae3a0094725d1ba7af254c5fbdd3e45e654366d2"
+    },
+    {
+      "path": "components/timetable/math-qa-demo.tsx",
+      "sha256": "d399150900fb92607456b2e250053c4e890a68be6375d4097ffd4b58e64e8e23"
+    },
+    {
+      "path": "components/timetable/overview-panel.tsx",
+      "sha256": "a06a9da7bf87624db39cc2ae3c841ce83a8494294209748333aabefc71af1b1b"
+    },
+    {
+      "path": "components/timetable/week-grid.tsx",
+      "sha256": "77f383f0587fb484741a69b9bb7a26c34b8a04b1de51da3980535148be907062"
+    },
+    {
+      "path": "lib/mt/styles.ts",
+      "sha256": "470b80ba678160c928c2363c4190861b3be0954c0b20ba07a45b08cbd1931552"
+    },
+    {
+      "path": "lib/timetable/activities.ts",
+      "sha256": "b6d1474741ff03121905bc11e9bc059db99fd26406925a67840c5ec99d6d0a8a"
+    },
+    {
+      "path": "lib/timetable/activity-groups.ts",
+      "sha256": "8ec65e9e6c26f030befddf0952fa60a508b866185acb54b4818e0150510d89da"
+    },
+    {
+      "path": "lib/timetable/conflict-display.ts",
+      "sha256": "b85d6f378ecb234edbfb1cf56005f37ec36281f492dded1c8caf3a4c25b1cf5f"
+    },
+    {
+      "path": "lib/timetable/data.ts",
+      "sha256": "eb12b6c010568832fa7a494ea9666369e560ad45ccf8ccd13083fadc3bc533ca"
+    },
+    {
+      "path": "lib/timetable/display.ts",
+      "sha256": "cd27a678453441118a223217c71586642acf679646e571fbf5e0f477165188b5"
+    },
+    {
+      "path": "lib/timetable/math-qa-demo.ts",
+      "sha256": "95f0e3e310a13b42c140e8506311c294c7821b84922213bd8f36bf27dcc24fc0"
+    },
+    {
+      "path": "lib/timetable/surface.ts",
+      "sha256": "be1d945c6ac6260eaab4e6221f3bff3dff7616ae7d2856f47c23b3c54422599c"
+    },
+    {
+      "path": "lib/timetable/teacher-appearance.ts",
+      "sha256": "3e389fb73c9c001d6c669234d07c3f3b7bee9a06360a3a0d8f09b66e7db668c2"
+    },
+    {
+      "path": "tests/research-workflows.test.cjs",
+      "sha256": "4c4b3f04d9a9bbc8aea03af12915b9bef6ba07c42dfc6c7d5d61f6b353d366f8"
+    },
+    {
+      "path": "tests/timetable-activity-browse.test.cjs",
+      "sha256": "2d5c4a6132d07723ec4e4cb8336dd65eecd41dc05a5c1f1b38ad9f31a42f6b2a"
+    },
+    {
+      "path": "tests/timetable-activity-groups.test.cjs",
+      "sha256": "cfbb85e9f6a2498f91d2293926167cdd195f6504a546003d78cc0f42786607ce"
+    },
+    {
+      "path": "tests/timetable-activity-settings.test.cjs",
+      "sha256": "b02eec14eb145b31327622367c808b6a9bad035c07fce860f12c3e5219ac8af6"
+    },
+    {
+      "path": "tests/timetable-card-text.test.cjs",
+      "sha256": "a2005470a1a4466dee98930b828dfc72e37bbbc0033915febd656e7fc44d7fab"
+    },
+    {
+      "path": "tests/timetable-conflicts.test.cjs",
+      "sha256": "25b9cc89ddb045e84fb0d5439f96a44280e4470e1668f07b1408b605569bad72"
+    },
+    {
+      "path": "tests/timetable-display.test.cjs",
+      "sha256": "7f6a4f5779127265e140dc37700fd88671369085c0d50bc56a151fd8dc184053"
+    },
+    {
+      "path": "tests/timetable-math-qa-demo.test.cjs",
+      "sha256": "e3853b6cff637dd25b373da2368507d99a7646e437a8a7d238bf083132f3ca54"
+    },
+    {
+      "path": "tests/timetable-style-drafts.test.cjs",
+      "sha256": "d33d9f8bbf204854857525d594cae24ec11f448e170244d200352eb5e062d0e8"
+    },
+    {
+      "path": "tests/timetable-style-editor-events.test.cjs",
+      "sha256": "a5eab9bce586c2dfc6003848ee915f63fa01f3f51caa81e576b311d9479e8b31"
+    },
+    {
+      "path": "tests/timetable-surface.test.cjs",
+      "sha256": "44f8384988af550db08d0a3767806af70d77118118d01780f39dbab2d09cf803"
+    },
+    {
+      "path": "tests/timetable-teacher-appearance.test.cjs",
+      "sha256": "a7b2cdfdc73db0900b8edae46f90005ec6bbca12a7c60edb7c388104696ccc05"
+    },
+    {
+      "path": "tests/timetable-teacher-parts.test.cjs",
+      "sha256": "0b92f703b6edf2409b676c5c6f75969b4aeb2dd47bb4101bf65dfe16654ed020"
+    }
+  ],
+  "prior_verification": {
+    "full_tests": 221,
+    "status": "PASS",
+    "typecheck": "PASS",
+    "build": "PASS",
+    "independent_timetable_tests": 149,
+    "evidence": "docs/evidence/math-qa-demo/verification.json"
+  },
+  "publication_verification": {
+    "status": "PENDING_ON_COMMITTED_TREE",
+    "make_check": "NOT_RUN (no target in wfb-v3)",
+    "browser_automation": "NOT_RUN (prior denial respected)"
+  },
+  "git_publication": {
+    "status": "AUTHORIZED_PENDING",
+    "strategy": "ordinary commits and fast-forward push; no force push"
+  },
+  "consolidated_document": "docs/design-history/2026-10-19-timetable-improvements/DESIGN_AND_IMPLEMENTATION.md",
+  "independent_review": {
+    "status": "PASS",
+    "path": "docs/reviews/2026-10-19-timetable-consolidation.md",
+    "source_fingerprint_matches": true,
+    "no_remaining_required_fixes": true
+  }
+}

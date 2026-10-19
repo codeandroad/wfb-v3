@@ -1,11 +1,11 @@
 "use client"
 
-import { Badge, Checkbox, Field, Segmented, Select, Sheet, useToast } from "@/components/kit"
+import { Badge, Checkbox, Field, LinkButton, Segmented, Select, Sheet, useToast } from "@/components/kit"
 import { Button } from "@/components/ui/button"
 import { fmtClock, WEEKS } from "@/lib/timetable/data"
 import { useTimetable } from "@/lib/timetable/store"
 import { useDemo } from "@/lib/demo/store"
-import { type Persona } from "@/lib/demo/nav"
+import { PERSONAS, type Persona } from "@/lib/demo/nav"
 import { FlaskConical, RotateCcw } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
@@ -32,10 +32,13 @@ export function TimetableDemoBar() {
         <span className="text-muted-foreground">
           演示时钟 <strong className="text-foreground">{fmtClock(tt.clock)}</strong>
         </span>
-        <Button variant="outline" size="xs" className="ml-auto" onClick={() => setOpen(true)}>
-          <FlaskConical className="size-3.5" />
-          演示控制
-        </Button>
+        <div className="ml-auto flex flex-wrap items-center gap-2">
+          {PERSONAS[persona].admin ? <LinkButton href="/timetable/demo/math-qa" variant="outline" size="xs">多人答疑演示</LinkButton> : null}
+          <Button variant="outline" size="xs" onClick={() => setOpen(true)}>
+            <FlaskConical className="size-3.5" />
+            演示控制
+          </Button>
+        </div>
       </div>
       <TimetableDemoSheet open={open} onClose={() => setOpen(false)} />
     </>

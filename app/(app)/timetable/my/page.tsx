@@ -10,8 +10,11 @@ import { useMt } from "@/lib/mt/store"
 import { periodById } from "@/lib/timetable/data"
 import { LessonDialog } from "@/components/timetable/lesson-dialog"
 import { TimetableDemoBar } from "@/components/timetable/demo-bar"
+import { TimetableFilterBar } from "@/components/timetable/card-filters"
+import { EMPTY_CARD_FILTERS, hasCardFilters, matchesCardFilters } from "@/lib/timetable/display"
 import { WeekGrid } from "@/components/timetable/week-grid"
 import {
+  addDays,
   changedRows,
   fmtClock,
   fmtDate,
@@ -35,7 +38,6 @@ import {
   teacherDraftWeekEntries,
   teacherWeekEntries,
   useTimetable,
-  weekConflicts,
 } from "@/lib/timetable/store"
 import { AlertTriangle, Check, ChevronLeft, ChevronRight, GitCompare, PencilLine, RefreshCw, RotateCcw, Sparkles, Undo2, Upload, X } from "lucide-react"
 import { Suspense, useEffect, useRef, useState } from "react"
@@ -333,7 +335,6 @@ function EditView({ teacherId, weekStart, clockDate, onCard }: { teacherId: stri
   const adoption = tt.adoptions[teacherId]
   const draft = adoption?.draft
   const { entries, draftKeys } = teacherDraftWeekEntries(tt, teacherId, weekStart)
-  const conflicts = weekConflicts(entries)
 
   if (!draft) return null
   const dirty = draft.edits.length > 0
@@ -377,9 +378,8 @@ function EditView({ teacherId, weekStart, clockDate, onCard }: { teacherId: stri
         </p>
       </div>
 
-      {conflicts.length ? <ConflictBar count={conflicts.length} /> : null}
 
-      <WeekGrid
+      <WeekGrid displayControls="teacher"
         key={teacherId}
         weekStart={weekStart}
         entries={entries}
@@ -429,7 +429,6 @@ function MyView({ teacherId, weekStart, clockDate, onCard }: { teacherId: string
   const refCur = teacherCurrent(tt, teacherId, weekStart)
   const adoption = tt.adoptions[teacherId]
   const { entries, multiVersion } = teacherWeekEntries(tt, teacherId, weekStart)
-  const conflicts = weekConflicts(entries).length
 
   if (refCur.kind === "no_account") return <StateBox title="无账号" desc="该演示教师无账号，无法查看个人课表。" />
   if (refCur.kind === "load_error") {
@@ -464,8 +463,7 @@ function MyView({ teacherId, weekStart, clockDate, onCard }: { teacherId: string
         </div>
       ) : null}
 
-      {conflicts ? <ConflictBar count={conflicts} /> : null}
-      <WeekGrid weekStart={weekStart} entries={entries} clockDate={clockDate} onCardClick={onCard} recordable makeupEdits={adoption?.personalEdits ?? []} />
+      <WeekGrid displayControls="teacher" weekStart={weekStart} entries={entries} clockDate={clockDate} onCardClick={onCard} recordable makeupEdits={adoption?.personalEdits ?? []} />
     </>
   )
 }
@@ -475,7 +473,6 @@ function SchoolPeekView({ teacherId, weekStart, clockDate, onCard }: { teacherId
   const { push } = useToast()
   const seq = latestSeq(tt)
   const entries = schoolWeekEntries(tt, teacherId, weekStart, seq)
-  const conflicts = weekConflicts(entries).length
 
   // 是否可“应用学校课表”：有个人调整，或学校已有更靠后的来源版可重挂
   const adoption = tt.adoptions[teacherId]
@@ -500,14 +497,14 @@ function SchoolPeekView({ teacherId, weekStart, clockDate, onCard }: { teacherId
           </Button>
         ) : null}
       </div>
-      {conflicts ? <ConflictBar count={conflicts} /> : null}
-      <WeekGrid weekStart={weekStart} entries={entries} clockDate={clockDate} onCardClick={onCard} />
+      <WeekGrid displayControls="teacher" calendarSourceEntries={date => schoolWeekEntries(tt, teacherId, weekStartOf(date), seq)} weekStart={weekStart} entries={entries} clockDate={clockDate} onCardClick={onCard} />
       <p className="mt-2 text-[11px] text-muted-foreground">学校课表为只读视图。要把它变成你的现用安排，请到“差异对比”里选择“采用学校新版”。</p>
     </>
   )
 }
 
 function CompareView({ teacherId, weekStart, pending, dualColumn, onToggleColumns, onUpdate, onKept }: { teacherId: string; weekStart: string; pending: boolean; dualColumn: boolean; onToggleColumns: () => void; onUpdate: () => void; onKept: () => void }) {
+  const [filters, setFilters] = useState({ ...EMPTY_CARD_FILTERS })
   const tt = useTimetable()
   const { push } = useToast()
   const res = diffFor(tt, teacherId, weekStart)
@@ -515,6 +512,8 @@ function CompareView({ teacherId, weekStart, pending, dualColumn, onToggleColumn
 
   if (!res || cur.kind !== "ok") return <StateBox title="无法对比" desc="你的当前课表不可用（尚无个人课表 / 读取失败）。" />
   const changed = changedRows(res.rows)
+  const filteredRows = res.rows.filter(row => [row.school, row.personal].some(entry => entry && matchesCardFilters({ ...entry, teacherId }, filters)))
+  const entries: ProjectedEntry[] = res.rows.flatMap(row => [row.school, row.personal].flatMap(entry => entry ? [{ ...entry, teacherId, date: addDays(weekStart, entry.weekday - 1) }] : []))
 
   return (
     <>
@@ -524,29 +523,22 @@ function CompareView({ teacherId, weekStart, pending, dualColumn, onToggleColumn
         <span className="text-muted-foreground">我的 <strong className="text-foreground">{perLabel(teacherId, cur.rev.perSeq)}</strong> · 来源 {schLabel(cur.rev.sourceSch)}</span>
         <Button variant="ghost" size="xs" className="ml-auto" onClick={onToggleColumns}>{dualColumn ? "变化清单" : "双栏课表"}</Button>
       </div>
-      <div className="mb-2 text-[12px] text-muted-foreground">{changed.length ? `共 ${changed.length} 处差异` : "两侧一致，无差异"}</div>
+      <TimetableFilterBar entries={entries} value={filters} onChange={setFilters} />
+      <div className="my-2 text-[12px] text-muted-foreground">显示 {changedRows(filteredRows).length} / {changed.length} 处差异</div>
       {dualColumn ? (
-        <DiffColumns rows={res.rows} schoolTitle={`学校 ${schLabel(res.schSeq)}`} personalTitle={`我的 ${perLabel(teacherId, cur.rev.perSeq)}`} />
+        <DiffColumns rows={filteredRows} schoolTitle={`学校 ${schLabel(res.schSeq)}`} personalTitle={`我的 ${perLabel(teacherId, cur.rev.perSeq)}`} />
       ) : (
-        <DiffList rows={res.rows} emptyText="两侧一致，无差异" />
+        <DiffList rows={filteredRows} emptyText={changed.length ? "没有符合条件的差异，可清除筛选。" : "两侧一致，无差异"} />
       )}
+      {hasCardFilters(filters) ? <p className="mt-3 text-xs text-muted-foreground">筛选仅影响显示；采用新版和确认保留仍针对本周全部安排。</p> : null}
       <div className="mt-4 flex flex-wrap gap-2">
         {pending ? <Button size="sm" onClick={onUpdate}><RefreshCw className="size-3.5" />采用学校新版</Button> : null}
         {changed.length ? (
-          <Button variant="outline" size="sm" onClick={() => { tt.confirmDiff(teacherId); push("已确认知晓合法差异，已返回我的课表"); onKept() }}><Check className="size-3.5" />确认保留（单方，不改两侧）</Button>
+          <Button variant="outline" size="sm" onClick={() => { tt.confirmDiff(teacherId); push("已确认知晓合法差异，已返回我的课表"); onKept() }}><Check className="size-3.5" />确认保留本周全部差异</Button>
         ) : null}
       </div>
       <p className="mt-3 text-[11px] text-muted-foreground">采用只影响生效日之后，且保留你的个人调整；确认保留不改变学校版也不改变你的现用安排。</p>
     </>
-  )
-}
-
-function ConflictBar({ count }: { count: number }) {
-  return (
-    <div className="mb-2 flex items-center gap-2 rounded-lg border border-[#eec4bf] bg-[#fbe6e4] px-3 py-1.5 text-[12px] text-[#9a2b22]">
-      <AlertTriangle className="size-3.5" />
-      检测到 {count} 项资源冲突（点击课卡查看详情）
-    </div>
   )
 }
 

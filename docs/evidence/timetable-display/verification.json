@@ -1,0 +1,88 @@
+{
+  "date": "2026-10-19",
+  "baseline": "42ba585f5e5b351c7beb333c15bdbb4e2e0c580f",
+  "implementation_sha256": "961f6939e0ff4c9a981294ba61b55b1511f921d8953cc46aff7e916fa23aa5e2",
+  "review_matches": true,
+  "checks": {
+    "typecheck": "PASS",
+    "tests": {
+      "status": "PASS",
+      "count": 94,
+      "failed": 0,
+      "new_display_tests": 14
+    },
+    "build": "PASS",
+    "diff_check": "PASS",
+    "routes_http": {
+      "/timetable": 200,
+      "/timetable/my": 200,
+      "/teaching/settings?tab=style": 200,
+      "/homework": 200
+    },
+    "browser_interaction_visual": "NOT_RUN",
+    "parent_make_check": "NOT_RUN (no Makefile target in wfb-v3)"
+  },
+  "review": "docs/reviews/2026-10-19-timetable-display.md",
+  "manual_acceptance": "PENDING",
+  "git_action": "UNCOMMITTED_NOT_PUSHED",
+  "implementation_files": [
+    {
+      "path": "app/(app)/timetable/my/page.tsx",
+      "sha256": "73ee7685cead4b6a04ab129e158d43228dfd2dac00055bf272844fab1633383e"
+    },
+    {
+      "path": "components/mt/day-cards-view.tsx",
+      "sha256": "dcb9f3c98f6242fc74bf9432de5efb3433ff05d152957b43738e1073eb69f593"
+    },
+    {
+      "path": "components/mt/task-list.tsx",
+      "sha256": "bacdf5dec84818b22d3e4ba8d3902353d8426458c98ebde97c330ff056214400"
+    },
+    {
+      "path": "components/mt/teacher-prefs.tsx",
+      "sha256": "bbbbc1e752806c18128e8df449491d4f298b8d0fff28d8b935f312fc325bc1a9"
+    },
+    {
+      "path": "components/mt/week-schedule.tsx",
+      "sha256": "5d5f8f71f9d8cad89396657f66d210c255b67c3b534cc7c4a784b6bfe24ee2e6"
+    },
+    {
+      "path": "components/timetable/card-filters.tsx",
+      "sha256": "33894684a90a79d5e84c5b2bb80f4af7f5acb29321a32995a243577b0b143f92"
+    },
+    {
+      "path": "components/timetable/detail.tsx",
+      "sha256": "012eea961f02e0ae3e25ebe9f1e01c659fef2cd76b8be54ff195dabf8b22bf91"
+    },
+    {
+      "path": "components/timetable/display-settings.tsx",
+      "sha256": "86981308c0ac098428eeb0d3537b68aacf7da0ee86449d6c46b369c4690b2fb5"
+    },
+    {
+      "path": "components/timetable/overview-panel.tsx",
+      "sha256": "970d3a6c31bad974cb798ffea0957f0cba780fcfecfab75ee27173678691e85f"
+    },
+    {
+      "path": "components/timetable/week-grid.tsx",
+      "sha256": "6d3def10a11e6d45637f3579497cecbbf178ae53ef31e80460edd4818212d6e6"
+    },
+    {
+      "path": "lib/mt/styles.ts",
+      "sha256": "470b80ba678160c928c2363c4190861b3be0954c0b20ba07a45b08cbd1931552"
+    },
+    {
+      "path": "lib/timetable/data.ts",
+      "sha256": "3b21c58360360b932ecd3c54cfcad2b1028dee478c230202b7e3a323fd3e19e6"
+    },
+    {
+      "path": "lib/timetable/display.ts",
+      "sha256": "33d032dcca9efe2dfadb1efb8c4f1a6ec60e8ee402f08d02bb28dbb281e6c697"
+    }
+  ],
+  "test_file_sha256": "7f6a4f5779127265e140dc37700fd88671369085c0d50bc56a151fd8dc184053",
+  "logs": {
+    ".local-artifacts/timetable-display/typecheck.log": "71322f3a5e902c7c296ca827d919591ea7b30265f382923d16c5ea0a8440b9e8",
+    ".local-artifacts/timetable-display/tests.log": "55bf5ee33aa5fbf3305c23969741c05391da01edc4aa2e44b36712b8e229720b",
+    ".local-artifacts/timetable-display/build.log": "8e1993faabc2db7e10a6131e535c189090f59a9360c25019c8f64aacd50abf18"
+  }
+}

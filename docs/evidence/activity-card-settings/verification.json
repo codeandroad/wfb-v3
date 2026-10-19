@@ -1,0 +1,59 @@
+{
+  "date": "2026-10-19",
+  "baseline": "42ba585f5e5b351c7beb333c15bdbb4e2e0c580f",
+  "incremental_implementation_sha256": "7dd7ad740d2a8dfc8c283ef295af852030be4dd30c504cd09a78c440b940459f",
+  "implementation_files": [
+    {
+      "path": "components/timetable/display-settings.tsx",
+      "sha256": "cd9dc4666622f92052bbe69e282873d0d9fd4d9776bd869697c3e952bec1e8e5"
+    },
+    {
+      "path": "lib/timetable/display.ts",
+      "sha256": "1241e4e2c5739159b228b2b875fcd19c4e96b382d223f6bf6f6dcf0f0e89d7d9"
+    },
+    {
+      "path": "lib/timetable/surface.ts",
+      "sha256": "be1d945c6ac6260eaab4e6221f3bff3dff7616ae7d2856f47c23b3c54422599c"
+    }
+  ],
+  "test_file": {
+    "path": "tests/timetable-activity-settings.test.cjs",
+    "sha256": "b02eec14eb145b31327622367c808b6a9bad035c07fce860f12c3e5219ac8af6"
+  },
+  "checks": {
+    "typecheck": "PASS",
+    "tests": {
+      "status": "PASS",
+      "count": 178,
+      "failed": 0,
+      "new_activity_tests": 11
+    },
+    "build": "PASS",
+    "diff_check": "PASS",
+    "routes_http": {
+      "/timetable": 200,
+      "/timetable/my": 200
+    },
+    "browser_interaction_visual": "NOT_RUN",
+    "parent_make_check": "NOT_RUN (no Makefile target in wfb-v3)"
+  },
+  "review": "docs/reviews/2026-10-19-activity-card-settings.md",
+  "review_matches": true,
+  "review_status": "PASS (no required fixes)",
+  "manual_acceptance": "PENDING",
+  "git_action": "UNCOMMITTED_NOT_PUSHED",
+  "logs": {
+    ".local-artifacts/activity-card-settings/build.log": "a1602f9dab0593e4efe279e56e2352d7865b86fc67717bb325c3b17ca4c37259",
+    ".local-artifacts/activity-card-settings/http.json": "782a8fa8cdaef94de3ce7038bbd9a327808fb70b585819aaf5dec61c8ac4d3f3",
+    ".local-artifacts/activity-card-settings/implementation-manifest.txt": "7dd7ad740d2a8dfc8c283ef295af852030be4dd30c504cd09a78c440b940459f",
+    ".local-artifacts/activity-card-settings/tests.log": "85dc5efe1f53e15c0a232ff93edec1aa600bedc19a5ea0e0093dd3daa8d0a111",
+    ".local-artifacts/activity-card-settings/typecheck.log": "71322f3a5e902c7c296ca827d919591ea7b30265f382923d16c5ea0a8440b9e8"
+  },
+  "independent_review_checks": {
+    "regression_tests": 98,
+    "compatibility_combinations": 40,
+    "activity_only_teacher_ssr": "PASS",
+    "typecheck": "PASS",
+    "diff_check": "PASS"
+  }
+}

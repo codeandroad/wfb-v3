@@ -1,0 +1,60 @@
+{
+  "date": "2026-10-19",
+  "baseline": "42ba585f5e5b351c7beb333c15bdbb4e2e0c580f",
+  "incremental_implementation_sha256": "c1b74c15cdae38452a8f633f065d1973bbd24ef001b717fd46c6f9217fbfff25",
+  "review_matches": true,
+  "implementation_files": [
+    {
+      "path": "components/timetable/display-settings.tsx",
+      "sha256": "569202bf670ff065f2692d4a944049ef7e416dfb2d06e5c3c953c196cdb4d97d"
+    },
+    {
+      "path": "components/timetable/week-grid.tsx",
+      "sha256": "29cb549b6a4fb85d08ac184149537bf144807131388630bd4d30b7f6a71426b5"
+    },
+    {
+      "path": "lib/timetable/display.ts",
+      "sha256": "322106ba6c57f2ed83f9443edb756f7a10e9473eb8e4a93bde6e2517e029d102"
+    },
+    {
+      "path": "lib/timetable/surface.ts",
+      "sha256": "8ec35ec0500776ed5538be71bd319a729a98c49fc45a8768c5174d07289c4c82"
+    }
+  ],
+  "test_file": {
+    "path": "tests/timetable-surface.test.cjs",
+    "sha256": "44f8384988af550db08d0a3767806af70d77118118d01780f39dbab2d09cf803"
+  },
+  "checks": {
+    "typecheck": "PASS",
+    "tests": {
+      "status": "PASS",
+      "count": 135,
+      "failed": 0,
+      "new_surface_tests": 11
+    },
+    "build": "PASS",
+    "diff_check": "PASS",
+    "routes_http": {
+      "/timetable": 200,
+      "/timetable/my": 200
+    },
+    "browser_interaction_visual": "NOT_RUN",
+    "parent_make_check": "NOT_RUN (no Makefile target in wfb-v3)"
+  },
+  "review": "docs/reviews/2026-10-19-timetable-surface.md",
+  "review_status": "PASS (TS-01 fixed; no remaining required fixes)",
+  "manual_acceptance": "PENDING",
+  "git_action": "UNCOMMITTED_NOT_PUSHED",
+  "logs": {
+    ".local-artifacts/timetable-surface/build.log": "3b9489d267ec2483a5b1d8caa73dc20b108f68afa72a129a8b88d46a8dacbaac",
+    ".local-artifacts/timetable-surface/http.json": "782a8fa8cdaef94de3ce7038bbd9a327808fb70b585819aaf5dec61c8ac4d3f3",
+    ".local-artifacts/timetable-surface/tests.log": "36366be5d118619b20e6f67b08aec8500aef9b16bc96efd2aadbda7f223dca27",
+    ".local-artifacts/timetable-surface/typecheck.log": "71322f3a5e902c7c296ca827d919591ea7b30265f382923d16c5ea0a8440b9e8"
+  },
+  "independent_review_checks": {
+    "regression_tests": 55,
+    "compatibility_combinations": 25,
+    "status": "PASS"
+  }
+}

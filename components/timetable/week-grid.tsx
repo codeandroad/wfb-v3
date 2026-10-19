@@ -1,5 +1,15 @@
 "use client"
 
+import { TimetableDisplaySettings, StyledLessonTitle, StyledCardText, useTimetableAppearance, personalAppearanceTask } from "./display-settings"
+import { TimetableFilterBar } from "./card-filters"
+import { ActivityGroupCard, ActivityGroupDialog } from "./activity-group-card"
+import { groupActivityEntries } from "@/lib/timetable/activity-groups"
+import { EMPTY_CARD_FILTERS, hasCardFilters, matchesCardFilters, cardDisplayLabels, resolveCardAppearance, type Appearance, type DisplayMode, type CardFilters } from "@/lib/timetable/display"
+import { teacherById } from "@/lib/timetable/data"
+import { Palette, UserRound } from "lucide-react"
+import { useTeaching } from "@/lib/teaching/store"
+import { assessSchedule, entryStudentRoster, scheduleEntryKey, type ScheduleAssessment } from "@/lib/timetable/conflict-display"
+import { cardSurfaceStyle } from "@/lib/timetable/surface"
 import { Badge } from "@/components/kit"
 import { Button } from "@/components/ui/button"
 import { Copy } from "lucide-react"
@@ -10,12 +20,11 @@ import { dutyName, useDuties } from "@/lib/timetable/duty-store"
 import { useTeacherId } from "@/lib/mt/derive"
 import { teacherWeekEntries, useTimetable } from "@/lib/timetable/store"
 import { weekStartOf } from "@/lib/timetable/data"
-import { personalDisplay, prefKey, TASKS } from "@/lib/mt/model"
 import { useMt } from "@/lib/mt/store"
-import { cardStyle, resolveStyle, tagStyle, titleClass } from "@/lib/mt/styles"
+import { resolveStyle, tagStyle, titleClass } from "@/lib/mt/styles"
+import { teacherSurfaceStyle } from "@/lib/timetable/teacher-appearance"
 import {
   addDays,
-  finalMarker,
   fmtDate,
   LUNCH,
   PERIODS,
@@ -31,8 +40,11 @@ import { useRef, useState } from "react"
 
 const AXIS = "w-[78px]"
 
-type CardMeta = {
+export type CardMeta = {
   conflict?: boolean
+  conflictLabels?: string[]
+  conflictReasons?: string[]
+  reviewReasons?: string[]
   draft?: boolean
   draggable?: boolean
   past?: boolean // 过去日期的课次：锁定只读并置灰
@@ -60,7 +72,24 @@ export function WeekGrid({
   onCopyCell,
   compact = false,
   renderDay,
+  displayControls,
+  calendarSourceEntries,
+  showTeacher = false,
+  initialFilters,
+  filterScope,
+  groupActivities = false,
+  allowStyleEditing = true,
 }: {
+  /** Read-only fixture views keep the real filters while preventing preference writes. */
+  allowStyleEditing?: boolean
+  /** Compact summaries are display-only and enabled only by the read-only school activity view. */
+  groupActivities?: boolean
+  initialFilters?: Partial<CardFilters>
+  /** Limits visible objects while the full source remains available for conflicts and calendar projection. */
+  filterScope?: Partial<CardFilters>
+  displayControls?: DisplayMode
+  calendarSourceEntries?: (date: string) => ProjectedEntry[]
+  showTeacher?: boolean
   weekStart: string
   entries: ProjectedEntry[]
   clockDate?: string
@@ -84,6 +113,15 @@ export function WeekGrid({
   compact?: boolean
   renderDay?: (day: { weekday: number; date: string; entries: ProjectedEntry[]; stopped: boolean }) => React.ReactNode
 }) {
+  const [filters, setFilters] = useState({ ...EMPTY_CARD_FILTERS, ...initialFilters })
+  const [stylesOpen, setStylesOpen] = useState(false)
+  const [openActivityGroup, setOpenActivityGroup] = useState<{ key: string; context: string } | null>(null)
+  const { appearance } = useTimetableAppearance(displayControls ?? "teacher")
+  const cardAppearance = displayControls === "admin" || !canonical ? appearance : undefined
+  const mt = useMt()
+  const teacherId = useTeacherId()
+  const duties = useDuties()
+  const teaching = useTeaching()
   const timetable = useTimetable()
   const sharedEvents = useCalendarEvents()
   const calendarEvents = calendarEventsProp ?? sharedEvents
@@ -203,10 +241,47 @@ export function WeekGrid({
   // 实际参与渲染的课次：停课日课程保留但以失效态低调显示，追加补课日克隆
   const renderEntries: ProjectedEntry[] = [
     ...entries,
-    ...days.flatMap((d) => swapClonesFor(calendarEvents, entries, d.date, stoppedDates, makeupEdits, canonical ? undefined : date => [...new Set(entries.map(e => e.teacherId))].flatMap(id => teacherWeekEntries(timetable, id, weekStartOf(date)).entries))),
+    ...days.flatMap((d) => swapClonesFor(calendarEvents, entries, d.date, stoppedDates, makeupEdits, calendarSourceEntries ?? (canonical ? undefined : date => [...new Set(entries.map(e => e.teacherId))].flatMap(id => teacherWeekEntries(timetable, id, weekStartOf(date)).entries)))),
   ]
 
-  const eveningCount = renderEntries.filter(
+  // Assess the complete effective projection before display filters, excluding cancelled source days.
+  const assessment = assessSchedule(renderEntries.filter(e => !stoppedDates.has(e.date) && !e.movedTo), e => entryStudentRoster(e, mt.ready && !mt.loadError ? mt.biz.memberships : null, teaching))
+  const inScope = (entry: ProjectedEntry) => !filterScope || matchesCardFilters(entry, { ...EMPTY_CARD_FILTERS, ...filterScope })
+  const scopedEntries = renderEntries.filter(inScope)
+  const scopedAssessment = filterScope ? {
+    conflicts: assessment.conflicts.filter(issue => inScope(issue.a) || inScope(issue.b)),
+    reviews: assessment.reviews.filter(issue => inScope(issue.a) || inScope(issue.b)),
+  } : assessment
+  const issuesFor = (entry: ProjectedEntry) => {
+    const key = scheduleEntryKey(entry)
+    const conflicts = assessment.conflicts.filter(c => scheduleEntryKey(c.a) === key || scheduleEntryKey(c.b) === key)
+    const reviews = assessment.reviews.filter(c => scheduleEntryKey(c.a) === key || scheduleEntryKey(c.b) === key)
+    return {
+      conflict: !!conflicts.length || !!conflictKeys?.has(key),
+      conflictLabels: [...new Set(conflicts.map(c => ({ teacher: "教师冲突", room: "教室冲突", student: "学生冲突", time: "时段冲突", unknown: "冲突待核对" })[c.type]))],
+      conflictReasons: conflicts.map(c => c.reason),
+      reviewReasons: reviews.map(c => c.reason),
+    }
+  }
+
+  const matchesDisplay = (entry: ProjectedEntry) => {
+    if (!inScope(entry)) return false
+    const labels = cardDisplayLabels(entry, canonical, teacherId, mt.biz, dutyName(duties, entry.className, entry.group))
+    return matchesCardFilters({ ...entry, searchText: [labels.marker, labels.courseLabel].filter(Boolean).join(" ") }, filters)
+  }
+  const visibleEntries = displayControls ? scopedEntries.filter(matchesDisplay) : scopedEntries
+  const grouping = groupActivities && !editing && displayControls === "admin" && filterScope?.kind === "activity"
+  const displayGroups = grouping ? groupActivityEntries(visibleEntries) : []
+  const groupContext = JSON.stringify([weekStart, filters, filterScope])
+  const activeGroup = openActivityGroup?.context === groupContext ? displayGroups.find(group => group.key === openActivityGroup.key && group.entries.length > 1) : undefined
+  if (openActivityGroup && !activeGroup) setOpenActivityGroup(null)
+  const entryMeta = (entry: ProjectedEntry): CardMeta => ({
+    ...issuesFor(entry), draft: draftKeys?.has(entry.key),
+    past: !!clockDate && entry.date < clockDate,
+    voided: stoppedDates.has(entry.date) && !entry.makeupFrom,
+  })
+  const filtering = !!displayControls && hasCardFilters(filters)
+  const eveningCount = scopedEntries.filter(
     (e) => periodById(e.periodId)?.block === "evening" && !stoppedDates.has(e.date),
   ).length
   // 有晚间课时自动展开，无课时折叠；用户手动切换后以覆盖值为准
@@ -251,6 +326,8 @@ export function WeekGrid({
           const isMakeup = !!cal.swapSource
           const isStopped = stoppedDates.has(d.date)
           const canAdd = editing && (!!onAddCell || !!copied && !!onCopyCell) && items.length === 0 && !isPastCell && !isStopped
+          const displayed = items.filter(e => inScope(e) && (!displayControls || matchesDisplay(e)))
+          const cellGroups = grouping ? groupActivityEntries(displayed) : displayed.map((entry, i) => ({ key: `${entry.key}:${i}`, entries: [entry], teacherIds: [entry.teacherId], rooms: [], unknownRoomCount: 0 }))
           return (
             <div
               key={d.n}
@@ -283,13 +360,17 @@ export function WeekGrid({
                     <Plus className="size-4" />
                   </button>
                 ) : null}
-                {items.map((e, i) => (
+                {cellGroups.map((group, i) => group.entries.length > 1 ? (
+                  <ActivityGroupCard key={group.key} group={group} metas={group.entries.map(entryMeta)} appearance={cardAppearance} onClick={() => setOpenActivityGroup({ key: group.key, context: groupContext })} />
+                ) : group.entries.map(e => (
                   <div key={e.key + i} className="flex min-w-0 flex-col gap-1">
                   <ClassCard
                     entry={e}
                     canonical={canonical}
+                    showTeacher={showTeacher}
+                    appearance={cardAppearance}
                     meta={{
-                      conflict: conflictKeys?.has(cellKey(e)),
+                      ...issuesFor(e),
                       draft: draftKeys?.has(e.key),
                       draggable: draggableFor(e),
                       past: isPastCell,
@@ -310,7 +391,7 @@ export function WeekGrid({
                   />
                   {editing && onCopyCell && draggableFor(e) && <Button variant="ghost" size="xs" aria-label={`复制${e.className} ${d.label}${p.label}`} onClick={() => { setCopied({ ...e }); setCopyMessage("已选中课卡，点击空格粘贴；可连续复制多节。") }}><Copy data-icon="inline-start" />复制</Button>}
                   </div>
-                ))}
+                )))}
               </div>
               {isOver ? (
                 <span className="pointer-events-none absolute inset-x-1 bottom-1 truncate rounded bg-primary px-1 py-0.5 text-center text-[9px] font-medium text-primary-foreground">
@@ -325,6 +406,17 @@ export function WeekGrid({
   )
 
   return (
+    <>
+      {displayControls ? <div className="mb-3 space-y-2 rounded-lg border border-border bg-card px-3 py-2.5">
+        <div className="flex flex-wrap items-center justify-between gap-2"><p role="status" className="text-xs text-muted-foreground">显示 {visibleEntries.length} / {scopedEntries.length} {grouping ? `项安排 · ${displayGroups.length} 张课卡` : "张课卡"}{filtering ? " · 筛选仅影响显示" : ""}</p>{allowStyleEditing ? <Button variant="outline" size="xs" onClick={() => setStylesOpen(true)}><Palette className="mr-1 size-3.5" />显示样式</Button> : null}</div>
+        <TimetableFilterBar entries={scopedEntries} value={filters} onChange={setFilters} showTeacher={showTeacher} fixedKind={filterScope?.kind === "all" ? undefined : filterScope?.kind} />
+        {!filtering && filterScope && scopedEntries.length === 0 ? <p className="text-sm">本周暂无{filterScope.kind === "activity" ? "活动" : "课卡"}安排，可切换周次或左侧对象查看。</p> : null}
+        {filtering && visibleEntries.length === 0 ? <p className="text-sm">没有符合条件的课卡，可清除筛选查看全部安排。</p> : null}
+        {filtering && editing ? <p className="text-xs text-muted-foreground">隐藏的课次仍占用原时段；新增、复制和移动会核对完整课表。</p> : null}
+      </div> : null}
+      {stylesOpen && displayControls && allowStyleEditing ? <TimetableDisplaySettings mode={displayControls} entries={scopedEntries} onClose={() => setStylesOpen(false)} /> : null}
+      {activeGroup ? <ActivityGroupDialog group={activeGroup} onClose={() => setOpenActivityGroup(null)}>{activeGroup.entries.map((entry, i) => <ClassCard key={`${scheduleEntryKey(entry)}:${i}`} entry={entry} meta={entryMeta(entry)} canonical showTeacher appearance={cardAppearance} onClick={onCardClick ? () => { setOpenActivityGroup(null); onCardClick(entry) } : undefined} />)}</ActivityGroupDialog> : null}
+      <ScheduleIssues assessment={scopedAssessment} />
     <div data-layout={renderDay ? "days" : "periods"} className={cn("overflow-hidden rounded-lg border bg-card", editing ? "border-primary/50 ring-1 ring-primary/30" : "border-border", className)}>
       {editing && copied && onCopyCell && <div className="flex flex-wrap items-center justify-between gap-2 border-b bg-accent px-3 py-2 text-sm text-accent-foreground"><p role="status">复制「{copied.className}」 · {copyMessage}</p><Button variant="outline" size="sm" onClick={() => { setCopied(null); setCopyMessage("") }}>结束复制</Button></div>}
       <div className="flex items-stretch bg-muted/60">
@@ -395,7 +487,7 @@ export function WeekGrid({
                 {renderDay({
                   weekday: day.n,
                   date: day.date,
-                  entries: renderEntries.filter(entry => entry.date === day.date).sort((a, b) => (periodById(a.periodId)?.no ?? 0) - (periodById(b.periodId)?.no ?? 0)),
+                  entries: visibleEntries.filter(entry => entry.date === day.date).sort((a, b) => (periodById(a.periodId)?.no ?? 0) - (periodById(b.periodId)?.no ?? 0)),
                   stopped: stoppedDates.has(day.date),
                 })}
               </div>
@@ -404,7 +496,7 @@ export function WeekGrid({
         </div>
       ) : (
         <>
-          {dayPeriods.filter(p => !compact || editing || renderEntries.some(e => e.periodId === p.id)).map((p) => renderRow(p, p.id === "a1"))}
+          {dayPeriods.filter(p => !compact || editing || scopedEntries.some(e => e.periodId === p.id)).map((p) => renderRow(p, p.id === "a1"))}
 
           {(!compact || editing || eveningCount > 0) && <button
             onClick={() => setEveningOverride(!showEvening)}
@@ -427,15 +519,26 @@ export function WeekGrid({
           className="pointer-events-none fixed z-50 w-40 -translate-x-1/2 -translate-y-1/2 rounded-md bg-card text-foreground shadow-lg"
           style={{ left: ghost.x, top: ghost.y }}
         >
-          <ClassCard entry={ghost.entry} canonical={canonical} />
+          <ClassCard entry={ghost.entry} canonical={canonical} showTeacher={showTeacher} appearance={cardAppearance} meta={issuesFor(ghost.entry)} />
         </div>
       ) : null}
     </div>
+    </>
   )
 }
 
-function cellKey(e: ProjectedEntry): string {
-  return `${e.teacherId}-${e.key}-${e.date}-${e.periodId}`
+export function ScheduleIssues({ assessment }: { assessment: ScheduleAssessment }) {
+  if (!assessment.conflicts.length && !assessment.reviews.length) return null
+  const label = (entry: ProjectedEntry) => `${entry.className}（${teacherById(entry.teacherId)?.name ?? entry.teacherId}）`
+  return <details className="mb-3 rounded-lg border border-[#e6d4a8] bg-[#fbf7ee] px-3 py-2 text-xs" open>
+    <summary className="cursor-pointer font-medium">当前范围：{assessment.conflicts.length} 项冲突 · {assessment.reviews.length} 项待核对</summary>
+    <ul className="mt-2 max-h-36 space-y-1.5 overflow-y-auto">
+      {[...assessment.conflicts.map(item => ({ ...item, confirmed: true })), ...assessment.reviews.map(item => ({ ...item, confirmed: false }))].map((item, i) => <li key={i} className={item.confirmed ? "text-destructive" : "text-[#805b17]"}>
+        <strong>{item.confirmed ? "冲突" : "待核对"} · {fmtDate(item.a.date)} {periodById(item.a.periodId)?.label}</strong>：{label(item.a)} / {label(item.b)}。{item.reason}
+      </li>)}
+    </ul>
+    <p className="mt-2 text-muted-foreground">基于当前范围的全部有效课次判断；筛选隐藏课卡不会消除提示。</p>
+  </details>
 }
 
 export function ClassCard({
@@ -444,10 +547,14 @@ export function ClassCard({
   onClick,
   dragProps,
   canonical = false,
+  showTeacher = false,
+  appearance,
   children,
   ariaLabel,
 }: {
   entry: ProjectedEntry
+  showTeacher?: boolean
+  appearance?: Appearance
   meta?: CardMeta
   canonical?: boolean
   children?: React.ReactNode
@@ -463,20 +570,12 @@ export function ClassCard({
   const duties = useDuties()
   const mt = useMt()
   const teacherId = useTeacherId()
-  const lessonCustom = !canonical && entry.displayMode === "CUSTOM" && !!entry.customLabel?.trim()
-  const task = !canonical && !lessonCustom && entry.taskId && teacherId ? TASKS.find((t) => t.id === entry.taskId && t.teacher_id === teacherId) : undefined
-  const taskPref = task && teacherId ? mt.biz.taskPrefs[prefKey(teacherId, task.id)] : undefined
-  const taskCustom = !!taskPref?.enabled && !!taskPref.text.trim()
-  const marker =
-    task && teacherId && taskCustom
-      ? personalDisplay(task, teacherId, mt.biz.taskPrefs, mt.biz.lessonOverrides).division
-      : finalMarker(entry, canonical, dutyName(duties, entry.className, entry.group))
-  const customShown = lessonCustom || taskCustom
-  const ownTask = !canonical && entry.taskId && teacherId ? TASKS.find((t) => t.id === entry.taskId && t.teacher_id === teacherId) : undefined
-  const courseLabel =
-    ownTask && teacherId ? personalDisplay(ownTask, teacherId, mt.biz.taskPrefs, mt.biz.lessonOverrides).course : null
+  const { ownTask, marker, customShown, courseLabel } = cardDisplayLabels(entry, canonical, teacherId, mt.biz, dutyName(duties, entry.className, entry.group))
+  const styleTask = appearance?.mode === "teacher" ? !canonical ? personalAppearanceTask(appearance, entry) : null : ownTask
   // 本人样式仅作用于本人真实任务课卡；学校版/差异（canonical）不染色
-  const ps = ownTask && teacherId ? resolveStyle(mt.biz, teacherId, ownTask) : null
+  const ps = appearance && (appearance.mode === "admin" || entry.kind === "activity")
+    ? resolveCardAppearance(appearance, entry)
+    : styleTask && teacherId ? resolveStyle(mt.biz, teacherId, styleTask) : null
   const noteSummary = entry.noteShow && entry.note?.trim() ? entry.note.trim() : null
   const personal = entry.origin === "personal"
   const history = entry.kind === "history"
@@ -508,7 +607,7 @@ export function ClassCard({
           className={cn("truncate text-[12px] font-semibold leading-tight", ps && titleClass(ps))}
           style={ps?.hex ? { color: ps.hex } : undefined}
         >
-          {entry.className}
+          <StyledLessonTitle entry={entry} appearance={appearance} />
         </span>
         {locked ? (
           <Lock
@@ -532,15 +631,16 @@ export function ClassCard({
         </div>
       ) : null}
       {courseLabel ? <div className="mt-0.5 truncate text-[11px] leading-tight opacity-80">{courseLabel}</div> : null}
+      {showTeacher ? <div className="mt-0.5 flex items-start gap-1 text-[11px] leading-tight"><UserRound className="size-2.5 shrink-0" aria-hidden /><StyledCardText entry={entry} appearance={appearance} field="teacher">{teacherById(entry.teacherId)?.name ?? entry.teacherId}</StyledCardText></div> : null}
       {/* 地点 */}
       <div className="mt-0.5 flex items-center gap-1 text-[11px] leading-tight opacity-90">
         {entry.room ? (
           <span className="inline-flex items-center gap-0.5">
             <MapPin className="size-2.5" />
-            {entry.room}
+            <StyledCardText entry={entry} appearance={appearance} field="room">{entry.room}</StyledCardText>
           </span>
         ) : (
-          <span className="text-[10px] opacity-70">未排教室</span>
+          <span className="text-[10px] opacity-70">未安排场所</span>
         )}
       </div>
       {/* 本课备注摘要：仅在“课卡显示”开启且有正文时出现 */}
@@ -562,7 +662,8 @@ export function ClassCard({
         </span>
       ) : null}
       {meta?.draft || personal ? <span className="text-xs font-medium">草稿／个人调整</span> : null}
-      {meta?.conflict ? <span className="mt-0.5 inline-block text-[10px] font-medium text-destructive">冲突</span> : null}
+      {meta?.conflict ? <span title={meta.conflictReasons?.join("；")} className="mt-0.5 inline-block text-[10px] font-medium text-destructive">{meta.conflictLabels?.length ? meta.conflictLabels.join(" · ") : "冲突"}</span> : null}
+      {meta?.reviewReasons?.length ? <span title={meta.reviewReasons.join("；")} className="mt-0.5 inline-block text-[10px] font-medium text-[#805b17]">同时段安排 · 待核对</span> : null}
     </>
   )
 
@@ -570,12 +671,17 @@ export function ClassCard({
     "block w-full rounded-md border px-1.5 py-1 text-left",
     tone,
     meta?.conflict && "ring-2 ring-destructive/60",
+    !meta?.conflict && !!meta?.reviewReasons?.length && "ring-1 ring-[#b88522]/60",
     draggable && "cursor-grab touch-none select-none active:cursor-grabbing",
     onClick && "transition-shadow hover:shadow-sm focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring",
   )
 
   const plainTone = !!ps
-  const personalCard = ps ? cardStyle(ps) : undefined
+  const personalCard = ps && !locked && !voided && !meta?.draft && !personal && !swap
+    ? styleTask && teacherId && appearance?.mode !== "admin" && !activity
+      ? teacherSurfaceStyle(mt.biz.styles ?? {}, teacherId, styleTask)
+      : cardSurfaceStyle(appearance, entry, ps)
+    : undefined
 
   if (onClick || draggable) {
     return (

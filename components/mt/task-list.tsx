@@ -1,5 +1,7 @@
 "use client"
 
+import { PersonalLessonTitle } from "@/components/timetable/display-settings"
+
 import { Badge, Card, EmptyState, LinkButton, PageHeader } from "@/components/kit"
 import { MtDemoBar, MtLoadError, MtLoading, SaveState } from "@/components/mt/shared"
 import { WeekPicker } from "@/components/mt/week-picker"
@@ -187,7 +189,7 @@ function TaskRow({ tw, teacherId, q, st }: { tw: TaskWeek; teacherId: string; q:
             )}
             style={ps.hex ? { color: ps.hex } : undefined}
           >
-            {d.className}
+            <PersonalLessonTitle task={tw.task} name={d.className} />
           </Link>
           {d.division ? (
             ps.tagHex ? (

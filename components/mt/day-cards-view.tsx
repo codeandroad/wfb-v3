@@ -1,11 +1,14 @@
 "use client"
 
+import { PersonalCardText, PersonalLessonTitle } from "@/components/timetable/display-settings"
+
 import { Badge } from "@/components/kit"
 import { dayCardsOfWeek, lessonTimingLabel, periodsLabel } from "@/lib/mt/daycards"
 import { Layers } from "lucide-react"
 import { fmtMD, personalDisplay, WEEKDAY_CN, type STask } from "@/lib/mt/model"
 import { useMt } from "@/lib/mt/store"
-import { cardStyle, resolveStyle, tagStyle, titleClass } from "@/lib/mt/styles"
+import { resolveStyle, tagStyle, titleClass } from "@/lib/mt/styles"
+import { teacherSurfaceStyle } from "@/lib/timetable/teacher-appearance"
 import { cn } from "@/lib/utils"
 
 /** 按日记录视图：同一教学任务同一日期的原课次合并为一张日卡 */
@@ -44,6 +47,13 @@ export function DayCardsView({
               const t = allTasks.find((x) => x.id === c.task.id)!
               const pd = personalDisplay(t, teacherId, mt.biz.taskPrefs, mt.biz.lessonOverrides)
               const ps = resolveStyle(mt.biz, teacherId, t)
+              const focused = focus === c.key
+              const surface = {
+                ...teacherSurfaceStyle(mt.biz.styles ?? {}, teacherId, t),
+                ...(focused ? { borderColor: undefined, borderWidth: 1, borderStyle: "solid" as const } : {}),
+                // A merged day's left marker stays visible even when the personal border is hidden.
+                ...(c.merged > 1 ? { borderLeftWidth: 4, borderLeftStyle: "solid" as const, borderLeftColor: "color-mix(in oklab, var(--foreground) 25%, transparent)" } : {}),
+              }
               const sub = [pd.division, pd.course].filter(Boolean).join(" · ")
               const roomSet = [...new Set(c.lessons.map((l) => l.room).filter(Boolean))]
               const perLessonRoom = roomSet.length > 1
@@ -57,7 +67,7 @@ export function DayCardsView({
                   aria-haspopup="dialog"
                   data-testid="day-card"
                   data-style-bg={ps.bg?.label ?? ""}
-                  style={focus === c.key ? (ps.bg ? { backgroundColor: ps.bg.hex } : undefined) : cardStyle(ps)}
+                  style={surface}
                   id={`day-${c.key}`}
                   data-merged={c.merged}
                   data-eval={c.status.key}
@@ -65,12 +75,12 @@ export function DayCardsView({
                   className={cn(
                     "relative flex min-w-0 flex-col items-start gap-1.5 rounded-lg border bg-card px-3 py-2.5 text-left transition-colors hover:border-primary focus-visible:outline-2 focus-visible:outline-primary",
                     c.merged > 1 && "border-l-4 border-l-foreground/25",
-                    focus === c.key ? "border-primary ring-2 ring-primary/30" : "border-border",
+                    focused ? "border-primary ring-2 ring-primary/30" : "border-border",
                   )}
                 >
                   <span className="flex w-full min-w-0 items-center gap-1">
                     <span title={pd.className} className={cn("min-w-0 truncate text-sm font-semibold leading-snug", titleClass(ps))} style={ps.hex ? { color: ps.hex } : undefined}>
-                      {pd.className}
+                      <PersonalLessonTitle task={t} name={pd.className} />
                     </span>
                     {pd.division ? <span className="shrink-0 whitespace-nowrap rounded px-1 text-xs font-medium" style={tagStyle(ps)}>{pd.division}</span> : null}
                   </span>
@@ -94,13 +104,13 @@ export function DayCardsView({
                           <span className="font-mono">
                             {l.period.start}–{l.period.end}
                           </span>
-                          {perLessonRoom && l.room ? <span>{l.room}</span> : null}
+                          {perLessonRoom && l.room ? <PersonalCardText task={t} field="room">{l.room}</PersonalCardText> : null}
                           {tl ? <span>· {tl}</span> : null}
                         </li>
                       )
                     })}
                   </ul>
-                  {!perLessonRoom && roomSet[0] ? <span className="text-[11px] text-muted-foreground">{roomSet[0]}</span> : null}
+                  {!perLessonRoom && roomSet[0] ? <span className="text-[11px] text-muted-foreground"><PersonalCardText task={t} field="room">{roomSet[0]}</PersonalCardText></span> : null}
                   <span className="flex flex-wrap items-center gap-1.5">
                     <Badge tone={c.status.tone}>{c.status.label}</Badge>
                     {c.status.key !== "FUTURE" && (c.timing.key === "MORE_TODAY" || c.timing.key === "LIVE") ? (

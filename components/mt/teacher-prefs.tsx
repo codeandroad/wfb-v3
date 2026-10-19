@@ -1,33 +1,17 @@
 "use client"
 
+import { TeacherCardStyleEditor, TeacherTitleStyleCard } from "@/components/timetable/display-settings"
+
 import { Badge, Card, CardHeader, Input, Segmented } from "@/components/kit"
 import { buttonVariants } from "@/components/ui/button"
 import { HW_DAYS_MAX, PAGE_SIZE_MAX, PAGE_SIZE_MIN, PAGE_SIZES, pageSizeError } from "@/lib/mt/hw"
 import { permittedTasks } from "@/lib/mt/derive"
-import { ATT_LABEL, classOf, courseOf, dutyOf, personalDisplay, type Attendance, type STask } from "@/lib/mt/model"
-import {
-  FONT_LABEL,
-  LEVEL_LABEL,
-  resolveStyle,
-  saveStylePatch,
-  STYLE_COLORS,
-  STYLE_BGS,
-  cardStyle,
-  tagStyle,
-  styleKey,
-  titleClass,
-  WEIGHT_LABEL,
-  type StyleFont,
-  type StyleLevel,
-  type StylePref,
-  type StyleWeight,
-} from "@/lib/mt/styles"
+import { ATT_LABEL, type Attendance } from "@/lib/mt/model"
 import { emptyLib, PHRASE_MAX, REASON_STATES, SYSTEM_PHRASES, type PersonalPhrase, type PhraseKind } from "@/lib/mt/phrases"
 import { useMt, usePhraseWriters, usePrefWriters, useTeacherPrefs } from "@/lib/mt/store"
 import { cn } from "@/lib/utils"
 import { ArrowDown, ArrowUp, Check, Pencil, Plus, Trash2, X } from "lucide-react"
 import { useState } from "react"
-import { StyleColorInput } from "@/components/mt/style-color-input"
 
 const btn = (variant: "outline" | "ghost" | "default" = "outline") => cn(buttonVariants({ variant, size: "sm" }), "h-7 gap-1 px-2 text-xs")
 
@@ -46,184 +30,14 @@ export function TeacherPrefsPanel({ teacherId }: { teacherId: string }) {
 
 export function StyleCard({ teacherId }: { teacherId: string }) {
   const mt = useMt()
-  const pw = usePrefWriters(teacherId)
   const tasks = permittedTasks(mt.biz, teacherId)
-  const [level, setLevel] = useState<StyleLevel>("TASK")
-  const targets = (() => {
-    const seen = new Map<string, { id: string; label: string; task: STask }>()
-    for (const t of tasks) {
-      const id = level === "TASK" ? t.id : level === "CLASS" ? t.class_id : t.course_id
-      if (!id || seen.has(id)) continue
-      const duty = dutyOf(t)?.normative_label ?? null
-      const pd = personalDisplay(t, teacherId, mt.biz.taskPrefs, mt.biz.lessonOverrides)
-      const custom = pd.division && pd.division !== duty ? `（显示为「${pd.division}」）` : ""
-      const label = level === "TASK" ? `${classOf(t).name}${duty ? ` · ${duty}` : ""}` : level === "CLASS" ? classOf(t).name : (courseOf(t)?.name ?? id)
-      seen.set(id, { id, label, task: t })
-    }
-    const list = [...seen.values()]
-    const count = new Map<string, number>()
-    return list.map((x) => {
-      const total = list.filter((y) => y.label === x.label).length
-      if (total < 2) return x
-      return { ...x, label: `${x.label} · ${courseOf(x.task)?.name ?? x.task.valid_from}` }
-    })
-  })()
-  const [pick, setPick] = useState<string | null>(null)
-  const [styleNotice, setStyleNotice] = useState("")
-  const [preview, setPreview] = useState<{ key: string; patch: StylePref } | null>(null)
-  const target = targets.find((x) => x.id === pick) ?? targets[0]
-  if (!target) return null
-  const targetDivision = personalDisplay(target.task, teacherId, mt.biz.taskPrefs, mt.biz.lessonOverrides).division
-  const key = styleKey(teacherId, level, target.id)
-  const own = mt.biz.styles?.[key] ?? {}
-  const previewing = preview?.key === key
-  const previewBiz = previewing ? { ...mt.biz, styles: saveStylePatch(mt.biz.styles ?? {}, key, preview.patch) } : mt.biz
-  const eff = resolveStyle(previewBiz, teacherId, target.task)
-  const set = (patch: Partial<StylePref>) => {
-    const result = pw.setStyle(key, patch)
-    setStyleNotice(result.ok ? "已保存，仅更新本次属性。" : result.error)
-    if (result.ok) setPreview(null)
-    return result.ok
-  }
-
-  return (
+  return <>
     <Card>
-      <CardHeader
-        title="我的显示样式"
-        desc="仅改变本人显示。范围决定影响哪些任务；同一属性最后成功保存的设置生效，其他属性保留。"
-        action={
-          <Segmented<StyleLevel>
-            size="sm"
-            ariaLabel="样式层级"
-            value={level}
-            onChange={(v) => {
-              setLevel(v)
-              setPick(null)
-            }}
-            options={(["TASK", "CLASS", "COURSE"] as StyleLevel[]).map((l) => ({ value: l, label: LEVEL_LABEL[l] }))}
-          />
-        }
-      />
-      <div className="grid gap-5 px-5 py-4 md:grid-cols-[2fr_3fr]">
-        <div className="flex flex-col gap-3">
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="text-xs text-muted-foreground">设置对象</span>
-            <select className="h-9 rounded-md border border-input bg-card px-2 text-sm" value={target.id} onChange={(e) => setPick(e.target.value)}>
-              {targets.map((x) => (
-                <option key={x.id} value={x.id}>{x.label}</option>
-              ))}
-            </select>
-          </label>
-          <div className="rounded-lg border border-border bg-card px-3 py-2.5" style={cardStyle(eff)} data-testid="style-preview">
-            <p className="text-[11px] text-muted-foreground">{previewing ? "候选预览（尚未保存）" : "卡片预览（当前生效）"}</p>
-            <p className={cn("text-sm font-semibold leading-snug", titleClass(eff))} style={eff.hex ? { color: eff.hex } : undefined}>
-              {classOf(target.task).name}
-            </p>
-            {targetDivision ? (
-              <span className="mt-1 inline-block rounded px-1 text-xs font-medium" style={tagStyle(eff) ?? { backgroundColor: "rgba(0,0,0,.06)" }}>
-                {targetDivision}
-              </span>
-            ) : (
-              <span className="mt-1 block text-[11px] text-muted-foreground">整科任务，无分工标签</span>
-            )}
-            <span className="mt-1 block text-[11px] font-medium text-[#8a5a10]">待评价 3 · 示例状态文字</span>
-            <p className="mt-1 text-[11px] text-muted-foreground">
-              {(["color", "tag", "bg", "weight", "font"] as const)
-                .map((f) => `${{ color: "文字", tag: "分工", bg: "背景", weight: "字重", font: "字体" }[f]}：${eff.from[f] ? LEVEL_LABEL[eff.from[f]!] : "系统默认"}`)
-                .join(" · ")}
-            </p>
-          </div>
-          <button type="button" className={cn(btn(), "self-start")} disabled={!mt.biz.styles?.[key]} onClick={() => pw.setStyle(key, null)}>
-            恢复{LEVEL_LABEL[level]}全部样式默认
-          </button>
-          {level === "CLASS" ? <>
-            <p className="text-sm">本教学班全部本人任务</p>
-            {tasks.filter(t => t.class_id === target.id).map(t => {
-              const style = resolveStyle(previewBiz, teacherId, t)
-              const separate = mt.biz.styles?.[styleKey(teacherId, "TASK", t.id)]
-              const display = personalDisplay(t, teacherId, mt.biz.taskPrefs, mt.biz.lessonOverrides)
-              return <div key={t.id} className="rounded border border-border p-3 text-sm" style={cardStyle(style)}>
-                <strong style={{ color: style.hex ?? undefined }}>{display.division ?? classOf(t).subject}</strong>
-                <p>{dutyOf(t)?.normative_label ?? "整科"} · 当前生效</p>
-                <p>{(["color", "bg", "weight", "font"] as const).map(f => `${{ color: "主题", bg: "背景", weight: "字重", font: "字体" }[f]}：${style.from[f] ? LEVEL_LABEL[style.from[f]!] : "系统"}`).join(" · ")}</p>
-              </div>
-            })}
-            <p className="text-sm text-muted-foreground">保存任一属性即应用于这 {tasks.filter(t => t.class_id === target.id).length} 个任务。</p>
-          </> : null}
-
-        </div>
-        <div className="flex flex-col gap-4">
-          {styleNotice ? <p role="status" className="text-sm">{styleNotice}</p> : null}
-          <fieldset className="flex flex-col gap-2">
-            <legend className="mb-1 text-xs text-muted-foreground">颜色</legend>
-            <div className="flex flex-wrap gap-2">
-              <button type="button" aria-pressed={!own.color} onClick={() => set({ color: undefined })} className={cn("rounded-md border px-2 py-1 text-xs", !own.color ? "border-primary ring-2 ring-primary/30" : "border-border")}>
-                恢复此属性默认
-              </button>
-              {STYLE_COLORS.map((c) => (
-                <button
-                  key={c.id}
-                  type="button"
-                  aria-pressed={own.color === c.id}
-                  aria-label={c.label}
-                  title={c.label}
-                  onClick={() => set({ color: c.id })}
-                  className={cn("size-7 rounded-md border-2", own.color === c.id ? "border-foreground" : "border-transparent")}
-                  style={{ backgroundColor: c.hex }}
-                />
-              ))}
-            </div>
-          </fieldset>
-          <StyleColorInput key={`${key}:color:${own.color}`} label="主题色" value={own.color?.startsWith("#") ? own.color : STYLE_COLORS.find(c => c.id === own.color)?.hex ?? eff.hex ?? ""} onChange={color => set({ color })} onPreview={color => setPreview(color ? { key, patch: { color } } : null)} />
-          <fieldset className="flex flex-col gap-2">
-            <legend className="mb-1 text-xs text-muted-foreground">课卡背景</legend>
-            <div className="flex flex-wrap gap-2">
-              <button type="button" aria-pressed={!own.bg} onClick={() => set({ bg: undefined })} className={cn("rounded-md border px-2 py-1 text-xs", !own.bg ? "border-primary ring-2 ring-primary/30" : "border-border")}>
-                恢复此属性默认
-              </button>
-              <button type="button" aria-pressed={own.bg === "AUTO"} onClick={() => set({ bg: "AUTO" })} className="rounded-md border px-2 py-1 text-sm">跟随主题色</button>
-              {STYLE_BGS.map((b) => (
-                <button
-                  key={b.id}
-                  type="button"
-                  aria-pressed={own.bg === b.id}
-                  onClick={() => set({ bg: b.id })}
-                  className={cn("rounded-md border px-2 py-1 text-xs", own.bg === b.id ? "ring-2 ring-foreground" : "")}
-                  style={b.id === "NONE" ? { borderStyle: "dashed" } : { backgroundColor: b.hex, borderColor: b.border }}
-                >
-                  {b.label}
-                </button>
-              ))}
-            </div>
-            <p className="text-[11px] text-muted-foreground">{"明确背景不会随主题色改变；只有「跟随主题色」会自动配套。恢复默认同样是本范围的最新选择。"}</p>
-          </fieldset>
-          <StyleColorInput key={`${key}:bg:${own.bg}`} label="背景色" value={own.bg?.startsWith("#") ? own.bg : STYLE_BGS.find(b => b.id === own.bg)?.hex ?? ""} onChange={bg => set({ bg })} onPreview={bg => setPreview(bg ? { key, patch: { bg } } : null)} />
-          <div className="flex flex-wrap gap-6">
-            <div className="flex flex-col gap-1">
-              <span className="text-xs text-muted-foreground">字重</span>
-              <Segmented<string>
-                size="sm"
-                ariaLabel="字重"
-                value={own.weight ?? ""}
-                onChange={(v) => set({ weight: (v || undefined) as StyleWeight | undefined })}
-                options={[{ value: "", label: "默认" }, ...(Object.keys(WEIGHT_LABEL) as StyleWeight[]).map((w) => ({ value: w, label: WEIGHT_LABEL[w] }))]}
-              />
-            </div>
-            <div className="flex flex-col gap-1">
-              <span className="text-xs text-muted-foreground">字体</span>
-              <Segmented<string>
-                size="sm"
-                ariaLabel="字体"
-                value={own.font ?? ""}
-                onChange={(v) => set({ font: (v || undefined) as StyleFont | undefined })}
-                options={[{ value: "", label: "默认" }, ...(Object.keys(FONT_LABEL) as StyleFont[]).map((f) => ({ value: f, label: FONT_LABEL[f] }))]}
-              />
-            </div>
-          </div>
-        </div>
-      </div>
+      <CardHeader title="我的显示样式" desc="课卡外观与各部分文字分开设置；保留任务、班级与课程范围。" />
+      <div className="px-5 pb-5"><TeacherCardStyleEditor teacherId={teacherId} /></div>
     </Card>
-  )
+    <TeacherTitleStyleCard tasks={tasks} />
+  </>
 }
 
 export function HwDaysCard({ teacherId }: { teacherId: string }) {

@@ -12,6 +12,7 @@ import {
   PERIODS,
   periodById,
   ROOMS,
+  teacherById,
   WEEKDAYS,
   type DiffRow,
   type EditAction,
@@ -112,6 +113,7 @@ export function CardDetail({
   return (
     <Modal open={open} onClose={onClose} title={entry.className} width="max-w-md">
       <dl className="space-y-2.5 text-[13px]">
+        <Row k={entry.kind === "activity" ? "安排教师" : "任课教师"}>{teacherById(entry.teacherId)?.name ?? entry.teacherId}</Row>
         {entry.kind !== "activity" ? (
           <Row k="教学分工">{entry.group ? dutyName(duties, entry.className, entry.group) : "整科（无分工）"}</Row>
         ) : null}

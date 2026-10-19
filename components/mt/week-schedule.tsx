@@ -1,10 +1,13 @@
 "use client"
 
+import { PersonalCardText, PersonalLessonTitle } from "@/components/timetable/display-settings"
+
 import { EmptyState, LinkButton, PageHeader } from "@/components/kit"
 import { MtDemoBar, MtLoadError, MtLoading } from "@/components/mt/shared"
 import { WeekPicker } from "@/components/mt/week-picker"
 import { currentWeek, permittedTasks, useTeacherId } from "@/lib/mt/derive"
-import { cardStyle, resolveStyle, tagStyle, titleClass } from "@/lib/mt/styles"
+import { resolveStyle, tagStyle, titleClass } from "@/lib/mt/styles"
+import { teacherSurfaceStyle } from "@/lib/timetable/teacher-appearance"
 import {
   classOf,
   fmtMD,
@@ -70,7 +73,7 @@ export function WeekSchedulePage({ view }: { view: ScheduleView }) {
   const [dayTaskId, dayDate] = dayParam ? dayParam.split("|") : [null, null]
   const dayTask = dayTaskId ? tasks.find((t) => t.id === dayTaskId) ?? null : null
   const dayValid = !!dayTask && !!dayDate && /^\d{4}-\d{2}-\d{2}$/.test(dayDate) && dates.includes(dayDate)
-  const weekCards = dayCardsOfWeek(mt.biz, scoped.length ? scoped : tasks, week).sort((a, b) => a.date.localeCompare(b.date) || a.lessons[0].startTs - b.lessons[0].startTs)
+  const weekCards = dayCardsOfWeek(mt.biz, scoped, week).sort((a, b) => a.date.localeCompare(b.date) || a.lessons[0].startTs - b.lessons[0].startTs)
   const dayKnown = dayValid && weekCards.some((c) => c.task.id === dayTaskId && c.date === dayDate)
   const paneQ = sp.get("pane")
   const studentQ = sp.get("student")
@@ -142,6 +145,12 @@ export function WeekSchedulePage({ view }: { view: ScheduleView }) {
                   const t = tasks.find((x) => x.id === l.task_id)!
                   const pd = personalDisplay(t, teacherId, mt.biz.taskPrefs, mt.biz.lessonOverrides, l.id)
                   const ps = resolveStyle(mt.biz, teacherId, t)
+                  const focused = sp.get("focus") === l.id
+                  const surface = {
+                    ...teacherSurfaceStyle(mt.biz.styles ?? {}, teacherId, t),
+                    // Navigation focus retains its own border; personal colors and radius remain visible.
+                    ...(focused ? { borderColor: undefined, borderWidth: 1, borderStyle: "solid" as const } : {}),
+                  }
                   const sub = [pd.division, pd.course].filter(Boolean).join(" · ")
                   const done = l.endTs <= nowTs
                   const hasObs = !!mt.biz.observations[`${l.id}|CLASS`]
@@ -153,15 +162,15 @@ export function WeekSchedulePage({ view }: { view: ScheduleView }) {
                       aria-haspopup="dialog"
                       id={`lesson-${l.id}`}
                       data-style-bg={ps.bg?.label ?? ""}
-                      style={sp.get("focus") === l.id ? (ps.bg ? { backgroundColor: ps.bg.hex } : undefined) : cardStyle(ps)}
+                      style={surface}
                       className={cn(
                         "flex flex-col items-start gap-1 rounded-lg border bg-card px-3 py-2.5 text-left transition-colors hover:border-primary focus-visible:outline-2 focus-visible:outline-primary",
-                        sp.get("focus") === l.id ? "border-primary ring-2 ring-primary/30" : "border-border",
+                        focused ? "border-primary ring-2 ring-primary/30" : "border-border",
                       )}
                     >
                       <span className="font-mono text-[11px] text-muted-foreground">{lessonTimeLabel(l)}</span>
                       <span className={cn("text-sm font-semibold leading-snug", titleClass(ps))} style={ps.hex ? { color: ps.hex } : undefined}>
-                        {pd.className}
+                        <PersonalLessonTitle task={t} name={pd.className} />
                       </span>
                       {pd.division || pd.course ? (
                         <span className="flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
@@ -170,7 +179,7 @@ export function WeekSchedulePage({ view }: { view: ScheduleView }) {
                         </span>
                       ) : null}
                       <span className="flex flex-wrap items-center justify-start gap-x-2 gap-y-1 text-[11px] text-muted-foreground">
-                        <span>{l.room ?? ""}</span>
+                        <PersonalCardText task={t} field="room">{l.room ?? ""}</PersonalCardText>
                         <span className="flex items-center gap-1.5">
                           {hasObs ? <span className="text-muted-foreground">有观察</span> : null}
                           <span className={done ? "text-[#256a49]" : ""}>{done ? "已结束" : "未开始"}</span>

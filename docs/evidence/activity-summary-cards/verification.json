@@ -1,0 +1,82 @@
+{
+  "date": "2026-10-19",
+  "baseline": "42ba585f5e5b351c7beb333c15bdbb4e2e0c580f",
+  "branch": "main",
+  "incremental_implementation_sha256": "1e603eb89ae9aab55b0dd9e588d283d617fb9a73206c30e0f91daf786af613db",
+  "implementation_files": [
+    {
+      "path": "components/timetable/activity-group-card.tsx",
+      "sha256": "3d3f5835a88596b342d0eeebf76ab437680e8bc62702df4094858de1eb8039e6"
+    },
+    {
+      "path": "components/timetable/overview-panel.tsx",
+      "sha256": "a06a9da7bf87624db39cc2ae3c841ce83a8494294209748333aabefc71af1b1b"
+    },
+    {
+      "path": "components/timetable/week-grid.tsx",
+      "sha256": "17e84c2f5dee76c5b338b382d283487d623ae52aa38b4addff379a762e75dced"
+    },
+    {
+      "path": "lib/timetable/activity-groups.ts",
+      "sha256": "8ec65e9e6c26f030befddf0952fa60a508b866185acb54b4818e0150510d89da"
+    }
+  ],
+  "test_files": [
+    {
+      "path": "tests/timetable-activity-groups.test.cjs",
+      "sha256": "cfbb85e9f6a2498f91d2293926167cdd195f6504a546003d78cc0f42786607ce"
+    },
+    {
+      "path": "tests/timetable-activity-browse.test.cjs",
+      "sha256": "2d5c4a6132d07723ec4e4cb8336dd65eecd41dc05a5c1f1b38ad9f31a42f6b2a"
+    }
+  ],
+  "checks": {
+    "typecheck": "PASS",
+    "tests": {
+      "status": "PASS",
+      "count": 214,
+      "failed": 0,
+      "activity_group_tests": 14,
+      "activity_browse_tests": 9
+    },
+    "build": "PASS",
+    "diff_check": "PASS",
+    "routes_http": {
+      "/timetable": {
+        "status": 200,
+        "bytes": 91403
+      },
+      "/timetable/my": {
+        "status": 200,
+        "bytes": 88066
+      }
+    },
+    "browser_interaction_visual": "NOT_RUN (prior browser automation denial respected)",
+    "parent_make_check": "NOT_RUN (no Makefile target in wfb-v3)"
+  },
+  "independent_review": {
+    "path": "docs/reviews/2026-10-19-activity-summary-cards.md",
+    "status": "PASS (no remaining required fixes)",
+    "matches_implementation": true,
+    "regression_tests": 142,
+    "hundred_teacher_real_component_ssr": "PASS",
+    "typecheck": "PASS",
+    "diff_check": "PASS"
+  },
+  "manual_acceptance": "PENDING",
+  "manual_data_note": "Default browser data may contain only one teacher per activity; no synthetic multi-teacher records were written into user storage. Multi-teacher visual checks require suitable published data.",
+  "git_action": "UNCOMMITTED_NOT_PUSHED",
+  "logs": {
+    ".local-artifacts/activity-summary-cards/build.log": "026e7a5c9a7e68a144feef2da19ca48d5b3f2c10d538977ffa37c17c93abe418",
+    ".local-artifacts/activity-summary-cards/http.json": "a1e0325bded48b8f806704a2e39f6495c8607e614cdec9ad42ad0c4e437ce673",
+    ".local-artifacts/activity-summary-cards/implementation-manifest.txt": "1e603eb89ae9aab55b0dd9e588d283d617fb9a73206c30e0f91daf786af613db",
+    ".local-artifacts/activity-summary-cards/reviewer-diff-check.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    ".local-artifacts/activity-summary-cards/reviewer-implementation-manifest.txt": "e4f64a36c04c5e4deb0565ce5980b072b6120a1ca859f19e7eb0ea12a15d3e4e",
+    ".local-artifacts/activity-summary-cards/reviewer-summary-ssr.log": "28896c669463ad356e4863c0e60e5734031b20c8af35495a70beca529ab4317d",
+    ".local-artifacts/activity-summary-cards/reviewer-tests.log": "05bfcc353417062e6b901a22e5bae6e6c90bc0112c6d868c99cfb193522b7055",
+    ".local-artifacts/activity-summary-cards/reviewer-typecheck.log": "64df126360f2c182f554158445ba352f03a5961c3d1bd96e8926905078dac25b",
+    ".local-artifacts/activity-summary-cards/tests.log": "73790a40b7036332fee5951cfd765484e9fefd842fcd661774f2b00f4adcc511",
+    ".local-artifacts/activity-summary-cards/typecheck.log": "71322f3a5e902c7c296ca827d919591ea7b30265f382923d16c5ea0a8440b9e8"
+  }
+}

@@ -7,9 +7,15 @@ import { LessonDialog } from "@/components/timetable/lesson-dialog"
 import { DraftTray } from "@/components/timetable/school-drafts"
 import { TeacherLink } from "@/components/profile/teacher-link"
 import { WeekGrid } from "@/components/timetable/week-grid"
+import { TimetableFilterBar } from "@/components/timetable/card-filters"
+import { EMPTY_CARD_FILTERS, matchesCardFilters, type CardFilters } from "@/lib/timetable/display"
+import { useTeaching } from "@/lib/teaching/store"
+import { entryHomeroom } from "@/lib/timetable/conflict-display"
+import { schoolActivityObjects, schoolOverviewEntries } from "@/lib/timetable/activities"
 import { cn } from "@/lib/utils"
 import {
   ADMIN_CLASSES,
+  addDays,
   changedRows,
   fmtClock,
   fmtDate,
@@ -18,6 +24,7 @@ import {
   teacherById,
   WEEKS,
   weekOfStart,
+  weekStartOf,
   type EditAction,
   type ProjectedEntry,
 } from "@/lib/timetable/data"
@@ -34,13 +41,12 @@ import {
   teacherCurrent,
   teacherWeekEntries,
   useTimetable,
-  weekConflicts,
 } from "@/lib/timetable/store"
 import { AlertTriangle, Check, ChevronLeft, ChevronRight, PanelLeftClose, PanelLeftOpen, PencilLine, RefreshCw, Search, Send, Undo2, X } from "lucide-react"
 import { useState } from "react"
 
 type Mode = "school" | "teacher" | "diff"
-type ObjKind = "teacher" | "class" | "admin"
+type ObjKind = "teacher" | "class" | "admin" | "activity"
 
 interface ObjItem {
   id: string
@@ -54,6 +60,8 @@ export function OverviewPanel() {
   const [mode, setMode] = useState<Mode>("school")
   const [objKind, setObjKind] = useState<ObjKind>("teacher")
   const [adminClassId, setAdminClassId] = useState<string>(ADMIN_CLASSES[0].id)
+  const [selectedClassId, setSelectedClassId] = useState<string>(TEACHING_CLASSES[0].id)
+  const [activityName, setActivityName] = useState("")
   const [barOpen, setBarOpen] = useState(true)
   const [q, setQ] = useState("")
   const [detail, setDetail] = useState<ProjectedEntry | null>(null)
@@ -70,15 +78,21 @@ export function OverviewPanel() {
   const filteredTeachers = TEACHERS.filter((t) => !q || t.name.includes(q) || t.subject.includes(q))
   const filteredClasses = TEACHING_CLASSES.filter((c) => !q || c.name.includes(q) || c.subject.includes(q))
   const filteredAdmin = ADMIN_CLASSES.filter((c) => !q || c.name.includes(q) || c.grade.includes(q))
+  const activities = schoolActivityObjects(tt)
+  const filteredActivities = activities.filter(activity => !q || [activity.name, ...activity.rooms, ...activity.teacherIds.map(id => teacherById(id)?.name ?? id)].some(text => text.includes(q)))
   const adminClass = ADMIN_CLASSES.find((c) => c.id === adminClassId)
+  const teachingClass = TEACHING_CLASSES.find((c) => c.id === selectedClassId)
   const showAdmin = objKind === "admin" && !!adminClass
+  const showClass = objKind === "class" && !!teachingClass
 
   const items: ObjItem[] =
     objKind === "teacher"
       ? filteredTeachers.map((t) => ({ id: t.id, name: t.name, sub: t.subject, teacherId: t.id }))
       : objKind === "class"
         ? filteredClasses.map((c) => ({ id: c.id, name: c.name, sub: c.subject, teacherId: c.teacherIds[0] }))
-        : filteredAdmin.map((c) => ({ id: c.id, name: c.name, sub: `${c.grade} · ${c.memberTeacherIds.length} 位任课教师`, teacherId: c.memberTeacherIds[0] }))
+        : objKind === "activity"
+          ? [{ id: "", name: "全部活动", sub: `${activities.length} 类学校发布活动`, teacherId: "" }, ...filteredActivities.map(activity => ({ id: activity.name, name: activity.name, sub: `${activity.teacherIds.length} 位教师 · 学校发布`, teacherId: "" }))]
+          : filteredAdmin.map((c) => ({ id: c.id, name: c.name, sub: `${c.grade} · 归属安排`, teacherId: c.memberTeacherIds[0] }))
 
   function gotoWeek(delta: number) {
     const idx = WEEKS.findIndex((w) => w.start === tt.weekStart)
@@ -89,18 +103,19 @@ export function OverviewPanel() {
   return (
     <div className="flex gap-4">
       {barOpen ? (
-        <aside className="hidden w-56 shrink-0 lg:block">
+        <aside className="hidden w-64 shrink-0 lg:block">
           <div className="rounded-lg border border-border bg-card">
             <div className="flex items-center gap-2 border-b border-border px-2.5 py-2">
               <Segmented
                 size="sm"
                 ariaLabel="对象类型"
                 value={objKind}
-                onChange={(v) => setObjKind(v)}
+                onChange={(v) => { setObjKind(v); setQ("") }}
                 options={[
                   { value: "teacher", label: "教师" },
                   { value: "class", label: "教学班" },
                   { value: "admin", label: "行政班" },
+                  { value: "activity", label: "活动" },
                 ]}
               />
             </div>
@@ -112,7 +127,7 @@ export function OverviewPanel() {
             </div>
             <ul className="max-h-[560px] overflow-y-auto p-1.5">
               {items.map((o) => {
-                const active = objKind === "admin" ? adminClassId === o.id : objKind === "teacher" ? teacherId === o.id : teacherId === o.teacherId
+                const active = objKind === "activity" ? activityName === o.id : objKind === "admin" ? adminClassId === o.id : objKind === "teacher" ? teacherId === o.id : selectedClassId === o.id
                 const pending = objKind === "teacher" && isPending(tt, o.id)
                 const noAccount = objKind === "teacher" && TEACHERS.find((t) => t.id === o.id)?.hasAccount === false
                 const draft = objKind === "teacher" ? tt.schoolDrafts[o.id] : undefined
@@ -121,7 +136,9 @@ export function OverviewPanel() {
                     <button
                       aria-current={active ? "true" : undefined}
                       onClick={() => {
-                        if (objKind === "admin") setAdminClassId(o.id)
+                        if (objKind === "activity") setActivityName(o.id)
+                        else if (objKind === "admin") setAdminClassId(o.id)
+                        else if (objKind === "class") setSelectedClassId(o.id)
                         else tt.setSelectedTeacher(o.teacherId)
                       }}
                       className={cn(
@@ -160,7 +177,7 @@ export function OverviewPanel() {
             <Button variant="outline" size="icon" onClick={() => gotoWeek(1)} aria-label="下一周"><ChevronRight className="size-4" /></Button>
             <Button variant="ghost" size="xs" onClick={() => tt.advanceClockTo(clockDate)}>本周</Button>
           </div>
-          <div className={cn("ml-auto", showAdmin && "hidden")}>
+          <div className={cn("ml-auto", objKind !== "teacher" && "hidden")}>
             <Segmented
               ariaLabel="视图"
               value={mode}
@@ -174,8 +191,19 @@ export function OverviewPanel() {
           </div>
         </div>
 
-        {showAdmin ? (
-          <AdminClassView adminClassId={adminClass.id} weekStart={tt.weekStart} clockDate={clockDate} onCard={setDetail} />
+        {objKind === "activity" ? (
+          <ActivityView key={`activity:${activityName}`} activityName={activityName} weekStart={tt.weekStart} clockDate={clockDate} onCard={setDetail} />
+        ) : showAdmin ? (
+          <AdminClassView key={adminClass.id} adminClassId={adminClass.id} weekStart={tt.weekStart} clockDate={clockDate} onCard={setDetail} />
+        ) : showClass ? (
+          <TeachingClassView
+            key={teachingClass.id}
+            classId={teachingClass.id}
+            weekStart={tt.weekStart}
+            clockDate={clockDate}
+            onCard={setDetail}
+            onPickTeacher={(id) => { setObjKind("teacher"); setMode("school"); tt.setSelectedTeacher(id) }}
+          />
         ) : (
           <>
         <div className="mb-2 flex items-center gap-2">
@@ -199,7 +227,7 @@ export function OverviewPanel() {
           />
         ) : null}
         {mode === "teacher" ? <TeacherCurrentView teacherId={teacherId} weekStart={tt.weekStart} clockDate={clockDate} onCard={setDetail} /> : null}
-        {mode === "diff" ? <DiffView teacherId={teacherId} weekStart={tt.weekStart} dualColumn={dualColumn} onToggleColumns={() => setDualColumn((v) => !v)} /> : null}
+        {mode === "diff" ? <DiffView key={teacherId} teacherId={teacherId} weekStart={tt.weekStart} dualColumn={dualColumn} onToggleColumns={() => setDualColumn((v) => !v)} /> : null}
           </>
         )}
       </div>
@@ -272,25 +300,72 @@ function schoolRemove(tt: ReturnType<typeof useTimetable>, entry: ProjectedEntry
   return tt.schoolDraftEdit(tt.selectedTeacher, entry, { action: "remove", weekday: entry.weekday, periodId: entry.periodId, room: entry.room ?? null })
 }
 
+function TeachingClassView({ classId, weekStart, clockDate, onCard, onPickTeacher }: { classId: string; weekStart: string; clockDate: string; onCard: (e: ProjectedEntry) => void; onPickTeacher: (teacherId: string) => void }) {
+  const tt = useTimetable()
+  const teachingClass = TEACHING_CLASSES.find((item) => item.id === classId)
+  if (!teachingClass) return null
+  const seq = latestSeq(tt)
+  const entries = teachingClass.teacherIds.flatMap((teacherId) => schoolWeekEntries(tt, teacherId, weekStart, seq))
+    .filter((entry) => entry.kind !== "activity" && entry.className === teachingClass.name)
+
+  return (
+    <>
+      <div className="mb-2 flex flex-wrap items-center gap-2">
+        <h3 className="text-[15px] font-semibold">{teachingClass.name}</h3>
+        <Badge tone="neutral">{teachingClass.subject}</Badge>
+        <Badge tone="info">聚合只读</Badge>
+      </div>
+      <SourceBar>
+        <span className="font-medium text-foreground">学校发布版 {schLabel(seq)}</span>
+        <span className="text-muted-foreground">本周 {entries.length} 节</span>
+        <span className="text-muted-foreground">仅显示本教学班；调整请进入对应教师课表。</span>
+        <div className="ml-auto flex flex-wrap gap-1.5">
+          {teachingClass.teacherIds.map((teacherId) => (
+            <Button key={teacherId} variant="outline" size="xs" onClick={() => onPickTeacher(teacherId)}>
+              <PencilLine className="mr-1 size-3" />{teacherById(teacherId)?.name ?? teacherId}课表
+            </Button>
+          ))}
+        </div>
+      </SourceBar>
+      <WeekGrid
+        key={`teaching-class:${classId}`}
+        weekStart={weekStart}
+        entries={entries}
+        clockDate={clockDate}
+        onCardClick={onCard}
+        calendarSourceEntries={(date) => teachingClass.teacherIds
+          .flatMap((teacherId) => schoolWeekEntries(tt, teacherId, weekStartOf(date), seq))
+          .filter((entry) => entry.kind !== "activity" && entry.className === teachingClass.name)}
+        canonical
+        displayControls="admin"
+        showTeacher
+      />
+    </>
+  )
+}
+
 function AdminClassView({ adminClassId, weekStart, clockDate, onCard }: { adminClassId: string; weekStart: string; clockDate: string; onCard: (e: ProjectedEntry) => void }) {
   const tt = useTimetable()
+  const teaching = useTeaching()
   const ac = ADMIN_CLASSES.find((c) => c.id === adminClassId)
   if (!ac) return null
   const seq = latestSeq(tt)
-  const entries = ac.memberTeacherIds.flatMap((tid) => schoolWeekEntries(tt, tid, weekStart, seq))
-  const conflicts = weekConflicts(entries).length
+  const sourceEntries = (start: string) => TEACHERS.flatMap(t => schoolWeekEntries(tt, t.id, start, seq))
+    .filter(entry => entryHomeroom(entry, teaching) === adminClassId)
+  const entries = sourceEntries(weekStart)
+  const teacherIds = [...new Set(entries.map(entry => entry.teacherId))]
 
   return (
     <>
       <div className="mb-2 flex flex-wrap items-center gap-2">
         <h3 className="text-[15px] font-semibold">{ac.name}</h3>
         <Badge tone="neutral">{ac.grade}</Badge>
-        <Badge tone="info">聚合只读</Badge>
+        <Badge tone="info">归属安排 · 只读</Badge>
       </div>
-      <SourceBar tone={conflicts ? "warning" : "default"}>
+      <SourceBar>
         <span>
           任课教师：
-          {ac.memberTeacherIds.map((tid, i) => (
+          {teacherIds.map((tid, i) => (
             <span key={tid}>
               {i > 0 ? "、" : null}
               <TeacherLink teacherId={tid} className="hover:text-primary hover:underline">
@@ -300,16 +375,50 @@ function AdminClassView({ adminClassId, weekStart, clockDate, onCard }: { adminC
           ))}
         </span>
         <span className="text-muted-foreground">本周 {entries.length} 节</span>
-        {conflicts ? (
-          <span className="inline-flex items-center gap-1 font-medium text-foreground">
-            <AlertTriangle className="size-3.5" />学生时间冲突 {conflicts} 处
-          </span>
-        ) : null}
-        <span className="ml-auto text-muted-foreground">由所含教学任务的学校发布版聚合；修改请切到对应教师或教学班。</span>
+        <span className="ml-auto text-muted-foreground">仅汇总明确归属本班的教学课次；走班学生的实际去向可能不同。</span>
       </SourceBar>
-      <WeekGrid weekStart={weekStart} entries={entries} clockDate={clockDate} onCardClick={onCard} />
+      <WeekGrid
+        key={`admin-class:${adminClassId}`}
+        weekStart={weekStart}
+        entries={entries}
+        clockDate={clockDate}
+        onCardClick={onCard}
+        calendarSourceEntries={(date) => sourceEntries(weekStartOf(date))}
+        canonical
+        displayControls="admin"
+        showTeacher
+      />
     </>
   )
+}
+
+export function ActivityView({ activityName, weekStart, clockDate, onCard }: { activityName: string; weekStart: string; clockDate: string; onCard: (entry: ProjectedEntry) => void }) {
+  const tt = useTimetable()
+  const entries = schoolOverviewEntries(tt, weekStart)
+  const seq = latestSeq(tt)
+  return <>
+    <div className="mb-2 flex flex-wrap items-center gap-2">
+      <h3 className="text-[15px] font-semibold">{activityName || "全部活动"}</h3>
+      <Badge tone="info">学校活动 · 只读</Badge>
+    </div>
+    <SourceBar>
+      <span className="font-medium text-foreground">学校发布版 {schLabel(seq)}</span>
+      <span className="text-muted-foreground">同一时段的同名安排显示为摘要卡，点击查看各位教师和场所。</span>
+    </SourceBar>
+    <WeekGrid
+      key={`activity:${activityName}`}
+      weekStart={weekStart}
+      entries={entries}
+      clockDate={clockDate}
+      onCardClick={onCard}
+      calendarSourceEntries={date => schoolOverviewEntries(tt, weekStartOf(date))}
+      filterScope={{ kind: "activity", activityName }}
+      groupActivities
+      canonical
+      displayControls="admin"
+      showTeacher
+    />
+  </>
 }
 
 function SourceBar({ children, tone = "default" }: { children: React.ReactNode; tone?: "default" | "warning" }) {
@@ -338,7 +447,6 @@ function SchoolView({ teacherId, weekStart, clockDate, onReadCard, onEditCard, o
   // 已保存草稿也按草稿投影展示，便于核对待发布内容
   const draftProjection = ownDraft ? schoolDraftWeekEntries(tt, teacherId, weekStart, ownDraft.baseSeq) : null
   const entries = draftProjection ? draftProjection.entries : readOnlyEntries
-  const conflicts = weekConflicts(entries)
   const dirty = editCount > 0
 
   return (
@@ -376,11 +484,15 @@ function SchoolView({ teacherId, weekStart, clockDate, onReadCard, onEditCard, o
         </SourceBar>
       )}
 
-      {conflicts.length ? <ConflictBar count={conflicts.length} /> : null}
       <WeekGrid
-        key={`${teacherId}:${editing}`}
+        key={`school:${teacherId}:${editing}`}
         weekStart={weekStart}
         entries={entries}
+        calendarSourceEntries={(date) => ownDraft
+          ? schoolDraftWeekEntries(tt, teacherId, weekStartOf(date), ownDraft.baseSeq).entries
+          : schoolWeekEntries(tt, teacherId, weekStartOf(date), seq)}
+        canonical
+        displayControls="admin"
         clockDate={clockDate}
         editing={editing}
         draftKeys={draftProjection?.draftKeys}
@@ -404,7 +516,6 @@ function SchoolView({ teacherId, weekStart, clockDate, onReadCard, onEditCard, o
 function TeacherCurrentView({ teacherId, weekStart, clockDate, onCard }: { teacherId: string; weekStart: string; clockDate: string; onCard: (e: ProjectedEntry) => void }) {
   const tt = useTimetable()
   const { entries, days, multiVersion } = teacherWeekEntries(tt, teacherId, weekStart)
-  const conflicts = weekConflicts(entries)
   const refStatus = teacherCurrent(tt, teacherId, clockDate)
   const firstOk = days.find((d) => d.status.kind === "ok")
   const a = tt.adoptions[teacherId]
@@ -440,8 +551,16 @@ function TeacherCurrentView({ teacherId, weekStart, clockDate, onCard }: { teach
         {pending ? <Badge tone="warning">有学校新版待采用（未暗中回退到学校版）</Badge> : null}
         <Button variant="ghost" size="xs" className="ml-auto" onClick={() => tt.refreshCache()}><RefreshCw className="size-3 mr-1" />刷新</Button>
       </SourceBar>
-      {conflicts.length ? <ConflictBar count={conflicts.length} /> : null}
-      <WeekGrid weekStart={weekStart} entries={entries} clockDate={clockDate} onCardClick={onCard} canonical />
+      <WeekGrid
+        key={`teacher-current:${teacherId}`}
+        weekStart={weekStart}
+        entries={entries}
+        clockDate={clockDate}
+        onCardClick={onCard}
+        calendarSourceEntries={(date) => teacherWeekEntries(tt, teacherId, weekStartOf(date)).entries}
+        canonical
+        displayControls="admin"
+      />
       <p className="mt-2 text-[11px] text-muted-foreground">教务只读：读取教师已应用的排课字段投影，不含未应用草稿、私人备注或反馈内容；不代教师采用/确认。</p>
     </>
   )
@@ -449,6 +568,7 @@ function TeacherCurrentView({ teacherId, weekStart, clockDate, onCard }: { teach
 
 function DiffView({ teacherId, weekStart, dualColumn, onToggleColumns }: { teacherId: string; weekStart: string; dualColumn: boolean; onToggleColumns: () => void }) {
   const tt = useTimetable()
+  const [filters, setFilters] = useState<CardFilters>(EMPTY_CARD_FILTERS)
   const res = diffFor(tt, teacherId, weekStart)
   const cur = teacherCurrent(tt, teacherId, weekStart)
 
@@ -456,7 +576,12 @@ function DiffView({ teacherId, weekStart, dualColumn, onToggleColumns }: { teach
     return <StateBox tone="warning" title="无法计算差异" desc="教师当前使用课表不可用（无账号 / 尚无个人课表 / 读取失败），差异需两侧均可解析。" />
   }
 
-  const changed = changedRows(res.rows)
+  // 先计算完整差异，再筛选任一侧命中的行，避免将隐藏的一侧误报为新增或删除。
+  const filteredRows = res.rows.filter((row) => [row.school, row.personal].some((entry) => entry && matchesCardFilters({ ...entry, teacherId }, filters)))
+  const changed = changedRows(filteredRows)
+  const allChanged = changedRows(res.rows)
+  const filterEntries: ProjectedEntry[] = res.rows.flatMap((row) => [row.school, row.personal]
+    .flatMap((entry) => entry ? [{ ...entry, teacherId, date: addDays(weekStart, entry.weekday - 1) }] : []))
 
   return (
     <>
@@ -466,25 +591,17 @@ function DiffView({ teacherId, weekStart, dualColumn, onToggleColumns }: { teach
         <span className="text-muted-foreground">本人：个人使用版 <strong className="text-foreground">{perLabel(teacherId, cur.rev.perSeq)}</strong> · 来源 {schLabel(cur.rev.sourceSch)}</span>
         <Button variant="ghost" size="xs" className="ml-auto" onClick={onToggleColumns}>{dualColumn ? "切换为变化清单" : "查看双栏课表"}</Button>
       </SourceBar>
+      <TimetableFilterBar entries={filterEntries} value={filters} onChange={setFilters} />
       <div className="mb-2 text-[12px] text-muted-foreground">
-        {changed.length ? `所选范围共 ${changed.length} 处差异` : "所选范围无差异"}
+        {allChanged.length ? `显示 ${changed.length} / ${allChanged.length} 处差异` : "所选范围无差异"}
       </div>
       {dualColumn ? (
-        <DiffColumns rows={res.rows} schoolTitle={`学校 ${schLabel(res.schSeq)}`} personalTitle={`我的 ${perLabel(teacherId, cur.rev.perSeq)}`} />
+        <DiffColumns rows={filteredRows} schoolTitle={`学校 ${schLabel(res.schSeq)}`} personalTitle={`我的 ${perLabel(teacherId, cur.rev.perSeq)}`} />
       ) : (
-        <DiffList rows={res.rows} />
+        <DiffList rows={filteredRows} emptyText={allChanged.length ? "没有符合筛选条件的差异，可清除筛选查看全部。" : "所选范围无差异"} />
       )}
       <p className="mt-3 text-[11px] text-muted-foreground">差异来源：未采用新版 / 已应用个人调整 / 已确认保留 / 对应日期暂未生效 / 待核对来源变化。教务在此全为只读，不替教师采用或确认。</p>
     </>
-  )
-}
-
-function ConflictBar({ count }: { count: number }) {
-  return (
-    <div className="mb-2 flex items-center gap-2 rounded-lg border border-[#eec4bf] bg-[#fbe6e4] px-3 py-1.5 text-[12px] text-[#9a2b22]">
-      <AlertTriangle className="size-3.5" />
-      检测到 {count} 项资源冲突（点击课卡查看详情）
-    </div>
   )
 }
 
