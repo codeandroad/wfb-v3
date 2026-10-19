@@ -3,7 +3,7 @@
 import { useState } from "react"
 import Link from "next/link"
 import { AssignForm } from "@/components/mt/homework"
-import { Button, buttonVariants } from "@/components/ui/button"
+import { Button, buttonVariants } from "./button"
 import { FieldGroup } from "@/components/ui/field"
 import { useMt } from "@/lib/mt/store"
 import { permittedTasks, useTeacherId } from "@/lib/mt/derive"

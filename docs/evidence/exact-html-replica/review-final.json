@@ -1,0 +1,57 @@
+{
+  "reviewer": "independent /root/migration_review",
+  "reviewed_at_utc": "2026-10-13T06:55:07.206689+00:00",
+  "status": "PASS_FOCUSED",
+  "manual_owner_verification": "PENDING",
+  "repository": "/Users/wforthewin/Documents/aiprojects/weekly_feedback_ui/resources/wfb-v3",
+  "baseline": "5308673a8e957099e4fc3fee1e067dbfeafa067c",
+  "uncommitted": true,
+  "candidate_sha256": "01dcded033e6e41d6d02bec6b6320e350d40afede225c5546d2163d1cdc57ae9",
+  "aggregate_method": "SHA256 of compact sorted JSON file-hash map",
+  "candidate_file_count": 140,
+  "candidate_manifest": "tested-source.json",
+  "candidate_hash_mismatches": [],
+  "protected_files_verified_against_baseline": 98,
+  "protected_changed": [],
+  "must_fix_findings": [],
+  "verification": {
+    "node_tests": {
+      "command": "node --test tests/*.test.cjs",
+      "passed": 72,
+      "failed": 0,
+      "independently_run": true
+    },
+    "isolated_browser": {
+      "private_markup_export_import": {
+        "status": "PASS",
+        "keys": "rs:document@version:item",
+        "returned_content_visible": true
+      },
+      "common_stem_student_preview": {
+        "status": "PASS",
+        "given_function_visible": true
+      },
+      "common_stem_saved_bundle_reader": {
+        "status": "PASS",
+        "given_function_visible": true,
+        "saved_references_include_subquestion_and_parent": true
+      },
+      "earlier_four_fixes": {
+        "personal_copy_basket": "PASS; personal document revision 2 and modified body used",
+        "nested_dialog_back_navigation": "PASS; zero dialogs, original empty overflow restored",
+        "legacy_syllabus_selector": "PASS; syllabus-demo name and body match",
+        "plan_crud_preview_print": "PASS; copy, fixed, delete, Notes, supplement, table and isolated print visible"
+      }
+    },
+    "retained_source_policy": {
+      "status": "PASS",
+      "test": "共同题干与小题一同冻结版本和来源授权链，父项上游受限后禁止留存导出"
+    }
+  },
+  "review_limits": [
+    "Focused review of previously reported fixes and affected native research/course workflows; user visual/manual acceptance remains pending.",
+    "Production build and broader workflow results are reported by Implementer; this Reviewer independently ran Node tests and focused isolated-browser checks."
+  ],
+  "source_files_modified_by_reviewer": false,
+  "committed_by_reviewer": false
+}

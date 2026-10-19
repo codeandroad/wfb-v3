@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { useState } from "react"
-import { Button } from "@/components/ui/button"
+import { Button } from "./button"
 import { CriterionEditor } from "./criterion-editor"
 import { CriterionAdoption } from "./criterion-adoption"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"

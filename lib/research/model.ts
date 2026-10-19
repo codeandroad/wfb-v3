@@ -1,3 +1,5 @@
+import type { SourceNodeLayout, SourceLayout, SourceAssessment } from "./source-layout"
+import type { Journal, ChatMessage, GroupProfile } from "./workspace-model"
 import type { CatalogCourse, CatalogSubject, CatalogUnit } from "@/lib/demo/school"
 import { dutyEffective, type DutyActor, type StaffDutyAssignment } from "@/lib/school/duty-model"
 import { RESEARCH_GROUPS, type ResearchGroup } from "@/lib/school/responsibility-scopes"
@@ -8,18 +10,19 @@ export const groups = RESEARCH_GROUPS
 export type Access = { audience: "owner" | "group" | "school" | "specified"; groups: string[]; staff: string[] }
 export type SourceRef = { documentId: string; version: number; itemId: string; title: string; locator: string; retainedBy?: string; retainText: boolean }
 export type WeekAllocation = { week: number; minutes: number }
-export type Item = {
+export type ItemTopic = { id: string;name: string;auto: boolean;en?: string }
+export type Item = { layout?: SourceNodeLayout;topics?: ItemTopic[];
   id: string; parentId: string | null; title: string; body: string; notes: string; original: string; translation: string; supplement: string;
   origin: "官方原文" | "学校自编" | "教师译注" | "教学补充"; source: string; references: SourceRef[];
   unitIds: string[]; minutes: number | null; fixed: boolean; weeks: WeekAllocation[]; section: string;
   printedPage: string; filePage: string; question: string; subquestion: string; stem: string; maxScore: number | null; scoring: string;
   answer: { documentId: string; itemId: string } | null;
 }
-export type Assessment = { id: string; title: string; unitIds: string[]; itemIds: string[]; conditions: string; source: string; rubric: string }
+export type Assessment = { layout?: SourceAssessment;id: string; title: string; unitIds: string[]; itemIds: string[]; conditions: string; source: string; rubric: string }
 export type AssessmentPath = { id: string; target: string; required: string[]; optional: string[]; choose: number | null; weights: Record<string, number | null>; conditions: string; source: string }
-export type SourceFile = { id: string; name: string; type: string; data: string; access: Access }
-export type ResourceType = "教材" | "练习册" | "真题" | "答案与评分资料" | "讲义课件" | "实验材料" | "教学案例" | "常见错误材料" | "练习组合"
-export type Document = {
+export type SourceFile = { allowCopy?: boolean;leaderGroup?: string;id: string; name: string; type: string; data: string; access: Access }
+export type ResourceType = "校本资料" | "教材" | "练习册" | "真题" | "答案与评分资料" | "讲义课件" | "实验材料" | "教学案例" | "常见错误材料" | "练习组合"
+export type Document = { layout?: SourceLayout;paperSource?: { id: string;version: number };
   id: string; kind: "大纲" | "计划" | "资源" | "练习组合"; title: string; owner: string; author: string; course: string; version: number;
   source: string; sourceVersion: string; language: string; years: string; objectives: string; prerequisites: string; notes: string;
   scope: "whole" | "units"; unitIds: string[]; share: Access; copyPolicy: "retain" | "reference-only"; restricted: boolean; archived: boolean;
@@ -27,17 +30,17 @@ export type Document = {
   resourceType: ResourceType; edition: string; publisher: string; examYear: string; session: string; paperCode: string; files: SourceFile[];
 }
 export type DraftDocument = { document: Document; baseVersion: number; savedAt: string }
-export type Outcome = { id: string; kind: "document" | "activity"; entityId: string; version: number; title: string; submittedBy: string; submittedAt: string; document?: Document; activity?: Activity }
+export type Outcome = { journal?: Journal; id: string; kind: "document" | "activity" | "journal"; entityId: string; version: number; title: string; submittedBy: string; submittedAt: string; document?: Document; activity?: Activity }
 export type Discussion = { id: string; target: string; author: string; body: string; at: string }
 export type SchoolTask = { id: string; title: string; groups: string[]; due: string; requirements: string; acceptance: boolean; createdBy: string; createdAt: string }
 export type Task = {
   id: string; title: string; group: string; parent: string | null; schoolTaskId: string | null; course: string; owner: string; collaborators: string[];
-  scheduleDate?: string;
+  version?: number; createdBy?: string; divisions?: Record<string,string>; returnedNote?: string; scheduleDate?: string;
   submitters: string[]; due: string; mode: "牵头提交" | "成员各自提交"; requirements: string; acceptance: boolean;
   status: "待承接" | "进行中" | "已提交" | "待验收" | "已完成"; outcomes: Outcome[]; acceptedNote: string;
 }
-export type Activity = {
-  id: string; group: string; title: string; type: "集体备课" | "独立试讲" | "示范课" | "同课异构" | "专题研讨" | "评分校准";
+export type Activity = { place?: string; description?: string; responsibilities?: Record<string,string>;
+  id: string; group: string; title: string; type: "集体备课" | "独立试讲" | "示范课" | "同课异构" | "专题研讨" | "评分校准" | "听课观摩" | "团建活动" | "会议培训";
   owner: string; course: string; taskId: string | null; start: string; end: string; participants: string[];
   lesson: { taskId: string; lessonId: string; date: string; period: number; label: string; room: string | null } | null;
   materials: { documentId: string; version: number }[]; conclusion: string; share: Access;
@@ -46,7 +49,7 @@ export type Activity = {
   trials: { id: string; answer: string; notes: string; decisions: Record<string, string> }[]; version: number;
 }
 export type Notice = { id: string; group: string; title: string; body: string; recipients: string[]; requiresAck: boolean; acknowledged: string[]; author: string; at: string }
-export type SupportIssue = { id: string; group: string; title: string; body: string; response: string; status: "待协调" | "已回复"; author: string }
+export type SupportIssue = { taskId?: string; id: string; group: string; title: string; body: string; response: string; status: "待协调" | "已回复"; author: string }
 export type Criterion = {
   id: string; group: string; title: string; kind: "课堂表现方案" | "作业质量方案" | "题目评分依据" | "单次考核等级换算";
   version: number; source: string; notes: string; recommended: boolean;
@@ -56,7 +59,7 @@ export type Criterion = {
   testName: string; thresholds: { minimum: number; code: string }[];
 }
 export type GroupScheduleSlot = { id: string; group: string; weekday: number; periodId: string; title: string; room: string | null }
-export type ResearchState = {
+export type ResearchState = { journals?: Journal[]; messages?: ChatMessage[]; favorites?: Record<string,string[]>; groupProfiles?: Record<string,GroupProfile>; baskets?: Record<string,string[]>;
   schema: 3; documents: Document[]; revisions: Record<string, Document>; drafts: Record<string, DraftDocument>;
   staffDuties: StaffDutyAssignment[]; groups: ResearchGroup[]; schoolTasks: SchoolTask[]; tasks: Task[]; activities: Activity[];
   discussions: Discussion[]; notices: Notice[]; issues: SupportIssue[]; criteria: Criterion[];
@@ -97,6 +100,7 @@ export function canUseAccess(state: ResearchState, actor: Actor, owner: string, 
 export function canReadDocument(state: ResearchState, actor: Actor, doc: Document) {
   return canUseAccess(state, actor, doc.owner, doc.share, !doc.restricted)
 }
+export function canReadSourceFile(state:ResearchState,actor:Actor,doc:Document,file:SourceFile){return canReadDocument(state,actor,doc)&&canUseAccess(state,actor,doc.owner,file.access,!doc.restricted)&&(!file.leaderGroup||canLeadGroup(state,actor,file.leaderGroup))}
 export function canEditDocument(state: ResearchState, actor: Actor, doc: Document) {
   return canReadDocument(state, actor, doc) && (doc.owner === actor.staff || canEditGroup(state, actor, doc.owner))
 }

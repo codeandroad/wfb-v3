@@ -1,9 +1,10 @@
 "use client"
 
 import Link from "next/link"
+import { JournalRead } from "./journals"
 import { useState } from "react"
 import { Badge } from "@/components/ui/badge"
-import { Button, buttonVariants } from "@/components/ui/button"
+import { Button, buttonVariants } from "./button"
 import { FieldGroup } from "@/components/ui/field"
 import { useResearchContext } from "@/lib/research/context"
 import { useResearchForm } from "@/lib/research/use-form"
@@ -54,7 +55,7 @@ export function SchoolResearchPanel() {
   </section>
 }
 
-function SchoolTaskForm({ scope }: { scope: string[] }) {
+export function SchoolTaskForm({ scope, onSaved }: { scope: string[]; onSaved?: () => void }) {
   const { state, actor, command } = useResearchContext()
   const form = useResearchForm("school-task-create", { title: "", groups: [] as string[], due: "", requirements: "", acceptance: false })
   const [error, setError] = useState("")
@@ -67,37 +68,37 @@ function SchoolTaskForm({ scope }: { scope: string[] }) {
     const groupTasks: Task[] = selected.map(group => ({ id: crypto.randomUUID(), title: task.title, group, parent: null, schoolTaskId: id, course: "", owner: "", collaborators: [], submitters: [], due: task.due, mode: "牵头提交", requirements: task.requirements, acceptance: task.acceptance, status: "待承接", outcomes: [], acceptedNote: "" }))
     const result = command({ type: "school-task", task, groupTasks })
     if (!result.ok) { setError(result.error); setMessage(""); return }
-    form.reset(); setError(""); setMessage("已向所选科组分别下发；各组在同一事项上承接并引用已有成果。")
+    form.reset(); onSaved?.(); setError(""); setMessage("已向所选科组分别下发；各组在同一事项上承接并引用已有成果。")
   }
-  return <Panel title="下发一项学校教研任务" description="截止日期与交付说明可以留空，默认不验收；不会要求额外工时、百分比或完成报告。">
+  return <div className="ry-school-task-form"><p className="ry-muted">选择接收科组，填写任务事项与交付要求。</p>
     <FieldGroup className="grid sm:grid-cols-2"><RField label="学校任务名称" value={form.value.title} onChange={title => form.set({ title })} /><RField label="学校任务截止日期（可选）" type="date" value={form.value.due} onChange={due => form.set({ due })} /><RField label="学校任务交付要求（可选）" type="textarea" value={form.value.requirements} onChange={requirements => form.set({ requirements })} /></FieldGroup>
     <Choices label="下发到获授权统筹的科组" options={state.groups.filter(g => scope.includes(g.id)).map(g => ({ value: g.id, label: g.name }))} value={form.value.groups} onChange={groups => form.set({ groups })} />
     <label className="flex items-center gap-2"><input type="checkbox" checked={form.value.acceptance} onChange={e => form.set({ acceptance: e.target.checked })} />本任务明确要求学校验收（默认不需要）</label>
     <Button className="self-start" disabled={!form.value.title.trim() || !form.value.groups.length} onClick={submit}>向所选科组下发</Button>
     {error && <p role="alert" className="text-destructive">{error}</p>}{message && <p role="status">{message}</p>}
-  </Panel>
+  </div>
 }
 
-function SchoolTaskProgress({ task, scope, manageScope }: { task: SchoolTask; scope: string[]; manageScope: string[] }) {
+export function SchoolTaskProgress({ task, scope, manageScope }: { task: SchoolTask; scope: string[]; manageScope: string[] }) {
   const { state, people, command } = useResearchContext()
   const [error, setError] = useState("")
-  return <article className="flex flex-col gap-4 rounded-lg border p-4">
+  return <article className="ry-school-task">
     <header className="flex flex-wrap items-start justify-between gap-2"><h3 className="text-pretty font-semibold">{task.title}</h3><Badge variant="outline">{task.acceptance ? "明确需验收" : "无需额外审批"}</Badge></header>
-    <p>来源标识：{task.id} · {task.due ? `截止 ${task.due}` : "未设截止"}</p>{task.requirements && <RichText text={task.requirements} />}
+    <p className="ry-muted">{task.due ? `截止 ${task.due}` : "未设截止"}</p>{task.requirements && <RichText text={task.requirements} />}
     {task.groups.filter(g => scope.includes(g)).map(group => {
       const root = state.tasks.find(t => t.schoolTaskId === task.id && t.group === group && !t.parent)
       const divisions = state.tasks.filter(t => t.schoolTaskId === task.id && t.group === group && t.parent)
-      return <section className="flex flex-col gap-3 rounded-lg bg-muted p-4 text-foreground" key={group}>
+      return <section className="ry-school-receipt-body" key={group}>
         <h4 className="font-semibold">{state.groups.find(g => g.id === group)?.name} · {root?.status || "尚未建立承接事项"}</h4>
         <p>负责人：{people.find(p => p.id === root?.owner)?.name || "待本组承接确定"} · 必要分工 {divisions.length} 项（不要求所有分工完成才允许提交）</p>
         {divisions.map(d => <p key={d.id}>{d.title} · {people.find(p => p.id === d.owner)?.name || "负责人待确定"} · {d.status}</p>)}
         {(root?.outcomes ?? []).map(outcome => <details key={outcome.id}>
           <summary className="cursor-pointer text-primary">打开已提交成果：{outcome.title} v{outcome.version} · {people.find(p => p.id === outcome.submittedBy)?.name || outcome.submittedBy}</summary>
-          <div className="flex flex-col gap-3 pt-4">{outcome.document ? <DocumentRead document={outcome.document} submittedSnapshot /> : <RichText text={`${outcome.activity?.type || "活动"}：${outcome.activity?.title || outcome.title}\n${outcome.activity?.start || ""}—${outcome.activity?.end || ""}\n研讨结论：${outcome.activity?.conclusion || "尚未整理"}`} />}<p className="text-muted-foreground">此处为提交时快照，不改写来源内容，也不开放来源个人资料或学生记录。</p></div>
+          <div className="flex flex-col gap-3 pt-4">{outcome.document ? <DocumentRead document={outcome.document} submittedSnapshot /> : outcome.journal ? <JournalRead journal={outcome.journal} /> : <RichText text={`${outcome.activity?.type || "活动"}：${outcome.activity?.title || outcome.title}\n${outcome.activity?.start || ""}—${outcome.activity?.end || ""}\n研讨结论：${outcome.activity?.conclusion || "尚未整理"}`} />}<p className="text-muted-foreground">此处为提交时快照，不改写来源内容，也不开放来源个人资料或学生记录。</p></div>
         </details>)}
         {!root?.outcomes.length && <p className="text-muted-foreground">尚无正式提交成果，不把组内草稿当作已提交。</p>}
         {root?.status === "待验收" && manageScope.includes(group) && <Button className="self-start" onClick={() => { const result = command({ type: "review-task", id: root.id, note: "学校授权统筹人员明确验收本组成果" }); setError(result.ok ? "" : result.error) }}>验收{state.groups.find(g => g.id === group)?.name}本次提交</Button>}
-        {root?.acceptedNote && <p>{root.acceptedNote}</p>}
+        {root?.status === "待验收" && manageScope.includes(group) && <ReturnSubmission id={root.id} />}{root?.returnedNote && <p className="text-destructive">退回原因：{root.returnedNote}</p>}{root?.acceptedNote && <p>{root.acceptedNote}</p>}
         <Link className="self-start text-primary underline" href={`/research?group=${group}&tab=${encodeURIComponent("任务与协作")}&from=catalog`}>查看本组承接与分工</Link>
       </section>
     })}
@@ -105,10 +106,12 @@ function SchoolTaskProgress({ task, scope, manageScope }: { task: SchoolTask; sc
   </article>
 }
 
-function SupportResponse({ id, canManage }: { id: string; canManage: boolean }) {
+export function SupportResponse({ id, canManage }: { id: string; canManage: boolean }) {
   const { state, command } = useResearchContext()
   const issue = state.issues.find(i => i.id === id)!
   const form = useResearchForm(`school-support:${id}`, { response: issue.response })
   const [error, setError] = useState("")
-  return <article className="flex flex-col gap-3 rounded-lg border p-4"><h3 className="font-semibold">{state.groups.find(g => g.id === issue.group)?.name} · {issue.title} · {issue.status}</h3><RichText text={issue.body} />{issue.response && <RichText text={`学校回复：${issue.response}`} />}{canManage && <><FieldGroup><RField label="学校协调回复" type="textarea" value={form.value.response} onChange={response => form.set({ response })} /></FieldGroup><Button variant="outline" className="self-start" disabled={!form.value.response.trim()} onClick={() => { const result = command({ type: "respond-support", id, response: form.value.response }); setError(result.ok ? "" : result.error) }}>保存明确协调回复</Button></>}{error && <p role="alert" className="text-destructive">{error}</p>}</article>
+  return <article className="ry-support-case"><h3 className="font-semibold">{state.groups.find(g => g.id === issue.group)?.name} · {issue.title} · {issue.status}</h3><RichText text={issue.body} />{issue.response && <RichText text={`学校回复：${issue.response}`} />}{canManage && <><FieldGroup><RField label="学校协调回复" type="textarea" value={form.value.response} onChange={response => form.set({ response })} /></FieldGroup><Button variant="outline" className="self-start" disabled={!form.value.response.trim()} onClick={() => { const result = command({ type: "respond-support", id, response: form.value.response }); setError(result.ok ? "" : result.error) }}>保存明确协调回复</Button></>}{error && <p role="alert" className="text-destructive">{error}</p>}</article>
 }
+
+function ReturnSubmission({ id }: { id: string }) { const { command } = useResearchContext(),[open,setOpen] = useState(false),[error,setError] = useState(""); const f = useResearchForm(`return-task:${id}`,{ note: "" }); return <details open={open} onToggle={e => setOpen(e.currentTarget.open)}><summary className="cursor-pointer text-sm text-primary">退回调整</summary><div className="flex flex-col gap-3 pt-3"><RField label="明确退回原因" type="textarea" value={f.value.note} onChange={note => f.set({ note })} /><Button size="sm" className="self-start" disabled={!f.value.note.trim()} onClick={() => { const r = command({ type: "return-task",id,note: f.value.note }); if (!r.ok) setError(r.error); else { f.reset(); setOpen(false) } }}>退回并保留本次提交快照</Button>{error && <p role="alert" className="text-destructive">{error}</p>}</div></details> }

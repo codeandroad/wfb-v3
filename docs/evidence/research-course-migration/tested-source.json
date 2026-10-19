@@ -1,0 +1,33 @@
+{
+  "baseline": "5308673",
+  "code_sha256": "093c23b07bf3e1a4224c16bbeb0900c471fb740efae014f569df57df02f9d332",
+  "files": {
+    "components/research/activity-board.tsx": "3735a7db88189c01712daba4f3bccc542fb2d8db698e5d5c521a2b914c9aa4e7",
+    "components/research/business-editor.tsx": "107eea1c5b1c6da0c57ebdd6c672126a473fd13b100c36791cadc4f1df093579",
+    "components/research/course-workspace.tsx": "5cc9b44779e2f489940fc6b4ceb6df85e885a733d7d7febee641c400d4c70f54",
+    "components/research/document-library.tsx": "8107b23e378004f53adcf684bb58dc9e34915af3e702ae55e2da3f60c5c50434",
+    "components/research/document-metadata.tsx": "123ba532e126a9118936f97f18a1236f05fb6b380245ed4192ff78532d7127d8",
+    "components/research/group-chat.tsx": "a7acdbf155c9e70012da072a21498ab1d48740b2ba663ed8b827720c3f2956ee",
+    "components/research/group-schedule.tsx": "6579fae7efe383a3ae02cce3194cb0d5274b51e94cd6fde30ec4c6fc2fcd5cac",
+    "components/research/item-editor.tsx": "46c1ef3237db6ae2354ba332cf29c7bf3915cfc6939a22a66780526326a03093",
+    "components/research/journals.tsx": "9cb630404a11e2d795ff1139bde5c501a1911d57a7e7e4faf5bfd4d69ae3cdc1",
+    "components/research/paper-library.tsx": "b55cdfeb16c10c745a47f6094f99b75600deb8ef287d745f033537fa966dbfc1",
+    "components/research/paper-reader.tsx": "3a6207e85f2018565a9f080f9e36346229f2d9ed8bf2f0063b5648957745fa04",
+    "components/research/school-panel.tsx": "c0e0116ced052a1b9bb96ba91b371005fb9707d67a772b9f5ddd90675eaf5e45",
+    "components/research/school-workspace.tsx": "f510f4b77e89c74d5bd46e9ca19b2b583a73af6d1e966603c4f1554c40e08e65",
+    "components/research/task-board.tsx": "658215e207d3ce860a9c98b749625a6140778eb47527049ffc0df4c36cef6ecf",
+    "components/research/work-board.tsx": "264fda87295bab809c78c292d66b0cf0a96e641468c6aa450687d78ba3dcbf8d",
+    "components/research/workspace.tsx": "907671537ff498138a5c2e35b1d5c379553a9d8a8cc163d11c6934a1a2c6306e",
+    "lib/research/commands.ts": "7c62e483698913ef9edddab58fbb71f039b19fd3a8558f4498b568defdd38cba",
+    "lib/research/model.ts": "72bd2f98f601dcd86c28c7d4660e900936f9c870c025166bdd1722f5e2160936",
+    "lib/research/navigation.ts": "c72ef6dcdc22acbc6eb42b9147a6cf88d3b764efba3da29646223c871ddb27b2",
+    "lib/research/paper-assets.json": "c1cce6243dac7c6f4f1ac9bba181fd3955cc844286c2994b0718d48384857ed1",
+    "lib/research/paper-fixture.json": "22a7d2357335a10b3b6bdad80461c0b5bdd3a546bdcb22d6907ec86b45f8be98",
+    "lib/research/papers.ts": "d369bd7a7f6fa0b397e47ce282faf1e05315460ace3471e77ffc8f4d0e4de5f5",
+    "lib/research/store.ts": "85b84844c35910aecb1984decd2f0fb577986d1cd353bcd149da9366915fa10b",
+    "lib/research/use-form.ts": "1d502ccefcf38c033a9af7d778dbde63e513618db3c9d7df3d1b14dc3abd65af",
+    "lib/research/workspace-model.ts": "76911f7e1ad8be53a0ff43caf47ff87286d12c15681c3031877854b8eba16efd",
+    "tests/research-workflows.test.cjs": "562643172c899d955a16036500d0e42d9db40bbee9d75f14cea3fb9870319d39",
+    "app/(app)/catalog/page.tsx": "fcdaea7ef66f06bc20f0349b90ccb4b133694fe601e0ad41504d381116857804"
+  }
+}

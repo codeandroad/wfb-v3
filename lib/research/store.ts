@@ -9,6 +9,8 @@ import { PERIODS } from "@/lib/timetable/data"
 import { emptyDocument, emptyItem, type Actor, type Document, type ResearchState } from "./model"
 import { applyResearchCommand, type Command } from "./commands"
 import { researchSeed } from "./seed"
+import { paperDocumentsSeed } from "./papers"
+import { sourceDocumentsSeed } from "./source-seed"
 export * from "./model"
 export type { Command } from "./commands"
 
@@ -18,7 +20,8 @@ export function schoolPeriodMinutes(): number | null {
 }
 const KEY = "tgs:research-prototype:v2"
 const LEGACY_KEY = "tgs:research-prototype:v1"
-const seed = researchSeed(schoolPeriodMinutes())
+const baseSeed = researchSeed(schoolPeriodMinutes())
+const seed: ResearchState = { ...baseSeed, journals: [], messages: [], favorites: {}, groupProfiles: {}, baskets: {}, documents: [...baseSeed.documents,...sourceDocumentsSeed,...paperDocumentsSeed], revisions: { ...baseSeed.revisions,...Object.fromEntries([...sourceDocumentsSeed,...paperDocumentsSeed].map(d => [`${d.id}@${d.version}`,d])) } }
 let state = seed
 let hydrated = false
 let status = { error: "", memoryDraft: false }
@@ -26,13 +29,18 @@ const listeners = new Set<() => void>()
 
 function normalizeDocument(value: Partial<Document> & { id: string }): Document {
   const defaults = emptyDocument(value.id,value.kind ?? "计划",value.title ?? "未命名内容",value.owner ?? "",value.author ?? "u-lin",value.course ?? "",schoolPeriodMinutes())
-  return { ...defaults,...value,items: (value.items ?? []).map(i => ({ ...emptyItem(i.id),...i, weeks: Array.isArray(i.weeks) ? i.weeks : [], references: Array.isArray(i.references) ? i.references : [], notes: i.notes ?? ((i as unknown as { week?: string }).week ? `原版周次备注：${(i as unknown as { week: string }).week}；尚未映射具体分钟。` : "") })) }
+  return { ...defaults,...value,...(!value.paperSource && paperDocumentsSeed.some(p => p.id === value.id) ? { paperSource: { id: value.id,version: 1 } } : {}),items: (value.items ?? []).map(i => ({ ...emptyItem(i.id),...i, weeks: Array.isArray(i.weeks) ? i.weeks : [], references: Array.isArray(i.references) ? i.references : [], notes: i.notes ?? ((i as unknown as { week?: string }).week ? `原版周次备注：${(i as unknown as { week: string }).week}；尚未映射具体分钟。` : "") })) }
 }
 export function migrateResearch(value: unknown): ResearchState {
   const data = value as Omit<Partial<ResearchState>, "schema"> & { schema?: number; appointments?: unknown[]; grants?: unknown[] }
   if (!data || !Array.isArray(data.documents) || !Array.isArray(data.tasks)) throw new Error("教研存储无法读取。原数据未清空，请保留并检查存储格式。")
   const { appointments, grants, staffDuties, groups, schema: _schema, ...content } = data
-  if (data.schema === 2 || data.schema === 3) return { ...seed, ...content, schema: 3, documents: data.documents.map(normalizeDocument), staffDuties: data.schema === 2 ? migrateLegacyResearchDuties({ appointments, grants }) : staffDuties ?? seed.staffDuties, groups: groups ?? seed.groups }
+  if (data.schema === 2 || data.schema === 3) {
+    const revisions={...seed.revisions,...content.revisions},documents=[...data.documents.map(normalizeDocument),...[...sourceDocumentsSeed,...paperDocumentsSeed].filter(d=>!data.documents!.some(item=>item.id===d.id))]
+    // A forward correction for untouched fixtures created during the migration. Saved snapshots stay immutable.
+    for(let i=0;i<documents.length;i++){const d=documents[i],original=sourceDocumentsSeed.find(s=>s.id===d.id);if(original?.files.length&&d.version===1&&!d.files.length&&d.layout?.sourceId===d.id&&d.title===original.title&&JSON.stringify(d.items)===JSON.stringify(original.items)&&!Object.keys(content.drafts||{}).some(k=>k.endsWith('|'+d.id))){const next={...structuredClone(d),version:2,files:structuredClone(original.files)};documents[i]=next;revisions[`${d.id}@2`]=structuredClone(next)}}
+    return {...seed,...content,schema:3,revisions,documents,staffDuties:data.schema===2?migrateLegacyResearchDuties({appointments,grants}):staffDuties??seed.staffDuties,groups:groups??seed.groups}
+  }
   const documents = data.documents.map(normalizeDocument)
   for (const doc of seed.documents) if (!documents.some(d => d.id === doc.id)) documents.push(structuredClone(doc))
   const legacyTasks = data.tasks as unknown as { id: string; group: string; parent: string; title: string; owner: string; due: string; status: string; mode: string; result?: Document; discussion?: { author: string; text: string }[] }[]

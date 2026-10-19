@@ -1,0 +1,32 @@
+{
+  "date": "2026-10-19",
+  "user_instruction": "请提交当前的代码并推送。",
+  "commit_and_push_authorized": true,
+  "integration_base": "d9b32e82068adf160f4ceabf7830d9cee9d86784",
+  "remote": "origin",
+  "destination": "main",
+  "retained_remote_commits": [
+    "64af4e2",
+    "d9b32e8"
+  ],
+  "reviewed_implementation_sha256": "01dcded033e6e41d6d02bec6b6320e350d40afede225c5546d2163d1cdc57ae9",
+  "implementation_manifest_unchanged": true,
+  "protected_files_unchanged": 98,
+  "verification": {
+    "typecheck": "PASS",
+    "tests": {
+      "passed": 80,
+      "failed": 0,
+      "staff_script_internal_checks": 21
+    },
+    "build": "PASS",
+    "pre_commit_scope_review": "PASS"
+  },
+  "generated_files_excluded": [
+    "next-env.d.ts",
+    "tsconfig.tsbuildinfo"
+  ],
+  "owner_visual_acceptance": "NOT_SEPARATELY_CONFIRMED",
+  "root_make_check": "NOT_RUN: this request is Git publication of the wfb-v3 prototype; prototype verification is listed above",
+  "git_outcome_record": "The actual commit ID and push result are recorded by Git history and the origin/main reference."
+}

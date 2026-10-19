@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { buttonVariants } from "@/components/ui/button"
+import { buttonVariants } from "./button"
 import { Badge } from "@/components/ui/badge"
 import { DUTY_BY_KEY } from "@/lib/demo/staff"
 import { useResearchContext } from "@/lib/research/context"

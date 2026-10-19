@@ -3,7 +3,7 @@
 import { useState } from "react"
 import Link from "next/link"
 import { RegradeControl } from "@/components/mt/regrade-control"
-import { Button, buttonVariants } from "@/components/ui/button"
+import { Button, buttonVariants } from "./button"
 import { FieldGroup } from "@/components/ui/field"
 import { permittedTasks, useTeacherId, nameOf } from "@/lib/mt/derive"
 import { formalTaskName, weekOfDate, type STask } from "@/lib/mt/model"

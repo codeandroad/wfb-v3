@@ -4,8 +4,8 @@ import { useId, useState, type ReactNode } from "react"
 import Link from "next/link"
 import katex from "katex"
 import "katex/dist/katex.min.css"
-import { Card, CardHeader, EmptyState } from "@/components/kit"
-import { Button } from "@/components/ui/button"
+import { EmptyState } from "@/components/kit"
+import { Button } from "./button"
 import { Field, FieldDescription, FieldGroup, FieldLabel, FieldLegend, FieldSet } from "@/components/ui/field"
 import { Separator } from "@/components/ui/separator"
 import { useResearchContext } from "@/lib/research/context"
@@ -14,10 +14,10 @@ import { canReadDocument, canUseAccess, canViewGroup, itemReadable, itemText, sa
 import { BookOpen } from "lucide-react"
 
 export const control = "min-h-9 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60"
-export function Panel({ title, description, action, children }: { title: ReactNode; description?: ReactNode; action?: ReactNode; children: ReactNode }) { return <Card><CardHeader title={title} desc={description} action={action} /><div className="flex min-w-0 flex-col gap-4 p-5 text-sm leading-relaxed">{children}</div></Card> }
-export function RField({ label,value,onChange,type = "text",rows = 3,disabled,description,required,min }: { label: string; value: string | number; onChange: (value: string) => void; type?: "text" | "textarea" | "number" | "date" | "datetime-local"; rows?: number; disabled?: boolean; description?: string; required?: boolean; min?: number }) {
+export function Panel({ title, description, action, children,flush = false }: { title: ReactNode; description?: ReactNode; action?: ReactNode; children: ReactNode;flush?: boolean }) { return <section className="ry-section"><header><h2>{title}</h2><div>{action}</div></header>{description && <p className="ry-panel-description">{description}</p>}<div className={`ry-panel-body${flush ? " flush" : ""}`}>{children}</div></section> }
+export function RField({ label,value,onChange,type = "text",rows = 3,disabled,description,required,min,step,placeholder }: { label: string; value: string | number; onChange: (value: string) => void; type?: "text" | "textarea" | "number" | "date" | "datetime-local"; rows?: number; disabled?: boolean; description?: string; required?: boolean; min?: number;step?: string|number;placeholder?: string }) {
   const id = useId()
-  return <Field data-disabled={disabled}><FieldLabel htmlFor={id}>{label}</FieldLabel>{type === "textarea" ? <textarea id={id} aria-label={label} className={control} rows={rows} disabled={disabled} value={value} onChange={e => onChange(e.target.value)} /> : <input id={id} aria-label={label} className={control} type={type} min={min} disabled={disabled} required={required} value={value} onChange={e => onChange(e.target.value)} />} {description && <FieldDescription>{description}</FieldDescription>}</Field>
+  return <Field data-disabled={disabled}><FieldLabel htmlFor={id}>{label}</FieldLabel>{type === "textarea" ? <textarea id={id} aria-label={label} placeholder={placeholder} className={control} rows={rows} disabled={disabled} value={value} onChange={e => onChange(e.target.value)} /> : <input id={id} aria-label={label} placeholder={placeholder} className={control} type={type} min={min} step={step} disabled={disabled} required={required} value={value} onChange={e => onChange(e.target.value)} />} {description && <FieldDescription>{description}</FieldDescription>}</Field>
 }
 export function RSelect({ label,value,onChange,options,disabled,placeholder }: { label: string; value: string; onChange: (value: string) => void; options: { value: string; label: string }[]; disabled?: boolean; placeholder?: string }) {
   const id = useId()

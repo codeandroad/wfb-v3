@@ -1,0 +1,24 @@
+{
+  "status": "IMPLEMENTED_VERIFIED_REVIEWED_OWNER_PENDING",
+  "uncommitted": true,
+  "baseline": "5308673",
+  "code_sha256": "16f455bf376e54d153b255e5e5a13025302ce1481b81df62b0046c38d5d56106",
+  "typecheck": "PASS",
+  "tests": {
+    "passed": 64,
+    "failed": 0,
+    "staff_script_checks": 21
+  },
+  "build": "PASS",
+  "browser": {
+    "workflows": 9,
+    "roles": 6,
+    "review_regressions": 4,
+    "style_keyboard_isolation": 5
+  },
+  "protected_files_unchanged": 98,
+  "independent_review": "PASS_AFTER_FOCUS_FIX",
+  "production_smoke": "PASS",
+  "manual_acceptance": "PENDING",
+  "at": "2026-10-12T22:53:09.437771+00:00"
+}

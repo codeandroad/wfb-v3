@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Button } from "@/components/ui/button"
+import { Button } from "./button"
 import { FieldGroup } from "@/components/ui/field"
 import { permittedTasks, useTeacherId } from "@/lib/mt/derive"
 import type { STask } from "@/lib/mt/model"

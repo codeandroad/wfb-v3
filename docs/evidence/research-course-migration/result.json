@@ -1,0 +1,28 @@
+{
+  "typecheck": "PASS",
+  "tests": {
+    "total": 64,
+    "pass": 64,
+    "fail": 0
+  },
+  "build": "PASS",
+  "browser_suites": {
+    "full_workflow": 9,
+    "ordinary_teacher": 6,
+    "review_regressions": 4,
+    "production_smoke": "PASS"
+  },
+  "independent_review": "PASS after fixes",
+  "manual_verification": "PENDING",
+  "commit": "NOT_CREATED",
+  "baseline": "5308673",
+  "tested_code_sha256": "093c23b07bf3e1a4224c16bbeb0900c471fb740efae014f569df57df02f9d332",
+  "protected_files_unchanged": 98,
+  "original_files": {
+    "pdf": 69,
+    "zip": 6,
+    "docx": 1,
+    "count": 76,
+    "bytes": 38416421
+  }
+}

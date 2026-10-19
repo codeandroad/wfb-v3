@@ -70,31 +70,27 @@ test("group timetable is shared, leader-only, group-scoped and rejects occupied 
   state = command(state, { type: "delete-group-slot", id: slot.id })
   assert.equal(state.groupSchedules.some(s => s.id === slot.id), false)
   const workspace = fs.readFileSync(path.join(root, "components/research/workspace.tsx"), "utf8")
-  assert.ok(workspace.indexOf("<GroupSchedule") < workspace.indexOf('<nav aria-label="教研工作区内容"'))
+  assert.match(workspace, /tab === "schedule" \? <GroupSchedule/)
   assert.doesNotMatch(fs.readFileSync(path.join(root, "components/research/overview.tsx"), "utf8"), /需要学校支持的事项/)
 })
 
-test("research timetable switches one shared projection between daily and period views", () => {
-  const schedule = fs.readFileSync(path.join(root, "components/research/group-schedule.tsx"), "utf8")
-  const days = fs.readFileSync(path.join(root, "components/research/schedule-days.tsx"), "utf8")
-  const grid = fs.readFileSync(path.join(root, "components/timetable/week-grid.tsx"), "utf8")
-  assert.match(schedule, /useState<"days" \| "periods">\("days"\)/)
-  assert.match(schedule, /<ToggleGroup[^>]*value=\{\[view\]\}/)
-  assert.match(schedule, /setView\(canEdit \? "days" : "periods"\)/)
-  assert.match(schedule, /\{view === "periods" \? <section[\s\S]*<WeekGrid[\s\S]*<\/section> : <section[\s\S]*<ScheduleDays/)
-  assert.match(schedule, /data-testid="research-period-grid"/)
-  assert.match(schedule, /entries=\{entries\} compact canonical editing=\{canEdit\}/)
-  assert.match(schedule, /<ScheduleDays group=\{group\} week=\{week\} entries=\{entries\} \/>/)
-  assert.match(days, /<WeekGrid[^>]*weekStart=\{week\} entries=\{entries\} compact canonical renderDay=/)
-  assert.match(days, /if \(!dayEntries\.length && !tasks\.length\) return null/)
-  assert.match(days, /<ClassCard entry=\{merged\} canonical/)
-  assert.match(days, /onClick=\{leader \? \(\) => setDate\(dayDate\) : undefined\}/)
-  assert.match(days, /t\.group === group && t\.scheduleDate === dayDate/)
-  assert.match(days, /owner: actor\.staff/)
-  assert.doesNotMatch(days, /当日无教研事项|暂无当天事项|无固定教研课次|事项负责人|<Plus|grid-cols-|const cardClass/)
-  assert.match(grid, /data-layout=\{renderDay \? "days" : "periods"\}/)
-  assert.match(grid, /renderEntries\.filter\(entry => entry\.date === day\.date\)\.sort/)
-  assert.equal((grid.match(/children \?\? inner/g) || []).length, 2)
+test("dated activity overlaps use actual dates and all periods, without repeating with weekly templates", () => {
+  const { activitiesOn, activityOverlaps } = require("../lib/research/workspace-model.ts")
+  const state = seed(), original = state.activities.find(a => a.group === "math")
+  state.activities = [{ ...original, id: "dated-evening", start: "2026-09-30T19:00", end: "2026-10-01T01:00" }]
+  assert.equal(activitiesOn(state, actor(), "math", "2026-09-30").length, 1)
+  assert.equal(activitiesOn(state, actor(), "math", "2026-10-01").length, 1)
+  assert.equal(activitiesOn(state, actor(), "math", "2026-10-07").length, 0)
+  assert(activityOverlaps(state.activities[0], "2026-09-30", "19:20", "20:00"))
+  assert.equal(activityOverlaps(state.activities[0], "2026-09-30", "08:00", "08:40"), false)
+  assert.equal(activityOverlaps(state.activities[0], "2026-10-01", "01:00", "02:00"), false)
+  const { effectiveWithCalendar } = require("../lib/timetable/calendar-store.ts")
+  const entry = { key: "slot", date: "2026-09-30", periodId: "e2" }
+  const calendar = [{ id: "swap", kind: "swap", date: "2026-09-30", targetDate: "2026-10-01" }]
+  const projected = effectiveWithCalendar(calendar, [entry], ["2026-09-30", "2026-10-01"])
+  assert(projected.stopped.has("2026-09-30"))
+  assert.equal(projected.effective[0].date, "2026-10-01")
+  assert.equal(state.activities[0].start, "2026-09-30T19:00")
 })
 
 test("rendered daily timetable removes empty cards and follows shared slot moves", () => {
@@ -132,9 +128,7 @@ test("rendered daily timetable removes empty cards and follows shared slot moves
   assert.match(dayHtml(after, "2026-10-14"), /第4节/)
   assert.match(dayHtml(after, "2026-10-14"), /第5节/)
   assert.doesNotMatch(after, /暂无当天事项|无固定教研课次|事项负责人/)
-  const defaultView = renderUI(createElement(GroupSchedule, { group: "math" }))
-  assert.match(defaultView, /data-layout="days"/)
-  assert.doesNotMatch(defaultView, /data-layout="periods"|data-testid="research-period-grid"/)
+  // Native workspace daily/period switching is exercised by the browser acceptance script.
 })
 
 test("day-card tasks are dated, leader-only and remain shared without repeating next week", () => {
@@ -184,8 +178,8 @@ const assignmentFor = (task, questions = []) => ({
   assert.equal(restored.forms["u-lin|overview:math"].issueTitle, "尚未提交的协调事项")
   assert.equal(restored.forms["u-lin|overview:physics"].issueTitle, "另一科组独立草稿")
   const workspace = fs.readFileSync(path.join(root, "components/research/workspace.tsx"), "utf8")
-  assert.match(workspace, /new URLSearchParams\(params\)/)
-  assert.match(workspace, /scroll: false/)
+  assert.match(fs.readFileSync(path.join(root, "lib/research/navigation.ts"), "utf8"), /new URLSearchParams\(params\)/)
+  assert.match(fs.readFileSync(path.join(root, "lib/research/navigation.ts"), "utf8"), /scroll: false/)
   assert.match(workspace, /data-testid="research-workspace"/)
 })
 
@@ -369,7 +363,8 @@ test("legacy appointments and school grants migrate once into template-based dut
   assert.equal(migrated.schema, 3)
   assert.equal("appointments" in migrated, false)
   assert.equal("grants" in migrated, false)
-  assert.deepEqual(migrated.documents, previous.documents)
+  assert.deepEqual(migrated.documents.filter(d => previous.documents.some(old => old.id === d.id)), previous.documents)
+  assert(migrated.documents.some(d => d.id.startsWith("html-paper-")))
   const duty = migrated.staffDuties.find(row => row.id === "legacy-maintainer")
   assert.equal(duty.type, "research_participate")
   assert.equal(duty.start, "2025-09-01")
@@ -1216,4 +1211,175 @@ test("2. effective appointments, independent multi-group duties, no-timetable le
   assert("error" in confirmTeachingContent(biz, state, actor("u-xu"), "TEACHER_LYNN", input))
   const mapping = mapTeachingDates([{ ...model.emptyItem("unmapped"), minutes: 15 }], task, biz.variant, null)
   assert.deepEqual(mapping.unmapped, { dates: [], unmapped: 15 })
+})
+
+
+test("members create and revise their own tasks and activities without acquiring leader authority", () => {
+  const source = seed(), base = source.tasks.find(t => t.group === "math")
+  const task = { ...base,id: "member-task",createdBy: undefined,schoolTaskId: null,parent: null,title: "成员自建教研",owner: "u-zhou",collaborators: ["u-lin"],submitters: [],mode: "牵头提交",status: "进行中",outcomes: [],divisions: { "u-lin": "准备共享资料", "u-zhou": "组织讨论" } }
+  let state = command(source,{ type: "save-task",task },"u-zhou")
+  const saved = state.tasks.find(t => t.id === task.id)
+  assert.equal(saved.createdBy,"u-zhou")
+  assert.equal(model.canLeadGroup(state,actor("u-zhou"),"math"),false)
+  state = command(state,{ type: "save-task",task: { ...saved,title: "修订本人任务" } },"u-zhou")
+  assert.throws(() => command(state,{ type: "save-task",task: { ...state.tasks.find(t => t.id === task.id),title: "其他成员篡改" } },"u-he"),/本人|组长/)
+  assert.throws(() => applyResearchCommand(state,actor("u-zhou","2028-01-01"),{ type: "save-task",task: saved },catalogSeed),/本人|组长/)
+  const a = { ...source.activities.find(a => a.group === "math"),id: "member-activity",title: "成员组织团建",owner: "u-zhou",type: "团建活动",lesson: null,criterionId: null,trials: [],start: "2026-10-01T18:30",end: "2026-10-01T20:00",participants: ["u-zhou","u-lin"],materials: [],responsibilities: { "u-zhou": "协调场地" } }
+  state = command(state,{ type: "save-activity",activity: a },"u-zhou")
+  assert.equal(state.activities.find(x => x.id === a.id).responsibilities["u-zhou"],"协调场地")
+  assert.throws(() => command(state,{ type: "save-activity",activity: { ...a,version: 1,end: "2026-10-01T18:00" } },"u-zhou"),/时间/)
+  assert.throws(() => command(state,{ type: "save-group-slot",slot: source.groupSchedules[0] },"u-zhou"),/组长/)
+})
+
+test("journal drafts, dated logs and submission snapshots retain actual content independently", () => {
+  let state = command(seed(),{ type: "form-draft",key: "journal-dialog:math:new",value: { title: "未完成日志",body: "实际研讨内容" } },"u-zhou")
+  const document = documentOf(state,"syllabus-demo")
+  const journal = { id: "journal-test",group: "math",author: "u-zhou",date: actor().date,title: "备课记录",body: "讨论函数教学顺序",conclusion: "先讲图像",next: "整理讲义",course: "C101",taskId: null,activityId: null,references: [{ documentId: document.id,version: document.version,snapshot: { ...document,title: "伪造标题" } }],version: 1,at: actor().date }
+  state = command(state,{ type: "journal",journal },"u-zhou")
+  assert.equal(state.journals[0].references[0].snapshot.title,document.title)
+  const restored = migrateResearch(JSON.parse(JSON.stringify(state)))
+  assert.equal(restored.forms["u-zhou|journal-dialog:math:new"].body,"实际研讨内容")
+  assert.throws(() => command(state,{ type: "journal",journal: { ...journal,date: "2026-10-01" } },"u-zhou"),/日期/)
+  assert.throws(() => command(state,{ type: "journal",journal },"u-lin"),/本人日志/)
+  const base = state.tasks.find(t => t.group === "math")
+  state = command(state,{ type: "save-task",task: { ...base,id: "log-submission",schoolTaskId: null,parent: null,title: "引用日志",owner: "u-zhou",collaborators: [],submitters: [],outcomes: [],status: "进行中" } },"u-zhou")
+  state = command(state,{ type: "submit-task",id: "log-submission",outcome: { id: "o",kind: "journal",entityId: journal.id,version: 1,title: "ignored",submittedBy: "forged",submittedAt: "forged" } },"u-zhou")
+  state = command(state,{ type: "journal",journal: { ...state.journals[0],body: "后来修订" } },"u-zhou")
+  assert.equal(state.tasks.find(t => t.id === "log-submission").outcomes[0].journal.body,"讨论函数教学顺序")
+  assert.equal(state.tasks.find(t => t.id === "log-submission").outcomes[0].submittedBy,"u-zhou")
+})
+
+test("group chat saves messages and pinned references atomically, isolates drafts and rejects scope misuse", () => {
+  let state = command(seed(),{ type: "form-draft",key: "chat:math",value: { body: "本人数学草稿" } },"u-zhou")
+  state = command(state,{ type: "form-draft",key: "chat:math",value: { body: "组长草稿" } })
+  const d = documentOf(state,"syllabus-demo"), message = { id: "m1",group: "math",author: "forged",body: "@林老师 看看这个资料 👍",at: "forged",replyTo: null,mentions: ["u-lin"],meme: "thanks",files: [],references: [{ documentId: d.id,version: 1,snapshot: d }],reactions: { "👍": ["forged"] } }
+  state = command(state,{ type: "chat",message },"u-zhou")
+  assert.equal(state.messages[0].author,"u-zhou")
+  assert.deepEqual(state.messages[0].reactions,{})
+  assert.equal(state.forms["u-zhou|chat:math"],undefined)
+  assert.equal(state.forms["u-lin|chat:math"].body,"组长草稿")
+  assert.throws(() => command(state,{ type: "chat",message: { ...message,id: "m2",group: "physics" } },"u-zhou"),/有效成员/)
+  assert.throws(() => command(state,{ type: "withdraw-chat",id: "m1" }),/本人/)
+  state = command(state,{ type: "react-chat",id: "m1",emoji: "👍" })
+  assert.deepEqual(state.messages[0].reactions["👍"],["u-lin"])
+  state = command(state,{ type: "withdraw-chat",id: "m1" },"u-zhou")
+  assert.equal(state.messages[0].body,"")
+  assert.equal(state.messages[0].references.length,0)
+  assert.throws(() => command(state,{ type: "chat",message: { ...message,id: "m2",replyTo: "m1" } },"u-zhou"),/撤回/)
+  const { mediaValid } = require("../lib/research/workspace-model.ts")
+  assert.equal(mediaValid({ name: "unsafe.svg",mime: "image/svg+xml",size: 4,data: "data:image/svg+xml;base64,AAAA" }),false)
+  assert.equal(mediaValid({ name: "example.gif",mime: "image/gif",size: 3,data: "data:image/gif;base64,AAAA" }),true)
+})
+
+test("paper fixtures retain exact course/unit identities and original question bodies; basket is per actor", () => {
+  const { paperDocumentsSeed,paperRecords } = require("../lib/research/papers.ts")
+  const state = migrateResearch({ ...seed(),schema: 3 })
+  assert.equal(paperDocumentsSeed.length,paperRecords.length)
+  assert(paperDocumentsSeed.some(d => d.course === "C101") && paperDocumentsSeed.some(d => d.course === "C501"))
+  for (const d of paperDocumentsSeed) { assert(model.scopeValid(d,catalogSeed)); model.validateDocument(d); assert.equal(d.files.length,0) }
+  const p1 = paperDocumentsSeed.find(d => d.course === "C101" && d.paperCode.startsWith("1") && d.items.length)
+  assert.deepEqual(p1.unitIds,["U101"])
+  const chosen = command(state,{ type: "basket",ids: [p1.items[0].id] },"u-zhou")
+  assert.deepEqual(chosen.baskets["u-zhou"],[p1.items[0].id])
+  assert.equal(chosen.baskets["u-lin"],undefined)
+  assert.throws(() => command(chosen,{ type: "basket",ids: ["not-existing"] },"u-zhou"),/失效/)
+  const fixture = documentOf(chosen,p1.id)
+  const custom = { ...fixture,title: "教师已核验的原型试卷名称",version: 2 }
+  const persisted = { ...chosen,documents: chosen.documents.map(d => d.id === p1.id ? custom : d) }
+  assert.equal(migrateResearch(JSON.parse(JSON.stringify(persisted))).documents.find(d => d.id === p1.id).title,custom.title)
+})
+
+
+test("submitting a journal rechecks current retained-source authorization and freezes the pinned version", () => {
+ let state = seed(), d = documentOf(state,"textbook-demo")
+ const journal = { id: "source-bound-journal",group: "math",author: "u-lin",date: actor().date,title: "有资料引用的日志",body: "实际讨论",conclusion: "",next: "",course: "C101",taskId: null,activityId: null,references: [{ documentId: d.id,version: d.version,snapshot: d }],version: 1,at: actor().date }
+ state = command(state,{ type: "journal",journal })
+ const rootTask = state.tasks.find(t => t.id === "task-math")
+ state = command(state,{ type: "accept-task",id: rootTask.id,owner: "u-lin",collaborators: [],submitters: [],mode: "牵头提交" })
+ const submit = { type: "submit-task",id: rootTask.id,outcome: { id: "log-outcome",kind: "journal",entityId: journal.id,version: 1,title: "ignored",submittedBy: "forged",submittedAt: "forged" } }
+ for (const patch of [{ restricted: true },{ copyPolicy: "reference-only" },{ share: { audience: "owner",staff: [],groups: [] },owner: "u-chen" }]) {
+  const changed = { ...state,documents: state.documents.map(doc => doc.id === d.id ? { ...doc,...patch } : doc) }
+  assert.throws(() => command(changed,submit),/权限|引用/)
+ }
+ const revised = { ...state,documents: state.documents.map(doc => doc.id === d.id ? { ...doc,version: 2,title: "新修订" } : doc) }
+ const submitted = command(revised,submit)
+ assert.equal(submitted.tasks.find(t => t.id === rootTask.id).outcomes[0].journal.references[0].version,1)
+ assert.equal(submitted.tasks.find(t => t.id === rootTask.id).outcomes[0].journal.references[0].snapshot.title,d.title)
+})
+
+
+test("registered original exam assets retain their binary hashes and all question topic tags", () => {
+ const crypto = require("node:crypto"), assets = require("../lib/research/paper-assets.json")
+ assert.equal(Object.keys(assets).length,76)
+ for (const asset of Object.values(assets)) {
+  const raw = fs.readFileSync(path.join(root,"public",decodeURIComponent(asset.url)))
+  assert.equal(crypto.createHash("sha256").update(raw).digest("hex"),asset.sha256)
+  assert.equal(raw.length,asset.bytes)
+  assert.equal(asset.kind === "pdf" ? raw.subarray(0,5).toString() : raw.subarray(0,2).toString(),asset.kind === "pdf" ? "%PDF-" : "PK")
+ }
+ const { paperDocumentsSeed } = require("../lib/research/papers.ts")
+ const item = paperDocumentsSeed.flatMap(d => d.items).find(i => i.id === "9709-2024春-p1v2-7(a)")
+ assert(item.topics.some(t => t.id === "T1" && t.name === "二次函数" && t.auto))
+})
+
+test("activity edits preserve pinned materials and calibration, while explicit basis update clears old decisions", () => {
+ let state = seed(),criterion = state.criteria.find(c => c.group === "math"),doc = documentOf(state,"textbook-demo")
+ const base = state.activities.find(a => a.group === "math")
+ const activity = { ...base,id: "pinned-activity",owner: "u-lin",type: "评分校准",criterionId: criterion.id,criterionVersion: criterion.version,trials: [{ id: "sample",answer: "匿名示例",notes: "",decisions: {} }],materials: [{ documentId: doc.id,version: doc.version }] }
+ state = command(state,{ type: "save-activity",activity })
+ state = command(state,{ type: "trial-activity",id: activity.id,trial: "sample",decision: "基于旧依据" })
+ const saved = state.activities.find(a => a.id === activity.id)
+ state = { ...state,documents: state.documents.map(d => d.id === doc.id ? { ...d,version: 2 } : d),criteria: state.criteria.map(c => c.id === criterion.id ? { ...c,version: 2,title: "新依据" } : c) }
+ state = command(state,{ type: "save-activity",activity: { ...saved,place: "新地点" } })
+ const edited = state.activities.find(a => a.id === activity.id)
+ assert.equal(edited.materials[0].version,1)
+ assert.equal(edited.criterionVersion,1)
+ assert.equal(edited.trials[0].decisions["u-lin"],"基于旧依据")
+ state = command(state,{ type: "save-activity",activity: { ...edited,criterionVersion: 2 } })
+ assert.equal(state.activities.find(a => a.id === activity.id).criterionSnapshot.title,"新依据")
+ assert.deepEqual(state.activities.find(a => a.id === activity.id).trials[0].decisions,{})
+})
+
+
+test("empty parsed paper copies retain their exact registered original file identity", () => {
+ const { paperDocumentsSeed } = require("../lib/research/papers.ts")
+ const original = paperDocumentsSeed.find(d => d.course === "C501" && !d.items.length)
+ assert(original)
+ const state = migrateResearch({ ...seed(),schema: 3 })
+ const copy = model.copyDocument(state,actor(),original,"empty-paper-copy")
+ assert.equal(copy.items.length,0)
+ assert.deepEqual(copy.paperSource,{ id: original.id,version: 1 })
+ const next = command(state,{ type: "create-document",document: copy })
+ assert.deepEqual(migrateResearch(JSON.parse(JSON.stringify(next))).documents.find(d => d.id === copy.id).paperSource,copy.paperSource)
+})
+
+const {sourceDocumentsSeed}=require('../lib/research/source-seed.ts')
+const {exportSourceDocument,importSourceDocuments}=require('../lib/research/source-transfer.ts')
+const {sourceLayoutFor,sourceAssessmentFor}=require('../lib/research/source-layout.ts')
+test('原 HTML 的完整数学节点、考核、方案、量表与计划按真实原数据导入',()=>{
+ const d=sourceDocumentsSeed.find(d=>d.id==='s9709');assert.equal(d.items.length,48);assert.equal(d.items.filter(i=>i.layout.kind==='requirement').length,34);assert.equal(d.assessments.length,6);assert.equal(d.layout.schemes.length,5);assert.equal(d.layout.rubrics.length,2);assert(d.items.some(i=>i.notes&&i.supplement));
+ for(const doc of sourceDocumentsSeed){model.validateDocument(doc);assert(model.scopeValid(doc,catalogSeed));assert(doc.items.every(i=>i.unitIds.every(id=>catalogSeed.units.some(u=>u.code===id&&u.courseCode===doc.course))))}
+ const p=sourceDocumentsSeed.find(d=>d.title==='CAIE 9709 P1 · 教材目录计划（演示）');assert.equal(p.items.length,83);assert.equal(model.leafItems(p).length,72);assert.equal(model.totals(p).allocated,4600);assert.equal(p.budget,4800);assert.equal(p.reserve,200);assert(p.items.some(i=>i.weeks.length===2))
+})
+test('导出保留合法内容，隐藏不可留存正文并遵守附件独立权限与禁止复制',()=>{
+ const s=seed(),privateSource=model.emptyDocument('export-private','资源','受限来源','math','u-lin','C101',null);privateSource.share={audience:'specified',staff:['u-other'],groups:[]};privateSource.restricted=true;privateSource.items=[{...model.emptyItem('export-private-node'),body:'不应导出的正文'}];s.documents.push(privateSource);s.revisions['export-private@1']=privateSource
+ const d=model.emptyDocument('export-own','资源','导出核验','math','u-lin','C101',null);d.items=[{...model.emptyItem('visible'),body:'可读正文'},{...model.emptyItem('hidden'),body:'不应导出的正文',references:[{documentId:privateSource.id,version:1,itemId:'export-private-node',title:'受限来源',locator:'',retainText:false}]}];d.files=[{id:'normal',name:'正常文件',type:'text/plain',data:'正常',access:{audience:'group',groups:[],staff:[]}},{id:'limited',name:'不应导出独立原件',type:'text/plain',data:'独立秘密',access:{audience:'specified',groups:[],staff:['u-other']}},{id:'read-only',name:'可读但不得复制',type:'text/plain',data:'只读',allowCopy:false,access:{audience:'group',groups:[],staff:[]}}];s.documents.push(d)
+ const out=exportSourceDocument(s,actor(),d);assert.deepEqual(out.items.map(i=>i.id),['visible']);assert.deepEqual(out.files.map(i=>i.id),['normal']);assert(!JSON.stringify(out).includes('不应导出'));assert(!JSON.stringify(out).includes('独立秘密'));d.copyPolicy='reference-only';assert.throws(()=>exportSourceDocument(s,actor(),d),/不允许导出/)
+})
+test('批量 JSON 资料按原格式导回且整体提交，伪造留存引用拒绝且不写入',()=>{
+ const s=seed();for(const d of sourceDocumentsSeed){s.documents.push(d);s.revisions[`${d.id}@${d.version}`]=d}
+ const originals=sourceDocumentsSeed.filter(d=>d.course==='C101'&&d.kind==='大纲'),exported=originals.map(d=>exportSourceDocument(s,actor(),d)),imported=importSourceDocuments(exported,s,actor(),catalogSeed,'C101');assert.equal(imported.length,originals.length);assert(imported.every(d=>d.owner==='u-lin'&&d.share.audience==='owner'));assert(imported[0].items.every(i=>!originals[0].items.some(n=>n.id===i.id)));assert.equal(new Set(imported.flatMap(d=>d.items.map(i=>i.id))).size,imported.reduce((n,d)=>n+d.items.length,0));const next=applyResearchCommand(s,actor(),{type:'import-documents',documents:imported},catalogSeed);assert.equal(next.documents.length,s.documents.length+imported.length)
+ const invalid={...imported[0],id:'invalid-import',course:'unknown'};assert.throws(()=>applyResearchCommand(s,actor(),{type:'import-documents',documents:[imported[0],invalid]},catalogSeed));assert(!s.documents.some(d=>d.id===imported[0].id));const forged=structuredClone(exported[0]);forged.items[0].references=[{documentId:'not-authorized',version:1,itemId:'secret',retainText:true,retainedBy:'u-lin',title:'伪造',locator:''}];assert.throws(()=>importSourceDocuments(forged,s,actor(),catalogSeed,'C101'),/不可留存/)
+})
+test('原有无 layout 的大纲、节点和考核可取得完整默认元信息',()=>{const d=seed().documents.find(d=>d.kind==='大纲');const layout=sourceLayoutFor(d);assert(Array.isArray(layout.schemes));assert(Array.isArray(layout.rubrics));const a=d.assessments[0];if(a){const data=sourceAssessmentFor(a);assert.equal(data.name,a.title);assert.deepEqual(data.scopeRefs.map(r=>r.nodeId),a.itemIds)}})
+test('迁移中曾创建的未修改资源前向补齐附件，旧版本与用户修改保持原样',()=>{const raw=seed(),source=sourceDocumentsSeed.find(d=>d.id==='ry-math-workbook'),old={...structuredClone(source),files:[]};raw.documents.push(old);raw.revisions[`${old.id}@1`]=structuredClone(old);const next=migrateResearch(raw);assert.equal(next.documents.find(d=>d.id===old.id).version,2);assert.equal(next.revisions[`${old.id}@1`].files.length,0);assert.equal(next.revisions[`${old.id}@2`].files.length,2);const modified=structuredClone(raw);modified.documents.find(d=>d.id===old.id).items[0].body='本人修改';assert.equal(migrateResearch(modified).documents.find(d=>d.id===old.id).files.length,0)})
+const {selectionKey,resolveSelection,selectionReferences}=require('../lib/research/selection.ts')
+test('选题篮固定文档、版本和条目，不把个人修改版误认成同 ID 原题',()=>{let s=seed();const source=sourceDocumentsSeed.find(d=>d.id==='ry-math-workbook');s.documents.push(source);s.revisions[`${source.id}@1`]=source;s=command(s,{type:'copy-document',sourceId:source.id,sourceVersion:1,id:'private-selected-copy'});const copy=s.documents.find(d=>d.id==='private-selected-copy');copy.items[1].body='个人修改后的题干';const key=selectionKey(copy,copy.items[1]);s=command(s,{type:'basket',ids:[key]});const selected=resolveSelection(s,actor(),key);assert.equal(selected.document.id,copy.id);assert.equal(selected.item.body,'个人修改后的题干');assert.equal(resolveSelection(s,actor(),copy.items[1].id),null);s.revisions[`${copy.id}@1`]=structuredClone(copy);copy.version=2;copy.items[1].body='更新后的正文';s.documents=s.documents.map(d=>d.id===copy.id?copy:d);assert.equal(resolveSelection(s,actor(),key).item.body,'个人修改后的题干')})
+test('选取校本小题保留同版本共同题干与明确单元，可由原作业准备链路采用',()=>{let s=seed();const source=sourceDocumentsSeed.find(d=>d.id==='ry-math-workbook');s.documents.push(source);s.revisions[`${source.id}@1`]=source;const selected=resolveSelection(s,actor(),selectionKey(source,source.items[1]));assert(selected.item.stem.includes('$'));const d=model.emptyDocument('selected-workbook','练习组合','校本练习','u-lin','u-lin','C101',null);d.scope='units';d.unitIds=['U101'];d.items=[{...selected.item,id:'chosen-workbook-a',parentId:null,references:[model.referenceFor(source,selected.item,actor())]}];s=command(s,{type:'create-document',document:d});const biz=freshBiz(),task=ownMathTasks(biz)[0];assert(model.taskCompatible(d,task,d.items));const q=prepareHomeworkQuestions(s,actor(),d.id,d.version,['chosen-workbook-a'],task);assert(q[0].stem.includes('$'));assert.equal(q[0].maxScore,2)})
+
+test('共同题干与小题一同冻结版本和来源授权链，父项上游受限后禁止留存导出',()=>{
+ const s=seed(),source=structuredClone(sourceDocumentsSeed.find(d=>d.id==='ry-math-workbook')),upstream=model.emptyDocument('shared-stem-source','资源','共同题干原资料','math','u-lin','C101',null);upstream.items=[{...model.emptyItem('shared-condition'),body:'来源条件'}];s.documents.push(upstream);s.revisions[`${upstream.id}@1`]=structuredClone(upstream);source.items[0].references=[model.referenceFor(upstream,upstream.items[0],actor())];s.documents.push(source);s.revisions[`${source.id}@1`]=structuredClone(source)
+ const selected=resolveSelection(s,actor(),selectionKey(source,source.items[1])).item,copy=model.emptyDocument('stem-frozen','练习组合','小题','u-lin','u-lin','C101',null);copy.items=[{...selected,id:'frozen-child',parentId:null,references:selectionReferences(source,selected,actor())}];s.documents.push(copy);s.revisions[`${copy.id}@1`]=structuredClone(copy)
+ assert(copy.items[0].references.some(r=>r.documentId===source.id&&r.itemId===source.items[0].id&&r.version===1));assert(copy.items[0].references.some(r=>r.documentId===upstream.id));assert(model.canRetainItem(s,actor(),copy.items[0],copy.owner));assert.equal(exportSourceDocument(s,actor(),copy).items.length,1)
+ upstream.copyPolicy='reference-only';assert.equal(resolveSelection(s,actor(),selectionKey(source,source.items[1])),null);assert.equal(model.canRetainItem(s,actor(),copy.items[0],copy.owner),false);assert.equal(exportSourceDocument(s,actor(),copy).items.length,0)
 })

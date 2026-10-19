@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { useState } from "react"
-import { Button, buttonVariants } from "@/components/ui/button"
+import { Button, buttonVariants } from "./button"
 import { FieldGroup } from "@/components/ui/field"
 import { useResearchContext } from "@/lib/research/context"
 import { useResearchForm } from "@/lib/research/use-form"

@@ -1,0 +1,44 @@
+{
+  "checks": [
+    "生产构建六类原生课程页面可直接访问",
+    "生产路由内 QP/MS 原 PDF 成功加载",
+    "嵌套原文件弹窗后退关闭并恢复滚动",
+    "加载教研样式后 SPA 返回原作业页，外壳及作业计算样式未变",
+    "原左栏跳转学校科组概况，可查看人员而不误入科组",
+    "业务弹窗键盘退出保留草稿并恢复滚动"
+  ],
+  "errors": [],
+  "before": {
+    "sidebar": {
+      "backgroundColor": "rgb(33, 55, 47)",
+      "fontFamily": "Arial, \"PingFang SC\", \"Hiragino Sans GB\", \"Microsoft YaHei\", 微软雅黑, \"Noto Report\", system-ui, sans-serif"
+    },
+    "homework": {
+      "fontSize": "18px",
+      "color": "rgb(31, 42, 38)",
+      "fontWeight": "600"
+    },
+    "button": {
+      "backgroundColor": "rgb(255, 255, 255)",
+      "fontSize": "12px",
+      "borderRadius": "10px"
+    }
+  },
+  "after": {
+    "sidebar": {
+      "backgroundColor": "rgb(33, 55, 47)",
+      "fontFamily": "Arial, \"PingFang SC\", \"Hiragino Sans GB\", \"Microsoft YaHei\", 微软雅黑, \"Noto Report\", system-ui, sans-serif"
+    },
+    "homework": {
+      "fontSize": "18px",
+      "color": "rgb(31, 42, 38)",
+      "fontWeight": "600"
+    },
+    "button": {
+      "backgroundColor": "rgb(255, 255, 255)",
+      "fontSize": "12px",
+      "borderRadius": "10px"
+    }
+  },
+  "at": "2026-10-13T06:52:36.487Z"
+}

@@ -1,0 +1,97 @@
+{
+  "checks": [
+    "原 HTML 与原生页面字体、字号、颜色、页签、面板和主按钮计算样式相同",
+    "760px 原风格弹窗，输入初始焦点、Tab限制、Escape关闭、触发按钮焦点与滚动恢复",
+    "群聊独立220px成员栏与无边框输入区",
+    "课表统一表格，固定蓝色与日期活动黄色，只有一个main主地标",
+    "加载教研样式后，SPA返回原作业页面外壳与作业计算样式保持不变"
+  ],
+  "source": {
+    "heading": {
+      "fontSize": "23px",
+      "fontWeight": "650",
+      "color": "rgb(31, 42, 38)",
+      "fontFamily": "-apple-system, \"system-ui\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif"
+    },
+    "tabs": {
+      "fontSize": "13px",
+      "fontWeight": "600",
+      "color": "rgb(20, 112, 90)",
+      "borderBottomColor": "rgb(20, 112, 90)"
+    },
+    "panel": {
+      "backgroundColor": "rgb(255, 255, 255)",
+      "borderColor": "rgb(219, 229, 224)",
+      "borderRadius": "8px"
+    },
+    "create": {
+      "backgroundColor": "rgb(20, 112, 90)",
+      "color": "rgb(255, 255, 255)"
+    }
+  },
+  "native": {
+    "heading": {
+      "fontSize": "23px",
+      "fontWeight": "650",
+      "color": "rgb(31, 42, 38)",
+      "fontFamily": "-apple-system, \"system-ui\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif"
+    },
+    "tabs": {
+      "fontSize": "13px",
+      "fontWeight": "600",
+      "color": "rgb(20, 112, 90)",
+      "borderBottomColor": "rgb(20, 112, 90)"
+    },
+    "panel": {
+      "backgroundColor": "rgb(255, 255, 255)",
+      "borderColor": "rgb(219, 229, 224)",
+      "borderRadius": "8px"
+    },
+    "create": {
+      "backgroundColor": "rgb(20, 112, 90)",
+      "color": "rgb(255, 255, 255)"
+    }
+  },
+  "sourceDialog": {
+    "width": 760,
+    "radius": "12px"
+  },
+  "nativeDialog": {
+    "width": 760,
+    "radius": "12px"
+  },
+  "chromeBefore": {
+    "sidebar": {
+      "backgroundColor": "rgb(33, 55, 47)",
+      "fontFamily": "Arial, \"PingFang SC\", \"Hiragino Sans GB\", \"Microsoft YaHei\", 微软雅黑, \"Noto Report\", system-ui, sans-serif"
+    },
+    "homework": {
+      "fontSize": "18px",
+      "color": "rgb(31, 42, 38)",
+      "fontWeight": "600"
+    },
+    "button": {
+      "backgroundColor": "rgb(255, 255, 255)",
+      "fontSize": "12px",
+      "borderRadius": "10px"
+    }
+  },
+  "chromeAfter": {
+    "sidebar": {
+      "backgroundColor": "rgb(33, 55, 47)",
+      "fontFamily": "Arial, \"PingFang SC\", \"Hiragino Sans GB\", \"Microsoft YaHei\", 微软雅黑, \"Noto Report\", system-ui, sans-serif"
+    },
+    "homework": {
+      "fontSize": "18px",
+      "color": "rgb(31, 42, 38)",
+      "fontWeight": "600"
+    },
+    "button": {
+      "backgroundColor": "rgb(255, 255, 255)",
+      "fontSize": "12px",
+      "borderRadius": "10px"
+    }
+  },
+  "errors": [],
+  "at": "2026-10-12T22:52:43.753Z"
+}

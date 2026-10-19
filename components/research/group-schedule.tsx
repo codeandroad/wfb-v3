@@ -1,61 +1,37 @@
 "use client"
-
 import { useState } from "react"
-import { ChevronLeft, ChevronRight, Pencil, Check, Lock } from "lucide-react"
-import { Modal } from "@/components/kit"
-import { Button } from "@/components/ui/button"
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
-import { Badge } from "@/components/ui/badge"
-import { FieldGroup } from "@/components/ui/field"
-import { WeekGrid } from "@/components/timetable/week-grid"
-import { useTimetable } from "@/lib/timetable/store"
-import { addDays, fmtDate, PERIODS, WEEKDAYS, weekStartOf, type ProjectedEntry } from "@/lib/timetable/data"
+import { Modal } from "./modal"
+import { Button } from "./button"
+import { addDays,fmtDate,PERIODS,weekStartOf,periodById,type ProjectedEntry } from "@/lib/timetable/data"
+import { useCalendarEvents,effectiveWithCalendar } from "@/lib/timetable/calendar-store"
 import { useResearchContext } from "@/lib/research/context"
-import { canLeadGroup, type GroupScheduleSlot } from "@/lib/research/model"
-import { Panel, RField, RSelect } from "./primitives"
-import { ScheduleDays } from "./schedule-days"
-
+import { useWorkspaceNavigation } from "@/lib/research/navigation"
+import { canLeadGroup,canParticipateGroup,type GroupScheduleSlot } from "@/lib/research/model"
+import { activitiesOn,activityOverlaps,validDate } from "@/lib/research/workspace-model"
+import { JournalDialog,JournalRead } from "./journals"
+import { ActivityCard } from "./activity-board"
+import { Panel,RField,RSelect } from "./primitives"
 export function GroupSchedule({ group }: { group: string }) {
-  const { state, actor, command } = useResearchContext()
-  const tt = useTimetable()
-  const [week, setWeek] = useState(tt.weekStart)
-  const [view, setView] = useState<"days" | "periods">("days")
-  const [editing, setEditing] = useState(false)
-  const [slot, setSlot] = useState<GroupScheduleSlot | null>(null)
-  const [message, setMessage] = useState("")
-  const leader = canLeadGroup(state, actor, group)
-  const canEdit = leader && editing
-  const groupName = state.groups.find(g => g.id === group)?.name ?? "教研组"
-  const slots = (state.groupSchedules ?? []).filter(s => s.group === group)
-  const entries: ProjectedEntry[] = slots.map(s => ({ key: s.id, weekday: s.weekday, periodId: s.periodId, className: s.title, subject: groupName.replace("组", ""), room: s.room, kind: "activity", date: addDays(week, s.weekday - 1), teacherId: `research:${group}` }))
-  function save(value: GroupScheduleSlot) {
-    const result = command({ type: "save-group-slot", slot: value })
-    setMessage(result.ok ? "已更新本组共享安排（本机演示），组员查看同一份课表。" : result.error)
-    return { ok: result.ok, msg: result.ok ? "已保存" : result.error }
-  }
-  return <section aria-label="本组教研课表" data-testid="group-schedule" data-editable={canEdit}>
-    <Panel title="本组教研课表" description="每周教研安排 · 按日或按节查看" action={<Badge variant="outline">{leader ? "组长可维护" : "组员共享只读"}</Badge>}>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-2"><Button variant="outline" size="icon-sm" aria-label="上一周教研课表" onClick={() => setWeek(addDays(week, -7))}><ChevronLeft /></Button><span>{fmtDate(week)}–{fmtDate(addDays(week, 6))}</span><Button variant="outline" size="icon-sm" aria-label="下一周教研课表" onClick={() => setWeek(addDays(week, 7))}><ChevronRight /></Button><Button variant="ghost" size="sm" onClick={() => setWeek(weekStartOf(actor.date))}>本周</Button></div>
-        <div className="flex flex-wrap items-center gap-2">
-          <ToggleGroup aria-label="教研课表显示方式" variant="outline" size="sm" spacing={0} value={[view]} onValueChange={values => { const next = values[0]; if (next === "days" || next === "periods") setView(next) }}>
-            <ToggleGroupItem value="days" aria-controls={`research-${group}-days`}>按日课表</ToggleGroupItem>
-            <ToggleGroupItem value="periods" aria-controls={`research-${group}-periods`}>按节课表</ToggleGroupItem>
-          </ToggleGroup>
-          {leader ? <Button variant={canEdit ? "default" : "outline"} size="sm" onClick={() => { setEditing(!canEdit); setView(canEdit ? "days" : "periods"); setSlot(null); setMessage("") }}>{canEdit ? <Check data-icon="inline-start" /> : <Pencil data-icon="inline-start" />}{canEdit ? "完成调整" : "调整教研课表"}</Button> : <span className="flex items-center gap-2 text-muted-foreground"><Lock className="size-4" />仅教研组长可修改</span>}
-        </div>
-      </div>
-      {canEdit && view === "periods" && <p className="text-muted-foreground">拖拽课卡调整每周安排；点击课卡修改名称、教室或用选择器移动；点击空格新增。调整同步到按日课表，不改成员个人草稿。</p>}
-      {!slots.length && <p className="text-muted-foreground">本组暂无固定教研安排，由组长添加。</p>}
-      {view === "periods" ? <section id={`research-${group}-periods`} aria-label="按节教研课表" className="flex min-w-0 flex-col gap-2">
-        <div className="overflow-x-auto" data-testid="research-period-grid"><WeekGrid key={`${group}:${canEdit}`} className="min-w-[640px]" weekStart={week} entries={entries} compact canonical editing={canEdit} onMove={canEdit ? (entry, weekday, periodId) => { const current = slots.find(s => s.id === entry.key); if (current) save({ ...current, weekday, periodId }) } : undefined} onCardClick={canEdit ? entry => setSlot(slots.find(s => s.id === entry.key) ?? null) : undefined} onAddCell={canEdit ? (weekday, periodId) => setSlot({ id: crypto.randomUUID(), group, weekday, periodId, title: `${groupName.replace("组", "")}教研`, room: null }) : undefined} /></div>
-      </section> : <section id={`research-${group}-days`} aria-label="按日合并教研课表" className="flex min-w-0 flex-col gap-2">
-        <ScheduleDays group={group} week={week} entries={entries} />
-      </section>}
-      {message && <p role="status" className="text-primary">{message}</p>}
-      <Modal open={!!slot && canEdit} onClose={() => setSlot(null)} title="教研课卡信息" width="max-w-md" footer={<><Button variant="outline" onClick={() => setSlot(null)}>取消</Button>{slot && slots.some(s => s.id === slot.id) && <Button variant="destructive" onClick={() => { const result = command({ type: "delete-group-slot", id: slot.id }); setMessage(result.ok ? "已删除该教研安排。" : result.error); if (result.ok) setSlot(null) }}>删除课卡</Button>}<Button disabled={!slot?.title.trim()} onClick={() => { if (slot && save(slot).ok) setSlot(null) }}>保存安排</Button></>}>
-        {slot && <FieldGroup><RField label="教研名称" value={slot.title} onChange={title => setSlot({ ...slot, title })} /><RField label="教室" value={slot.room ?? ""} onChange={room => setSlot({ ...slot, room: room || null })} /><RSelect label="星期" value={String(slot.weekday)} options={WEEKDAYS.map(d => ({ value: String(d.n), label: d.label }))} onChange={weekday => setSlot({ ...slot, weekday: Number(weekday) })} /><RSelect label="节次" value={slot.periodId} options={PERIODS.map(p => ({ value: p.id, label: `${p.label} · ${p.start}–${p.end}` }))} onChange={periodId => setSlot({ ...slot, periodId })} />{message && <p role="status">{message}</p>}</FieldGroup>}
-      </Modal>
-    </Panel>
-  </section>
+ const { state,actor,command } = useResearchContext(),{ params,navigate } = useWorkspaceNavigation(),events = useCalendarEvents()
+ const [slot,setSlot] = useState<GroupScheduleSlot | null>(null),[error,setError] = useState("")
+ const week = validDate(params.get("week") || "") ? weekStartOf(params.get("week")!) : weekStartOf(actor.date),view = params.get("sv") === "periods" ? "periods" : "days",editing = params.get("adjust") === "1" && canLeadGroup(state,actor,group)
+ const dates = Array.from({ length: 7 },(_,i) => addDays(week,i)),slots = (state.groupSchedules || []).filter(s => s.group === group)
+ const project = (start: string): ProjectedEntry[] => slots.map(s => ({ key: s.id,weekday: s.weekday,periodId: s.periodId,className: s.title,subject: "固定教研",room: s.room,kind: "activity",date: addDays(start,s.weekday-1),teacherId: `research:${group}` }))
+ const { effective,stopped } = effectiveWithCalendar(events,project(week),dates,undefined,date => project(weekStartOf(date)))
+ const day = dates.includes(params.get("day") || "") ? params.get("day")! : "",activity = state.activities.find(a => a.group === group && a.id === params.get("detail"))
+ const log = params.get("log") === "new",member = canParticipateGroup(state,actor,group)
+ const title = state.groups.find(g => g.id === group)?.name || "本组"
+ function save(s: GroupScheduleSlot) { const r = command({ type: "save-group-slot",slot: s }); setError(r.ok ? "" : r.error); if (r.ok) setSlot(null) }
+ const openDay = (date: string) => navigate({ day: date,detail: "",log: "" })
+ function fixedCard(e: ProjectedEntry) { const original = slots.find(s => s.id === e.key),period = periodById(e.periodId); return <button key={e.key} draggable={editing && !!original} onDragStart={ev => ev.dataTransfer.setData("text/research-slot",e.key)} className="ry-class-card" onClick={() => editing && original ? setSlot(original) : openDay(e.date)}><b>{e.className}</b><span>{e.room || "地点未设"}</span><small>{period?.start}–{period?.end}{e.makeupFrom && ` · 调休自 ${e.makeupFrom}`}</small></button> }
+ return <section data-testid="group-schedule" className="ry-section ry-schedule">
+ <div className="ry-schedule-toolbar"><div className="ry-schedule-title"><h2>本组教研课表</h2><small>固定安排沿用学校校历 · 日期活动自动同步</small></div><div className="ry-week-controls"><Button aria-label="上一周教研课表" size="sm" variant="outline" onClick={() => navigate({ week: addDays(week,-7),day: "" })}>‹</Button><b>{fmtDate(week)} – {fmtDate(addDays(week,6))}</b><Button aria-label="下一周教研课表" size="sm" variant="outline" onClick={() => navigate({ week: addDays(week,7),day: "" })}>›</Button><Button size="sm" variant="outline" onClick={() => navigate({ week: weekStartOf(actor.date),day: "" })}>本周</Button><details className="ry-week-jump"><summary>选择周</summary><RField label="选择课表周" type="date" value={week} onChange={value => validDate(value) && navigate({ week: weekStartOf(value),day: "" })} /></details></div><div className="ry-segments"><Button size="sm" variant="ghost" aria-current={view === "days" ? "page" : undefined} onClick={() => navigate({ sv: "days",adjust: "" })}>按日课表</Button><Button size="sm" variant="ghost" aria-current={view === "periods" ? "page" : undefined} onClick={() => navigate({ sv: "periods" })}>按节课表</Button></div>{canLeadGroup(state,actor,group) && <Button size="sm" variant="outline" onClick={() => navigate({ adjust: editing ? "" : "1",sv: "periods" })}>{editing ? "完成调整" : "调整固定课表"}</Button>}</div>
+ <div className="ry-week-scroll"><table className="ry-week-grid"><thead><tr><th className="ry-grid-corner">{view === "days" ? "按日" : "时段"}</th>{dates.map((date,i) => <th key={date} className={date === actor.date ? "today" : ""}><button onClick={() => openDay(date)} aria-label={`查看 ${date} 教研安排`}><b>周{"一二三四五六日"[i]}</b><span>{fmtDate(date)}</span>{stopped.has(date) && <small>校历停课 / 调休</small>}</button></th>)}</tr></thead><tbody>
+ {view === "days" ? <tr><th className="ry-period-label">当天<br/>安排</th>{dates.map(date => { const activities = activitiesOn(state,actor,group,date),fixed = effective.filter(e => e.date === date),tasks = state.tasks.filter(t => t.group === group && t.scheduleDate === date),logs = state.journals?.filter(j => j.group === group && j.date === date) || [],blocks = [...new Map(fixed.map(e => [JSON.stringify([e.className,e.room]),fixed.filter(f => f.className === e.className && f.room === e.room)])).values()]; return <td key={date}><button data-testid={`research-day-${date}`} aria-label={`${date} 教研日卡，查看安排与记录日志`} className={`ry-day-card${!fixed.length && !activities.length && !tasks.length && !logs.length ? " ry-day-empty" : ""}`} onClick={() => openDay(date)}>{blocks.map((entries,index) => <span className="ry-day-block" key={index}><b>{entries[0].className}</b><span>{entries[0].room || "地点未设"}</span>{entries.map(e => { const p = periodById(e.periodId); return <small key={e.key}>{p?.label} {p?.start}–{p?.end}{e.makeupFrom && ` · 调休自 ${e.makeupFrom}`}</small> })}</span>)}{activities.map(a => <span key={a.id} className="ry-day-block ry-calendar-activity"><b>{a.title}</b><small>{date === a.start.slice(0,10) ? a.start.slice(11) : "跨日"}–{date === a.end.slice(0,10) ? a.end.slice(11) : "次日"}<br/>{a.place || "地点待定"}<br/>{a.type} · {a.participants.length} 位参与者</small></span>)}{tasks.map(t => <span key={t.id} className="ry-day-item">任务 · {t.title}</span>)}{logs.length > 0 && <span className="ry-day-log">{logs.length} 篇教研日志</span>}{!fixed.length && !activities.length && !tasks.length && !logs.length && <span className="ry-empty-day-label">查看 / 记录日志</span>}</button></td> })}</tr> : <>{PERIODS.map(p => <tr key={p.id}><th className="ry-period-label">{p.label}<span>{p.start}–{p.end}</span></th>{dates.map((date,i) => { const fixed = effective.filter(e => e.date === date && e.periodId === p.id),acts = activitiesOn(state,actor,group,date).filter(a => activityOverlaps(a,date,p.start,p.end)); return <td key={date} onDragOver={ev => editing && ev.preventDefault()} onDrop={ev => { ev.preventDefault(); const s = slots.find(s => s.id === ev.dataTransfer.getData("text/research-slot")); if (editing && s) save({ ...s,weekday: i+1,periodId: p.id }) }}><div className="ry-period-cards">{fixed.map(fixedCard)}{acts.map(a => <button key={a.id} className="ry-class-card ry-calendar-activity" onClick={() => navigate({ day: date,detail: a.id })}><b>{a.title}</b><small>{a.start.slice(11)}–{a.end.slice(11)} · {a.participants.length} 人</small></button>)}{editing && !slots.some(s => s.weekday === i+1 && s.periodId === p.id) && <button className="ry-slot-empty" aria-label={`新增周${i+1}${p.label}固定安排`} onClick={() => setSlot({ id: crypto.randomUUID(),group,weekday: i+1,periodId: p.id,title: `${title}教研`,room: null })}>＋</button>}</div></td> })}</tr>)}<tr><th className="ry-period-label">其他<br/>时段</th>{dates.map(date => <td key={date}>{activitiesOn(state,actor,group,date).filter(a => !PERIODS.some(p => activityOverlaps(a,date,p.start,p.end))).map(a => <button key={a.id} className="ry-class-card ry-calendar-activity" onClick={() => navigate({ day: date,detail: a.id })}><b>{a.title}</b><small>{a.start.slice(11)}–{a.end.slice(11)}</small></button>)}</td>)}</tr></>}
+ </tbody></table></div><footer className="ry-schedule-foot"><span>活动按实际日期同步，不随周模板重复；点击日卡查看事项并记录教研日志。节次及校历为文档演示配置。</span>{editing && <span>拖动课卡调整固定时段</span>}</footer>
+ {error && <p role="alert" className="text-destructive">{error}</p>}
+ {day && !log && <Modal open title={`${title} · ${day}`} width="max-w-4xl" onClose={() => navigate({ day: "",detail: "" })} footer={<><Button variant="outline" onClick={() => navigate({ day: "",detail: "" })}>关闭</Button>{member && <Button disabled={day > actor.date} onClick={() => navigate({ log: "new" })}>记录教研日志</Button>}</>}><div className="flex flex-col gap-4">{activity ? <><Button variant="ghost" className="self-start" onClick={() => navigate({ detail: "" })}>返回本日安排</Button><ActivityCard activity={activity} /></> : <>{effective.filter(e => e.date === day).map(e => <Panel key={e.key} title={e.className}><p>{periodById(e.periodId)?.start}–{periodById(e.periodId)?.end} · {e.room || "地点未设"}</p></Panel>)}{activitiesOn(state,actor,group,day).map(a => <Button key={a.id} variant="outline" className="h-auto justify-start whitespace-normal py-3 text-left" onClick={() => navigate({ detail: a.id })}>{a.title} · {a.start.replace("T"," ")} · 参与 {a.participants.length} 人 · 查看详情</Button>)}{state.tasks.filter(t => t.group === group && t.scheduleDate === day).map(t => <Button key={t.id} variant="outline" onClick={() => navigate({ tab: "work",wk: "tasks",task: t.id,day: "" })}>{t.title} · {t.status}</Button>)}</>}{(state.journals || []).filter(j => j.group === group && j.date === day).map(j => <details key={j.id} className="rounded-lg border p-3"><summary className="cursor-pointer font-semibold">{j.title} · 教研日志</summary><div className="pt-3"><JournalRead journal={j} /></div></details>)}{day > actor.date && <p className="text-xs text-muted-foreground">未来日期可查看安排，实际发生后再记录日志。</p>}</div></Modal>}
+ {day && log && member && <JournalDialog group={group} date={day} activityId={activity?.id} onClose={() => navigate({ log: "" })} onSaved={() => navigate({ log: "" })} />}
+ {slot && editing && <Modal open title="每周固定教研课卡" onClose={() => setSlot(null)} width="max-w-lg" footer={<><Button variant="outline" onClick={() => setSlot(null)}>取消</Button>{slots.some(s => s.id === slot.id) && <Button variant="destructive" onClick={() => { const r = command({ type: "delete-group-slot",id: slot.id }); if (r.ok) setSlot(null); else setError(r.error) }}>删除固定课卡</Button>}<Button onClick={() => save(slot)}>保存固定安排</Button></>}><div className="flex flex-col gap-4"><RField label="固定教研名称" value={slot.title} onChange={title => setSlot({ ...slot,title })} /><RField label="固定地点" value={slot.room || ""} onChange={room => setSlot({ ...slot,room })} /><RSelect label="星期" value={String(slot.weekday)} options={dates.map((_,i) => ({ value: String(i+1),label: `周${"一二三四五六日"[i]}` }))} onChange={v => setSlot({ ...slot,weekday: +v })} /><RSelect label="固定时段" value={slot.periodId} options={PERIODS.map(p => ({ value: p.id,label: `${p.label} ${p.start}–${p.end}` }))} onChange={periodId => setSlot({ ...slot,periodId })} /><p className="text-xs text-muted-foreground">调整固定模板不会移动按日期创建的活动、任务或日志。</p>{error && <p role="alert" className="text-destructive">{error}</p>}</div></Modal>}
+ </section>
 }

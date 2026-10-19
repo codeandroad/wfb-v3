@@ -1,0 +1,141 @@
+{
+  "9618": {
+    "P1": [
+      {
+        "id": "1.1",
+        "zh": "数据表示",
+        "en": "Data Representation"
+      },
+      {
+        "id": "1.2",
+        "zh": "多媒体",
+        "en": "Multimedia"
+      },
+      {
+        "id": "1.3",
+        "zh": "硬件",
+        "en": "Hardware"
+      },
+      {
+        "id": "2.1",
+        "zh": "网络",
+        "en": "Networks"
+      },
+      {
+        "id": "2.2",
+        "zh": "网络安全",
+        "en": "Network Security"
+      },
+      {
+        "id": "3.1",
+        "zh": "数据库",
+        "en": "Databases"
+      }
+    ],
+    "P2": [
+      {
+        "id": "4.1",
+        "zh": "计算思维",
+        "en": "Computational Thinking"
+      },
+      {
+        "id": "4.2",
+        "zh": "算法设计",
+        "en": "Algorithm Design"
+      },
+      {
+        "id": "4.3",
+        "zh": "程序设计",
+        "en": "Programming"
+      },
+      {
+        "id": "4.4",
+        "zh": "数据结构",
+        "en": "Data Structures"
+      },
+      {
+        "id": "4.5",
+        "zh": "软件开发",
+        "en": "Software Development"
+      }
+    ],
+    "P3": [
+      {
+        "id": "5.1",
+        "zh": "数据表示进阶",
+        "en": "Advanced Data Representation"
+      },
+      {
+        "id": "6.1",
+        "zh": "布尔代数",
+        "en": "Boolean Algebra"
+      },
+      {
+        "id": "7.1",
+        "zh": "系统软件",
+        "en": "System Software"
+      },
+      {
+        "id": "8.1",
+        "zh": "安全进阶",
+        "en": "Advanced Security"
+      }
+    ],
+    "P4": [
+      {
+        "id": "9.1",
+        "zh": "实践编程",
+        "en": "Practical Programming"
+      }
+    ]
+  },
+  "9709": {
+    "P1": [
+      {
+        "id": "T1",
+        "zh": "二次函数",
+        "en": "Quadratics"
+      },
+      {
+        "id": "T2",
+        "zh": "函数",
+        "en": "Functions"
+      },
+      {
+        "id": "T3",
+        "zh": "坐标几何",
+        "en": "Coordinate Geometry"
+      },
+      {
+        "id": "T4",
+        "zh": "圆",
+        "en": "Circular Measure"
+      },
+      {
+        "id": "T5",
+        "zh": "三角",
+        "en": "Trigonometry"
+      },
+      {
+        "id": "T6",
+        "zh": "级数",
+        "en": "Series"
+      },
+      {
+        "id": "T7",
+        "zh": "微分",
+        "en": "Differentiation"
+      },
+      {
+        "id": "T8",
+        "zh": "积分",
+        "en": "Integration"
+      },
+      {
+        "id": "T9",
+        "zh": "向量",
+        "en": "Vectors"
+      }
+    ]
+  }
+}

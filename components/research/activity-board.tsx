@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { Button } from "@/components/ui/button"
+import { Button } from "./button"
 import { FieldGroup } from "@/components/ui/field"
 import { useMt } from "@/lib/mt/store"
 import { permittedTasks, useTeacherId } from "@/lib/mt/derive"
@@ -49,7 +49,7 @@ export function ActivityCard({ activity: a,onEdit }: { activity: Activity; onEdi
   const execute = (action: Parameters<typeof command>[0]) => { const result = command(action); setError(result.ok ? "" : result.error) }
   return <Panel title={a.title} description={`${a.type} · ${a.start.replace("T"," ")}—${a.end.replace("T"," ")} · v${a.version}`} action={onEdit && canManage ? <Button variant="outline" onClick={onEdit}>编辑安排／结论</Button> : undefined}>
     {a.lesson ? <p>关联既有课次：{a.lesson.label} · {a.lesson.date} 第{a.lesson.period}节 · {a.lesson.room || "未确定教室"} · {a.lesson.lessonId}。这里只显示公开工作安排，不开放学生名单或记录。</p> : <p className="text-muted-foreground">教研活动，不生成学生出勤、课堂评价、成绩或周反馈事实。</p>}{issue && <p role="alert" className="text-destructive">关联课次已有调整或不可用。活动保留原关联供核对；请在原课表流程处理后明确修订活动，不会自动另造课次。</p>}
-    {a.taskId && <p>关联任务：{state.tasks.find(t => t.id === a.taskId)?.title || "来源事项不可用"}</p>}
+    {a.place && <p>活动地点：{a.place}</p>}{a.description && <RichText text={a.description} />}{Object.entries(a.responsibilities || {}).map(([id,note]) => <p key={id} className="text-sm">{people.find(p => p.id === id)?.name || id} · {note || "职责未填写"}</p>)}{a.taskId && <p>关联任务：{state.tasks.find(t => t.id === a.taskId)?.title || "来源事项不可用"}</p>}
     {a.participants.map(id => { const p = people.find(x => x.id === id); const online = p?.accountStatus === "enabled" && p.status !== "left"; return <div className="flex flex-wrap items-center justify-between gap-2" key={id}><p>{p?.name || "正式成员"} · {online ? a.responses[id] || "已列入邀请，回应未记录（不声称已读）" : "无可用账号，不发送／显示线上送达、回应"} · 到场 {a.attendance[id] || "未核实"}</p>{canManage && a.start.slice(0,10) <= actor.date && <div className="flex gap-2"><Button variant="outline" onClick={() => execute({ type: "attend-activity",id: a.id,staff: id,status: "到场" })}>核实到场</Button><Button variant="outline" onClick={() => execute({ type: "attend-activity",id: a.id,staff: id,status: "未到场" })}>核实未到场</Button></div>}</div> })}
     {a.participants.includes(actor.staff) && <div className="flex gap-2"><Button variant="outline" onClick={() => execute({ type: "respond-activity",id: a.id,response: "参加" })}>回应参加</Button><Button variant="outline" onClick={() => execute({ type: "respond-activity",id: a.id,response: "无法参加" })}>回应无法参加</Button></div>}
     <h3 className="font-semibold">关联材料与依据</h3>{a.materials.map(ref => { const d = state.documents.find(x => x.id === ref.documentId); return d && canReadDocument(state,actor,d) ? <Link key={ref.documentId} className="text-primary underline" href={documentHref(d,actor.staff,canEditGroup(state,actor,d.owner),ref.version)}>{d.title} v{ref.version}{d.version !== ref.version ? `（来源已更新 v${d.version}，当前采用不变）` : ""}</Link> : <p key={ref.documentId}>材料受限；参加活动不授予材料或来源组工作区权限。</p> })}{!a.materials.length && <p className="text-muted-foreground">没有关联材料。</p>}

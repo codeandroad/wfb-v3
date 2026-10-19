@@ -1,0 +1,15 @@
+"use client"
+import {useState} from 'react'
+import {useResearchContext} from '@/lib/research/context'
+import {selectionContent,canRetainSelection,selectionReferences} from "@/lib/research/selection"
+import {getResearch} from '@/lib/research/store'
+import {useResearchForm} from '@/lib/research/use-form'
+import {canReadDocument,canRetainItem,emptyDocument,referenceFor,type Document,type Item} from '@/lib/research/model'
+import {Modal} from './modal'
+import {RField,Choices} from './primitives'
+import {SourceRoot,SButton} from './source-ui'
+export function SourceSelectionDialog({document:doc,items,onClose,onCreated,markup={}}:{document:Document;items:Item[];onClose:()=>void;onCreated:(id:string)=>void;markup?:Record<string,{stem?:string;answer?:string}>}){
+ const {state,actor,catalog,command}=useResearchContext(),f=useResearchForm(`source-selection:${doc.id}:${doc.version}`,{title:`${doc.title} · 练习`,units:doc.scope==='units'?doc.unitIds:[] as string[],ids:items.filter(i=>!doc.items.some(n=>n.parentId===i.id)&&canRetainSelection(state,actor,doc,i)).map(i=>i.id)}),[error,setError]=useState('')
+ function save(){try{const live=getResearch(),current=live.documents.find(d=>d.id===doc.id);if(!current||!canReadDocument(live,actor,current)||current.restricted||current.copyPolicy!=='retain'||current.version!==doc.version)throw Error('来源版本或权限已变化，请重新阅读并选择。');const selected=items.filter(i=>f.value.ids.includes(i.id)).map(i=>selectionContent(doc,i));if(!selected.length||selected.some(i=>!canRetainSelection(live,actor,doc,i)))throw Error('请选择当前可以留存的内容。');const id=crypto.randomUUID(),next=emptyDocument(id,'练习组合',f.value.title.trim(),actor.staff,actor.staff,doc.course,null,state.groups);next.resourceType='练习组合';next.unitIds=f.value.units;next.scope=next.unitIds.length?'units':'whole';next.items=selected.map(i=>({...structuredClone(i),id:crypto.randomUUID(),parentId:null,body:markup[i.id]?.stem||i.body,scoring:markup[i.id]?.answer||i.scoring,references:selectionReferences(doc,i,actor)}));const r=command({type:'create-document',document:next});if(!r.ok)throw Error(r.error);f.clear();onClose();onCreated(id)}catch(e){setError(e instanceof Error?e.message:'保存失败')}}
+ return <Modal open draft title="选用 / 保存练习" onClose={onClose} footer={<><SButton onClick={onClose}>关闭，保留草稿</SButton><SButton className="pri" disabled={!f.value.title.trim()||!f.value.ids.length} onClick={save}>保存并继续</SButton></>}><SourceRoot><RField label="练习组合名称" value={f.value.title} onChange={title=>f.set({title})}/><Choices label="选择题目或资料范围" value={f.value.ids} options={items.filter(i=>!doc.items.some(n=>n.parentId===i.id)&&canRetainSelection(state,actor,doc,i)).map(i=>({value:i.id,label:`${i.title}${i.maxScore===null?'':` · ${i.maxScore} 分`}`}))} onChange={ids=>f.set({ids})}/><Choices label="适用单元（布置给任教任务时核对）" value={f.value.units} options={catalog.units.filter(u=>u.courseCode===doc.course).map(u=>({value:u.code,label:u.short+' · '+u.name}))} onChange={units=>f.set({units})}/><p className="mut">保存所选正文、答案与来源版本。打开组合后可继续布置作业。</p>{error&&<p role="alert">{error}</p>}</SourceRoot></Modal>
+}

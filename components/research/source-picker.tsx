@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Button } from "@/components/ui/button"
+import { Button } from "./button"
 import { FieldGroup } from "@/components/ui/field"
 import { useResearchContext } from "@/lib/research/context"
 import { useResearchForm } from "@/lib/research/use-form"

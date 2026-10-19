@@ -2,8 +2,8 @@
 
 import { useState } from "react"
 import { MapPin } from "lucide-react"
-import { Modal } from "@/components/kit"
-import { Button } from "@/components/ui/button"
+import { Modal } from "./modal"
+import { Button } from "./button"
 import { FieldGroup } from "@/components/ui/field"
 import { ClassCard, WeekGrid } from "@/components/timetable/week-grid"
 import { useResearchContext } from "@/lib/research/context"

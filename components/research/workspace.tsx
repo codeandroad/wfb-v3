@@ -1,88 +1,39 @@
 "use client"
-
 import Link from "next/link"
-import { useRouter, useSearchParams } from "next/navigation"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { Badge } from "@/components/ui/badge"
-import { Button, buttonVariants } from "@/components/ui/button"
-import { Empty, EmptyHeader, EmptyTitle, EmptyDescription } from "@/components/ui/empty"
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
+import { Button } from "./button"
 import { useResearchContext } from "@/lib/research/context"
-import { getResearch, retryResearchSave, useResearchStatus } from "@/lib/research/store"
-import { canReadActivity, canReadDocument, canViewGroup, coursesFor, membership, schoolScopes } from "@/lib/research/model"
-import { DUTY_BY_KEY } from "@/lib/demo/staff"
+import { retryResearchSave,useResearchStatus } from "@/lib/research/store"
+import { useWorkspaceNavigation } from "@/lib/research/navigation"
+import { canReadActivity,canViewGroup,coursesFor,membership,ownTodos,schoolScopes } from "@/lib/research/model"
 import { useStaffDutyStatus } from "@/lib/school/duty-store"
-import { ActivityBoard, ActivityCard } from "./activity-board"
+import { ActivityCard } from "./activity-board"
 import { CriterionBoard } from "./criterion-board"
-import { DocumentEditor } from "./document-editor"
+import { CourseWorkspace } from "./course-workspace"
+import { SourcePersonal } from "./source-personal"
 import { DocumentLibrary } from "./document-library"
-import { HomeworkHandoff } from "./homework-handoff"
-import { PlanHandoff } from "./plan-handoff"
-import { ResearchOverview } from "./overview"
+import { CurrentWork } from "./current-work"
 import { GroupSchedule } from "./group-schedule"
-import { ResearchMembers } from "./members"
-import { TaskBoard } from "./task-board"
+import { GroupChat } from "./group-chat"
+import { WorkBoard } from "./work-board"
 import { Panel } from "./primitives"
-
-const tabs = ["当前工作", "课程与内容", "任务与协作", "活动", "评价依据", "成员"]
+import styles from "./workspace.module.css"
+const tabs = [["overview","当前工作"],["schedule","教研课表"],["courses","本组课程"],["work","任务与活动"],["resources","共享资料"],["chat","群组聊天"],["criteria","评价依据"]]
+const legacy: Record<string,string> = { 当前工作: "overview",课程与内容: "courses",任务与协作: "work",活动: "work",成员: "chat",评价依据: "criteria" }
 export function ResearchWorkspace() {
-  const { state, actor, ready, catalog } = useResearchContext()
-  const status = useResearchStatus()
-  const dutyStatus = useStaffDutyStatus()
-  const params = useSearchParams()
-  const router = useRouter()
-  const groupId = params.get("group") || ""
-  const personal = params.get("space") === "personal"
-  const shared = params.get("space") === "shared"
-  const activityId = params.get("activity")
-  const activity = state.activities.find(a => a.id === activityId && canReadActivity(state, actor, a))
-  const entry = !groupId && !personal && !shared && !activityId
-  const group = state.groups.find(g => g.id === groupId)
-  const member = membership(state, actor.staff, groupId, actor.date)
-  const viewer = schoolScopes(state, actor).includes(groupId)
-  const accessible = actor.enabled && (activityId ? !!activity : personal || shared || entry || !!group && canViewGroup(state, actor, groupId))
-  const tab = personal || shared ? "课程与内容" : tabs.includes(params.get("tab") || "") ? params.get("tab")! : "当前工作"
-  const currentDoc = state.documents.find(d => d.id === params.get("doc"))
-  const correctSpace = currentDoc && (personal ? currentDoc.owner === actor.staff : shared ? true : currentDoc.owner === groupId || currentDoc.share.audience !== "group")
-  const allowedDoc = accessible && correctSpace && currentDoc && canReadDocument(state, actor, currentDoc) ? currentDoc : null
-  const requestedVersion = params.get("version")
-  const doc = allowedDoc && requestedVersion ? state.revisions[`${allowedDoc.id}@${Number(requestedVersion)}`] : allowedDoc
-  const myGroups = state.groups.filter(g => membership(state, actor.staff, g.id, actor.date))
-  function navigate(values: Record<string, string>) {
-    const next = new URLSearchParams(params)
-    Object.entries(values).forEach(([key, value]) => value ? next.set(key, value) : next.delete(key))
-    router.push(`/research?${next}`, { scroll: false })
-  }
-  function created(id: string) {
-    const created = getResearch().documents.find(d => d.id === id)
-    if (!created) return
-    navigate({ space: created.owner === actor.staff ? "personal" : "", group: created.owner === actor.staff ? "" : created.owner, doc: id, tab: "课程与内容", version: "", item: "" })
-  }
-  return <div className="flex w-full min-w-0 flex-col gap-5 font-sans" data-testid="research-workspace" data-ready={ready}>
-    <header className="flex flex-wrap items-start justify-between gap-3">
-      <div className="flex min-w-0 flex-col gap-1"><p className="text-sm text-muted-foreground">课程共建 · 教学准备</p><h1 className="text-balance text-2xl font-semibold">{personal ? "我的教学资料" : shared ? "校内共享资料" : activity?.title || group?.name || "我的教研"}</h1><p className="text-sm text-muted-foreground">{personal ? "个人内容独立保留，不随换班或教研职责结束而删除。" : shared ? "只开放有权使用的共享对象，不开放来源科组工作区。" : member ? `${DUTY_BY_KEY[member.type].label} · 负责对象 ${group?.name} · 有效任期 ${member.start} 至 ${member.end || "未设结束日期"}` : viewer ? "学校授权查看，不自动成为成员或获得编辑权。" : "从本人有效科组进入；个人教学资料也可独立使用。"}</p></div>
-      <div className="flex flex-wrap gap-2">{params.get("from") === "catalog" && <Link className={buttonVariants({ variant: "outline" })} href="/catalog">返回课程管理</Link>}{!entry && <Link className={buttonVariants({ variant: "outline" })} href="/research">我的科组</Link>}{!personal && <Link className={buttonVariants({ variant: "outline" })} href="/research?space=personal">我的资料</Link>}{!shared && <Link className={buttonVariants({ variant: "outline" })} href="/research?space=shared">共享资料</Link>}</div>
-    </header>
-    <Alert role="note"><AlertTitle>可操作的本机演示原型</AlertTitle><AlertDescription>人员教研职责统一来自教职工管理：职责模板、负责对象与任期共同决定访问，不再另设教研职责。沿用明确标注的本机模拟存储，未接入正式服务端授权、文件解析或消息服务；不会清空已有教学数据和任期历史。</AlertDescription></Alert>
-    {dutyStatus.error && <Alert variant="destructive"><AlertTitle>人员职责需要处理</AlertTitle><AlertDescription>{dutyStatus.error} 个人资料不会因此删除。</AlertDescription></Alert>}
-    {status.error && <Alert variant="destructive"><AlertTitle>本机保存需要处理</AlertTitle><AlertDescription>{status.error}<Button variant="outline" onClick={retryResearchSave}>重试写入已保留的草稿</Button></AlertDescription></Alert>}
-    {!ready ? <Panel title="正在恢复工作区"><p>读取本人的有效任命与已保存内容…</p></Panel> : !accessible ? <Empty className="border"><EmptyHeader><EmptyTitle>当前身份无法访问此工作区</EmptyTitle><EmptyDescription>没有该负责对象的当前有效教研职责。未生效、已结束职责或已停用对象不能通过直接链接继续访问；页面来源、部门文字与账号角色名称不授予权限。</EmptyDescription></EmptyHeader></Empty> : activity ? <ActivityCard activity={activity} /> : entry ? <>
-      <div className="grid gap-4 md:grid-cols-2">{myGroups.map(g => <Panel key={g.id} title={g.name} description={`${DUTY_BY_KEY[membership(state, actor.staff, g.id, actor.date)!.type].label} · 当前有效职责（演示）`} action={<Badge variant="outline">本人科组</Badge>}><p>{coursesFor(catalog, g.id).map(c => `${c.name} · ${c.officialCode}`).join("、") || "尚未维护责任课程"}</p><Link className={buttonVariants({ variant: "outline" })} href={`/research?group=${g.id}`}>进入{g.name}工作区</Link></Panel>)}</div>
-      {!myGroups.length && <Empty className="border"><EmptyHeader><EmptyTitle>当前没有有效教研职责</EmptyTitle><EmptyDescription>任课、账号角色或部门文字不会被推定为教研职责。个人资料仍可访问；请由学校有权人员在“教职工管理 → 人员详情 → 安排职责”选择教研组长或参与教师模板、具体教研组与任期，不在个人教研区自行任命。</EmptyDescription></EmptyHeader></Empty>}
-      {state.activities.some(a => a.participants.includes(actor.staff) && canReadActivity(state, actor, a)) && <Panel title="本人受邀的活动" description="参加跨组活动只开放该活动，不改变教研职责或开放来源组工作区。">{state.activities.filter(a => a.participants.includes(actor.staff) && canReadActivity(state, actor, a)).map(a => <Link key={a.id} className="self-start text-primary underline" href={`/research?activity=${encodeURIComponent(a.id)}`}>{a.title} · {a.start.slice(0, 10)}</Link>)}</Panel>}
-      <Panel title="内容准备不依赖班级或课表"><p>可以先建立个人大纲、教学计划及多来源练习组合；确定具��任教任务后再采用。无需先完成教研任务，也可继续原日常填报。</p><div className="flex flex-wrap gap-2"><Link href="/research?space=personal" className={buttonVariants({ variant: "outline" })}>管理我的教学资料</Link><Link href="/teaching" className={buttonVariants({ variant: "outline" })}>原有日常教学</Link><Link href="/homework" className={buttonVariants({ variant: "outline" })}>原有作业管理</Link>{schoolScopes(state, actor).length > 0 && <Link href="/catalog" className={buttonVariants({ variant: "outline" })}>课程管理的授权科组概况</Link>}</div></Panel>
-    </> : <>
-      {!personal && !shared && <GroupSchedule key={groupId} group={groupId} />}
-      {!personal && !shared && <nav aria-label="教研工作区内容" className="overflow-x-auto"><ToggleGroup variant="outline" value={[tab]} onValueChange={value => value[0] && navigate({ tab: value[0], doc: "", version: "", item: "" })}>{tabs.map(t => <ToggleGroupItem key={t} value={t}>{t}</ToggleGroupItem>)}</ToggleGroup></nav>}
-      {!personal && !shared && !member && <Alert role="note"><AlertTitle>仅管理查看</AlertTitle><AlertDescription>此来源只决定返回课程管理。内部编辑、承接、讨论及学生记录仍按各自真实授权检查。</AlertDescription></Alert>}
-      {params.get("doc") ? <><Button variant="outline" className="self-start" onClick={() => navigate({ doc: "", version: "", item: "" })}>返回内容列表</Button>{!doc ? <Empty className="border"><EmptyHeader><EmptyTitle>此内容或依据版本不可访问</EmptyTitle><EmptyDescription>内容不在当前范围、授权已结束，或指定版本不存在。不会回退到新版本替代当时依据。</EmptyDescription></EmptyHeader></Empty> : <><DocumentEditor key={`${actor.staff}:${doc.id}:${requestedVersion || "current"}`} document={doc} readonly={!!requestedVersion} onCreated={created} />{!requestedVersion && !doc.archived && doc.kind === "计划" && <PlanHandoff document={doc} />}{!requestedVersion && !doc.archived && (doc.kind === "资源" || doc.kind === "练习组合") && <HomeworkHandoff document={doc} />}</>}</> : <>
-        {tab === "当前工作" && <ResearchOverview group={groupId} navigate={navigate} />}
-        {tab === "课程与内容" && <DocumentLibrary group={personal || shared ? undefined : groupId} personal={personal} shared={shared} onOpen={id => navigate({ doc: id, version: "", item: "" })} onCreated={created} />}
-        {tab === "任务与协作" && <TaskBoard key={groupId} group={groupId} />}
-        {tab === "活动" && <ActivityBoard key={groupId} group={groupId} />}
-        {tab === "评价依据" && <CriterionBoard key={groupId} group={groupId} />}
-        {tab === "成员" && <ResearchMembers group={groupId} />}
-      </>}
-    </>}
-  </div>
+ const { state,actor,ready,catalog } = useResearchContext(),status = useResearchStatus(),duties = useStaffDutyStatus(),{ params,navigate } = useWorkspaceNavigation()
+ const groupId = params.get("group") || "",personal = params.get("space") === "personal",shared = params.get("space") === "shared",group = state.groups.find(g => g.id === groupId)
+ const tabParam = params.get("tab") || "overview",tab = tabs.some(([v]) => v === tabParam) ? tabParam : legacy[tabParam] || "overview"
+ const invited = !groupId && !personal && !shared && params.get("activity") ? state.activities.find(a => a.id === params.get("activity") && canReadActivity(state,actor,a)) : null
+ const entry = !groupId && !personal && !shared && !params.get("activity"),accessible = actor.enabled && (entry || personal || shared || !!invited || !!group && canViewGroup(state,actor,groupId))
+ const myGroups = state.groups.filter(g => membership(state,actor.staff,g.id,actor.date)),myTasks = myGroups.flatMap(g => ownTodos(state,actor,g.id)),member = membership(state,actor.staff,groupId,actor.date)
+ const courseDetail = !!params.get("doc") || (tab === "courses" || personal || shared) && (!!params.get("course") || !!params.get("view"))
+ function go(values: Record<string,string>) { const mapped = legacy[values.tab] || values.tab; navigate({ ...values,...(mapped ? { tab: mapped } : {}),...(values.tab === "活动" ? { wk: "activities" } : {}) }) }
+ function clearTab(v: string) { navigate({ tab: v,course: "",view: "",doc: "",version: "",item: "",task: "",activity: "",journal: "",edit: "",day: "",detail: "",log: "",sub: "",sv: "",parent: "" }) }
+ return <div className={`${styles.scope} ${styles.workspace} ${courseDetail?styles.courseDetail:""} ry-workspace`} data-testid="research-workspace" data-ready={ready}>
+ {!courseDetail && <header className={group && !personal && !shared ? "ry-group-heading" : "ry-home-heading"} data-testid="research-fixed-header"><div>{!entry && <div className="ry-return"><Link className="btn ghost" href={params.get("from") === "catalog" ? "/catalog?tab=groups" : "/research"}>{params.get("from") === "catalog" ? "返回科组概况" : "返回我的科组"}</Link></div>}<h1>{personal ? "我的教学资料" : shared ? "校内共享资料" : group?.name || (invited ? "受邀教研活动" : "我的教研")}{group && !personal && !shared && <span>{member?.type === "research_lead" ? "教研组长" : member ? "组内成员" : "管理查看 · 只读"}</span>}</h1>{!group && <p>{personal ? "个人保存的大纲、计划、资源与练习组合。" : shared ? "查看明确共享且当前有权使用的教学资料。" : "从有效科组进入课程共建与协作。"}</p>}</div><div className="ry-heading-actions">{!personal && <Link href="/research?space=personal" className="btn">我的教学资料</Link>}{entry && schoolScopes(state,actor).length > 0 && <Link href="/catalog" className="btn">学校课程管理</Link>}</div></header>}
+ {group && !personal && !shared && !courseDetail && <nav className="ry-local-nav" aria-label="教研组页签" data-testid="research-group-tabs">{tabs.map(([v,label]) => <Button key={v} variant="ghost" aria-current={tab === v ? "page" : undefined} onClick={() => clearTab(v)}>{label}</Button>)}</nav>}
+ {duties.error && <p role="alert" className="rounded-lg border border-destructive p-3 text-sm">{duties.error}</p>}{status.error && <div role="alert" className="rounded-lg border border-destructive p-3 text-sm">{status.error}<Button variant="outline" onClick={retryResearchSave}>重试保存保留的草稿</Button></div>}
+ {!ready ? <p className="ry-muted">正在恢复本机工作区…</p> : !accessible ? <p role="alert" className="ry-empty">当前身份无有效教研职责或此活动邀请已不可访问。可由学校在教职工管理中核对任命与有效期。</p> : invited ? <ActivityCard activity={invited} /> : entry ? <><div className="ry-home-layout"><section className="ry-subjects" aria-label="本人有效科组">{myGroups.map(g => <article key={g.id} className="ry-subject-row"><span className="ry-subject-mark">{g.name.slice(0,1)}</span><div><h2><Link href={`/research?group=${g.id}&tab=overview`} className="ry-title">{g.name.replace("教研组","")}</Link></h2><p>{g.name} <span className="ry-chip">{membership(state,actor.staff,g.id,actor.date)?.type === "research_lead" ? "教研组长" : "组内成员"}</span></p><div className="ry-course-names">{coursesFor(catalog,g.id).map(c => `${c.name} · ${c.officialCode}`).join("；") || "尚未登记有效课程"}</div></div><Link className="btn pri" href={`/research?group=${g.id}&tab=overview`} aria-label={`进入${g.name}`}>进入科组</Link></article>)}{!myGroups.length && <p className="ry-empty">当前没有有效科组任命。个人教学资料仍可独立保存和使用。</p>}</section><aside><Panel title="我需要处理" flush>{myTasks.length ? <div className="ry-agenda">{myTasks.map(t => <Link key={t.id} className="ry-agenda-row" href={`/research?group=${t.group}&tab=work&wk=tasks&task=${t.id}`}><b>{t.title}</b><span>{state.groups.find(g => g.id === t.group)?.name} · {t.due || "截止未设"}</span></Link>)}</div> : <p className="ry-empty">暂无分配给你的待处理教研任务。</p>}</Panel><p className="ry-note">每个科组的职责分别生效。个人资料不随换班或任命结束删除。</p><div className="ry-inline-actions"><Link href="/research?space=shared" className="btn ghost">校内共享资料</Link><Link href="/teaching" className="btn ghost">日常教学</Link><Link href="/homework" className="btn ghost">作业管理</Link></div></aside></div>{state.activities.filter(a => a.participants.includes(actor.staff) && canReadActivity(state,actor,a) && !myGroups.some(g => g.id === a.group)).map(a => <Link key={a.id} className="ry-agenda-row" href={`/research?activity=${a.id}`}>跨组受邀活动：{a.title} · {a.start.slice(0,10)}</Link>)}</> : (personal || shared) && !courseDetail ? personal?<SourcePersonal/>:<CourseWorkspace shared resourcesOnly/> : courseDetail || tab === "courses" || tab === "resources" ? <CourseWorkspace key={`${actor.staff}:${groupId}:${personal}:${shared}`} group={personal || shared ? undefined : groupId} personal={personal} shared={shared} resourcesOnly={tab === "resources" || shared && !params.get("view") && !params.get("doc")} /> : tab === "overview" ? <CurrentWork group={groupId} onNavigate={t => go({ tab: t })} /> : tab === "schedule" ? <GroupSchedule key={`${actor.staff}:${groupId}`} group={groupId} /> : tab === "work" ? <WorkBoard key={`${actor.staff}:${groupId}`} group={groupId} initialMode={tabParam === "活动" ? "activities" : undefined} /> : tab === "chat" ? <GroupChat key={`${actor.staff}:${groupId}`} group={groupId} /> : <CriterionBoard key={`${actor.staff}:${groupId}`} group={groupId} />}
+ {!courseDetail&&<p className="ry-demo-note">教研关系与协作记录为本机持久化演示；已有大纲、计划、资源和教学记录继续使用原数据。</p>}
+ </div>
 }
