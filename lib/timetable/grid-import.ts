@@ -111,7 +111,6 @@ export interface ImportRecord {
   roomId: string | null
   roomStatus: MatchStatus
   isActivity: boolean
-  activitySuggested: boolean // 未写“活动:”前缀，但名称像会议/教研等非课程活动
   // 汇总
   status: "ok" | "pending" | "error"
   issues: string[] // 阻断项：需要处理后才能写入
@@ -183,7 +182,7 @@ export function classOptionById(id: string | null | undefined): ClassOption | un
 }
 
 const KNOWN_ROOMS = new Set([...ROOMS, ...registry.locations.map((l) => l.id)])
-const ACTIVITY_RE = /(教研|会议|例会|班会|讲座|培训|值班|备课|集会|活动)/u
+const ACTIVITY_RE = /(教研|会议|例会|班会|讲座|培训|值班|备课|集会|答疑|活动)/u
 
 function matchClass(name: string, teacherId: string | null): { option: ClassOption | null; status: MatchStatus } {
   const key = norm(name)
@@ -347,10 +346,10 @@ export function parseImport(
           if (tch.status === "unmatched") recIssues.push(view === "TEACHER" ? "TEACHER_REQUIRED" : "TEACHER_UNMATCHED")
           if (tch.status === "ambiguous") recIssues.push("TEACHER_AMBIGUOUS")
 
-          const isActivity = part.kindHint === "ACTIVITY"
-          const cls = isActivity ? { option: null, status: "ok" as MatchStatus } : matchClass(part.name, tch.id)
-          const activitySuggested = !isActivity && cls.status === "unmatched" && ACTIVITY_RE.test(part.name)
-          if (cls.status === "unmatched") recIssues.push(activitySuggested ? "ACTIVITY_SUGGESTED" : "CLASS_UNMATCHED")
+          const classMatch = part.kindHint === "ACTIVITY" ? { option: null, status: "ok" as MatchStatus } : matchClass(part.name, tch.id)
+          const isActivity = part.kindHint === "ACTIVITY" || (classMatch.status === "unmatched" && ACTIVITY_RE.test(part.name))
+          const cls = isActivity ? { option: null, status: "ok" as MatchStatus } : classMatch
+          if (cls.status === "unmatched") recIssues.push("CLASS_UNMATCHED")
           if (cls.status === "ambiguous") recIssues.push("CLASS_AMBIGUOUS")
           if (cls.option && tch.id && cls.option.teacherIds.length && !cls.option.teacherIds.includes(tch.id)) notes.push("TEACHER_NOT_ASSIGNED")
 
@@ -381,7 +380,6 @@ export function parseImport(
             roomId: roomText && roomOk ? roomText : null,
             roomStatus: roomOk ? "ok" : "pending",
             isActivity,
-            activitySuggested,
             status,
             issues: recIssues,
             notes,
