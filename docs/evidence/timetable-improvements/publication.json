@@ -178,13 +178,29 @@
     "evidence": "docs/evidence/math-qa-demo/verification.json"
   },
   "publication_verification": {
-    "status": "PENDING_ON_COMMITTED_TREE",
+    "status": "PASS",
+    "commit": "f946ac29335b1ccb7d4c4e10677c7090011ead5b",
+    "tree": "8c4ffbb61bdf6614c155305b4f5705192c191841",
+    "clean_before_and_after_checks": true,
+    "typecheck": "PASS",
+    "tests": {
+      "status": "PASS",
+      "count": 221,
+      "failed": 0
+    },
+    "build": "PASS",
+    "diff_check": "PASS",
+    "document_links_json_and_scope": "PASS",
     "make_check": "NOT_RUN (no target in wfb-v3)",
-    "browser_automation": "NOT_RUN (prior denial respected)"
+    "browser_automation": "NOT_RUN (prior denial respected; user manual feedback separately recorded)"
   },
   "git_publication": {
-    "status": "AUTHORIZED_PENDING",
-    "strategy": "ordinary commits and fast-forward push; no force push"
+    "status": "IMPLEMENTATION_PUSH_CONFIRMED",
+    "code_commit": "f946ac29335b1ccb7d4c4e10677c7090011ead5b",
+    "remote": "origin/main",
+    "remote_confirmed_at_code_push": "f946ac29335b1ccb7d4c4e10677c7090011ead5b",
+    "force_push": false,
+    "note": "The following documentation-only commit records the completed clean-commit checks and this push receipt; it does not change tested implementation."
   },
   "consolidated_document": "docs/design-history/2026-10-19-timetable-improvements/DESIGN_AND_IMPLEMENTATION.md",
   "independent_review": {
@@ -192,5 +208,28 @@
     "path": "docs/reviews/2026-10-19-timetable-consolidation.md",
     "source_fingerprint_matches": true,
     "no_remaining_required_fixes": true
+  },
+  "local_source_backup": {
+    "path": ".local-artifacts/timetable-consolidation/accepted-source.tar.gz",
+    "source_commit": "f946ac29335b1ccb7d4c4e10677c7090011ead5b",
+    "bytes": 137585929,
+    "sha256": "91c7382767856a279e74cd3cdfdcb63ed0af9c59086b4d85391e0c0efbc708d2",
+    "contents": "git archive of tracked accepted code; no local storage, credentials, node_modules, build output or raw logs"
+  },
+  "logs": {
+    ".local-artifacts/timetable-consolidation/backup.json": "896454145df97209494af93af746164148bdd279b6bdd0ff36334e528d0b3cfd",
+    ".local-artifacts/timetable-consolidation/build.log": "adf3746696024615987f5a73f5a88f3b78e016529f5ca19c1093b545415fd5e5",
+    ".local-artifacts/timetable-consolidation/clean-test-target.json": "1e7d2c5db41aebe91cadccb5a637dd65d7bf198ef8b4030c15f96c2e2e5d2925",
+    ".local-artifacts/timetable-consolidation/code-push.json": "c8463541fa56e113ff38135dfaae752ecc5fef1aa671f0ca1e32099cdfd6e67f",
+    ".local-artifacts/timetable-consolidation/document-scope-check.json": "8dcd670cc3b2ceed53838b5f2ae20d796722036b8637d2446581dc4f0364c33d",
+    ".local-artifacts/timetable-consolidation/reviewer-document-links.json": "b41b8da8352e27329a7f7824a7de39f4a84127b4260146607c9ecb3beae98908",
+    ".local-artifacts/timetable-consolidation/reviewer-final.json": "ebed81512e8b1e3ce7550c72c25b2dfa9d1b46540e5a47ced1e9ab15fd4b62d5",
+    ".local-artifacts/timetable-consolidation/reviewer-pre-doc-validation.log": "69528fe576f5d3e3c759f95e42d0fd4115096a2f1e92cdcb4203ebba449871bc",
+    ".local-artifacts/timetable-consolidation/reviewer-product-test-manifest.txt": "0b956f87a1ba5ddaf71eede01e2f8df4a9c501d99393325b0b61e9d298014fad",
+    ".local-artifacts/timetable-consolidation/reviewer-scope.json": "5ba88c1ac4af81c59008887315e18c89892a80b2bbbf6635fba798482fcbaf89",
+    ".local-artifacts/timetable-consolidation/source-manifest.txt": "0b956f87a1ba5ddaf71eede01e2f8df4a9c501d99393325b0b61e9d298014fad",
+    ".local-artifacts/timetable-consolidation/staged-numstat.txt": "0a1ff2717299bc28d359fc03c0d8c8a2512e0e92fdde1c6168107ee308cac31c",
+    ".local-artifacts/timetable-consolidation/tests.log": "5d3ba80b9ef7ceddbb91839559ab4e307587019c8b100900cfcfa08ebbff1b66",
+    ".local-artifacts/timetable-consolidation/typecheck.log": "71322f3a5e902c7c296ca827d919591ea7b30265f382923d16c5ea0a8440b9e8"
   }
 }

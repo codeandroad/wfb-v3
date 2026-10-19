@@ -4,9 +4,9 @@
 
 完整设计与实现统一记录在 [课表改进总览](design-history/2026-10-19-timetable-improvements/DESIGN_AND_IMPLEMENTATION.md)，覆盖样式细分、两侧四部位、教师默认、颜色保存修复、筛选、教师姓名、明确行政归属、冲突、活动浏览/摘要及四教师演示；并澄清已有教研课表边界。旧分阶段文件作为当时快照保留，PENDING和未提交不代表当前状态。
 
-本轮仅归档文档、复核现有代码并发布，无新增业务代码。基线main `42ba585f5e5b351c7beb333c15bdbb4e2e0c580f`，25实现文件+13测试文件+.gitignore的集合指纹`0b956f87a1ba5ddaf71eede01e2f8df4a9c501d99393325b0b61e9d298014fad`，独立范围核对一致。原左栏/顶栏/作业、共享排课与校历store无改动；.local-artifacts日志不入Git。提交后在记录的干净提交上执行原型现有检查，再普通推送既有origin/main；最终记录见 [交付证据](evidence/timetable-improvements/publication.json) 和 [独立复核](reviews/2026-10-19-timetable-consolidation.md)。
+本轮仅归档文档、复核现有代码并发布，无新增业务代码。基线main `42ba585f5e5b351c7beb333c15bdbb4e2e0c580f`，25实现文件+13测试文件+.gitignore的集合指纹`0b956f87a1ba5ddaf71eede01e2f8df4a9c501d99393325b0b61e9d298014fad`，独立范围核对一致。原左栏/顶栏/作业、共享排课与校历store无改动；.local-artifacts日志不入Git。已在干净代码提交`f946ac29335b1ccb7d4c4e10677c7090011ead5b`上执行原型现有检查，并普通推送至既有origin/main，远端SHA核对一致；最终记录见 [交付证据](evidence/timetable-improvements/publication.json) 和 [独立复核](reviews/2026-10-19-timetable-consolidation.md)。
 
-当前已有验证：221项测试、类型和构建PASS；149项独立课表回归PASS。干净提交的最终复验另记录。浏览器自动化和父make check仍NOT_RUN，用户本次实际人工反馈单独保留。原始日志与源代码备份留在忽略目录.local-artifacts/timetable-consolidation/，证据记录哈希。
+最终干净提交复验：221项测试、类型和构建PASS，检查前后工作区干净；此前149项独立课表回归PASS。本次代码已推送，后续仅以文档提交记录复验与推送回执，不修改已测实现。浏览器自动化和父make check仍NOT_RUN，用户本次实际人工反馈单独保留。原始日志与源代码备份留在忽略目录.local-artifacts/timetable-consolidation/，证据记录哈希。
 
 ---
 

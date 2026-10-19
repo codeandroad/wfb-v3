@@ -4,7 +4,7 @@
 
 | 修订 | 目录 | 状态 |
 | --- | --- | --- |
-| 2026-10-19 课表全部改进汇总 | [最终设计与实现](2026-10-19-timetable-improvements/DESIGN_AND_IMPLEMENTATION.md) | 用户人工核验暂时接受（U-TT-20261019-01），授权提交推送；统一样式、颜色保留、筛选、归属与冲突、活动摘要、独立演示；交付状态见证据。 |
+| 2026-10-19 课表全部改进汇总 | [最终设计与实现](2026-10-19-timetable-improvements/DESIGN_AND_IMPLEMENTATION.md) | 用户人工核验暂时接受（U-TT-20261019-01）；完整归档，代码f946ac2已普通提交推送，干净版本221项测试/类型/构建通过；最终记录见交付证据。 |
 | 2026-10-19 多人数学答疑独立演示 | [设计](2026-10-19-math-qa-demo/DESIGN.md) · [实施](2026-10-19-math-qa-demo/IMPLEMENTATION.md) | 独立4教师/4场所场景，复用摘要/筛选/详情，不写原数据；221项测试通过，人工核验PENDING，未提交。 |
 | 2026-10-19 多教师活动摘要卡 | [设计](2026-10-19-activity-summary-cards/DESIGN.md) · [实施](2026-10-19-activity-summary-cards/IMPLEMENTATION.md) | 同日期/同节次/同名活动摘要与完整名单，原样式与冲突保留；214项测试通过，人工核验PENDING，未提交。 |
 | 2026-10-19 颜色跨部位保留与教务活动浏览 | [设计](2026-10-19-timetable-style-retention-activities/DESIGN.md) · [实施](2026-10-19-timetable-style-retention-activities/IMPLEMENTATION.md) | 颜色完成后自动保存，新增全校活动目录/筛选，完整投影保留冲突；200项测试通过，人工核验PENDING，未提交。 |
