@@ -1,5 +1,6 @@
 "use client"
 
+import { commitSchoolChange } from "@/lib/school/system-client"
 import { Card, CardHeader, Checkbox, Select } from "@/components/kit"
 import { Button } from "@/components/ui/button"
 import { addLog, newBatchId, nowText, type LogRecord } from "@/lib/import/log-store"
@@ -8,7 +9,7 @@ import { sheetTitle, TEMPLATE_VERSION } from "@/lib/import/schema"
 import { EXISTING_PREFIX } from "@/lib/import/target-sample"
 import type { Plan } from "@/lib/import/validate"
 import { useRef, useState } from "react"
-import { commitPeople } from "@/lib/import/commit-people"
+import { commitPeople,discardPeopleReceipt } from "@/lib/import/commit-people"
 import { useStaffPermission } from "@/lib/school/staff-store"
 import { ExampleTag, Notice } from "./shared"
 
@@ -51,7 +52,7 @@ export function StepConfirm({
   const blocked = plan.totals.block > 0
   const alreadyDone = !!completed
 
-  const confirm = () => {
+  const confirm = async () => {
     if (!canManage || blocked || alreadyDone || !selfCheck || submitted.current) return
     if (stale) {
       setStaleHit(true)
@@ -59,8 +60,8 @@ export function StepConfirm({
     }
     const id = newBatchId()
     let mappings: string[] = []
-    try { if (kind === "done") mappings = commitPeople(plan, id, canManage) }
-    catch (error) { setFailure(error instanceof Error ? error.message : "提交失败，请重新校验。"); return }
+    try { if (kind === "done") mappings = await commitSchoolChange(()=>commitPeople(plan, id, canManage)) }
+    catch (error) { discardPeopleReceipt(id);setFailure(error instanceof Error ? error.message : "提交失败，请重新校验。"); return }
     submitted.current = true
     addLog({
       id, type: "import", status: kind === "done" ? "done" : kind === "failed" ? "failed" : "pending",
@@ -68,7 +69,7 @@ export function StepConfirm({
       operator: "当前经办者（演示身份）", source: file.fileName, version: file.version ?? TEMPLATE_VERSION,
       scope: groups.map((g) => g.name).join("、"), startedAt: nowText(), endedAt: kind === "pending" ? "—" : nowText(),
       period: file.sourcePeriod ?? "未声明", plan: `新增对象 ${plan.totals.newObjects}、关系 ${plan.totals.newRelations}、复用 ${plan.totals.reuse}`,
-      result: kind === "done" ? "完成（结果示例，未写入真实学校）" : kind === "failed" ? "当前批失败，未写本批业务（结果示例）" : "结果待查询（示例）",
+      result: kind === "done" ? "导入处理完成（学校原型；其他未接入的关系仍为演示）" : kind === "failed" ? "当前批失败，未写本批业务（结果示例）" : "结果待查询（示例）",
       errors: kind === "failed" ? ["后端事务失败示例：本批全部未写入"] : [], mappings,
       followUps: [staff.length ? `${staff.length} 名教职工待开户` : "", live("27").length ? "学校课表待确认版本" : ""].filter(Boolean),
       fingerprint: kind === "failed" ? undefined : file.fingerprint, example: true, sessionCreated: true,

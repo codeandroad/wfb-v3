@@ -2,6 +2,7 @@
 
 import { Badge, Field, Modal, Segmented, Select } from "@/components/kit"
 import { Button } from "@/components/ui/button"
+import { usePlaceOptions } from "@/lib/school/foundation-store"
 import Link from "next/link"
 import { recordKey, useLessonRecords } from "@/lib/timetable/lesson-records"
 import { weekOfDate } from "@/lib/mt/model"
@@ -119,7 +120,7 @@ export function CardDetail({
         ) : null}
         <Row k="实际日期">{fmtDateFull(entry.date)}（{wd}）</Row>
         <Row k="节次时间">{p ? `${p.label} · ${p.start}–${p.end}` : entry.periodId}</Row>
-        <Row k="教室">{entry.room ?? "未排教室（未纳入教室冲突检查）"}</Row>
+        <Row k="场所">{entry.room ?? "未安排场所（未纳入教室冲突检查）"}</Row>
         {entry.makeupFrom ? <Row k="补课来源">{`补 ${entry.makeupFrom} 课程`}</Row> : null}
         {entry.movedTo ? <Row k="调休去向">{`已调至 ${entry.movedTo}`}</Row> : null}
       </dl>
@@ -144,7 +145,7 @@ export function EditableCardModal({
   onSubmit,
   onRemove,
   allowScope = true,
-  rooms = ROOMS,
+  rooms: legacyRooms = ROOMS,
 }: {
   entry: ProjectedEntry | null
   open: boolean
@@ -165,6 +166,7 @@ export function EditableCardModal({
   allowScope?: boolean
   rooms?: string[]
 }) {
+  const rooms = usePlaceOptions(legacyRooms, entry?.room)
   const [weekday, setWeekday] = useState(String(entry?.weekday ?? 1))
   const [periodId, setPeriodId] = useState(entry?.periodId ?? "m1")
   const [room, setRoom] = useState(entry?.room ?? "")
@@ -240,7 +242,7 @@ export function EditableCardModal({
         <dl className="space-y-2.5 text-[13px]">
           <Row k="课程标识">{entry.key}</Row>
           <Row k="节次">{periodById(entry.periodId)?.label} · {periodById(entry.periodId)?.start}–{periodById(entry.periodId)?.end}</Row>
-          <Row k="教室">{entry.room ?? "未排教室"}</Row>
+          <Row k="场所">{entry.room ?? "未安排场所"}</Row>
         </dl>
       ) : (
         <div className="space-y-3">
@@ -297,10 +299,10 @@ export function EditableCardModal({
               </Select>
             </Field>
           </div>
-          <Field label="教室">
+          <Field label="场所">
             <Select value={room} onChange={(e) => setRoom(e.target.value)}>
               {rooms.map((r) => <option key={r} value={r}>{r}</option>)}
-              <option value="">未排教室</option>
+              <option value="">未安排场所</option>
             </Select>
           </Field>
           {err ? <p className="rounded-lg border border-[#eec4bf] bg-[#fbe6e4] px-3 py-2 text-[12px] text-[#9a2b22]">{err}</p> : null}
@@ -317,7 +319,7 @@ export function AddCardModal({
   onClose,
   onSubmit,
   defaultSubject = "",
-  rooms = ROOMS,
+  rooms: legacyRooms = ROOMS,
 }: {
   cell: { weekday: number; periodId: string; date: string } | null
   open: boolean
@@ -326,6 +328,7 @@ export function AddCardModal({
   defaultSubject?: string
   rooms?: string[]
 }) {
+  const rooms = usePlaceOptions(legacyRooms)
   const [className, setClassName] = useState("")
   const [subject, setSubject] = useState(defaultSubject)
   const [group, setGroup] = useState("")
@@ -399,10 +402,10 @@ export function AddCardModal({
             />
           </Field>
         </div>
-        <Field label="教室">
+        <Field label="场所">
           <Select value={room} onChange={(e) => setRoom(e.target.value)}>
             {rooms.map((r) => <option key={r} value={r}>{r}</option>)}
-            <option value="">未排教室</option>
+            <option value="">未安排场所</option>
           </Select>
         </Field>
         {err ? <p className="rounded-lg border border-[#eec4bf] bg-[#fbe6e4] px-3 py-2 text-[12px] text-[#9a2b22]">{err}</p> : null}
@@ -425,7 +428,7 @@ function slotText(slot: DiffRow["school"]): string {
   if (!slot) return "—"
   const wd = WEEKDAYS.find((w) => w.n === slot.weekday)?.label ?? ""
   const p = periodById(slot.periodId)
-  return `${wd} ${p?.label ?? slot.periodId} · ${p ? `${p.start}–${p.end}` : ""} · ${slot.room ?? "未排教室"}`
+  return `${wd} ${p?.label ?? slot.periodId} · ${p ? `${p.start}–${p.end}` : ""} · ${slot.room ?? "未安排场所"}`
 }
 
 export function DiffList({
@@ -527,7 +530,7 @@ function ColumnCard({ title, side, rows }: { title: ReactNode; side: "school" | 
                 <p className="text-[12px] font-medium">{r.label}</p>
                 <p className="mt-0.5 text-[11px] text-muted-foreground">
                   {slot
-                    ? `${WEEKDAYS.find((w) => w.n === slot.weekday)?.label ?? ""} ${periodById(slot.periodId)?.label ?? ""} · ${slot.room ?? "未排教室"}`
+                    ? `${WEEKDAYS.find((w) => w.n === slot.weekday)?.label ?? ""} ${periodById(slot.periodId)?.label ?? ""} · ${slot.room ?? "未安排场所"}`
                     : side === "school"
                       ? "学校版无此课"
                       : "我的版暂无（学校新增）"}

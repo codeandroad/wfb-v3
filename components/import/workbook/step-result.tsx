@@ -1,5 +1,6 @@
 "use client"
 
+import { commitSchoolChange } from "@/lib/school/system-client"
 import { Card, CardHeader, LinkButton } from "@/components/kit"
 import { Button } from "@/components/ui/button"
 import { nowText, updateLog } from "@/lib/import/log-store"
@@ -10,7 +11,7 @@ import { buildReportBytes, downloadBytes } from "@/lib/import/workbook-out"
 import { CheckCircle2, CircleAlert, Clock } from "lucide-react"
 import { ExampleTag, Notice, Stat } from "./shared"
 import type { ResultKind } from "./step-confirm"
-import { commitPeople } from "@/lib/import/commit-people"
+import { commitPeople,discardPeopleReceipt } from "@/lib/import/commit-people"
 import { useStaffPermission } from "@/lib/school/staff-store"
 import { useState } from "react"
 
@@ -59,11 +60,11 @@ export function StepResult({
           <Notice tone="info">提交后连接中断，本批结果尚未确认（示例）。请不要重复提交：同一批次查询后会得到同一结果，不会新建批次。</Notice>
           <div className="flex flex-wrap gap-2">
             <Button
-              onClick={() => {
+              onClick={async () => {
                 try {
-                  const mappings = commitPeople(plan, batchId, canManage)
-                  updateLog(batchId, { status: "done", endedAt: nowText(), mappings, result: "查询后确认：共享会话模拟完成" })
-                } catch (error) { setFailure(error instanceof Error ? error.message : "查询失败，请重试。"); return }
+                  const mappings = await commitSchoolChange(()=>commitPeople(plan, batchId, canManage))
+                  updateLog(batchId, { status: "done", endedAt: nowText(), mappings, result: "查询后确认：学校原型资料已保存" })
+                } catch (error) { discardPeopleReceipt(batchId);setFailure(error instanceof Error ? error.message : "查询失败，请重试。"); return }
                 onChangeKind("done")
               }}
             >
@@ -78,7 +79,7 @@ export function StepResult({
 
   return (
     <Card>
-      <CardHeader title={<span className="flex items-center gap-2"><CheckCircle2 className="size-4 text-[#256a49]" aria-hidden />导入完成 <ExampleTag /></span>} desc={`批次 ${batchId} · 教职工和编号已写入共享会话原型；其他业务关系仍为结果模拟，未接正式后台`} />
+      <CardHeader title={<span className="flex items-center gap-2"><CheckCircle2 className="size-4 text-[#256a49]" aria-hidden />导入完成 <ExampleTag /></span>} desc={`批次 ${batchId} · 教职工档案与工号已保存至学校原型资料；其他业务关系仍为演示`} />
       <div className="flex flex-col gap-4 p-5">
         <div className="grid grid-cols-2 gap-2 md:grid-cols-5">
           <Stat label="新增对象" value={t.newObjects} />
@@ -90,7 +91,7 @@ export function StepResult({
 
         {mapping.length ? (
           <section aria-labelledby="map-h" className="flex flex-col gap-2">
-            <h3 id="map-h" className="flex items-center gap-2 text-[13px] font-semibold">编号映射回执 <ExampleTag>共享会话模拟，非正式后台编号</ExampleTag></h3>
+            <h3 id="map-h" className="flex items-center gap-2 text-[13px] font-semibold">编号映射回执 <ExampleTag>学校原型资料，未连接生产后台</ExampleTag></h3>
             <div className="max-h-64 overflow-auto rounded-lg border border-border">
               <table className="w-full text-[13px]">
                 <thead className="sticky top-0 bg-muted text-xs text-muted-foreground">

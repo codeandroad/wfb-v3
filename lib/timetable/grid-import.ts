@@ -17,6 +17,7 @@ import {
   type Period,
 } from "./data"
 import registry from "../teaching/fixture.json"
+import { getFoundation, resolvePlaceLabel } from "../school/foundation-store"
 
 /* ---------------- 系统课节权威（由 PERIODS 派生别名，绝不从上传文件建立） ---------------- */
 
@@ -220,7 +221,7 @@ export interface SourceDetection {
 const GROUP_RE = /^[A-Z]{1,2}\d{1,2}$/
 
 function looksLikeRoom(s: string | undefined) {
-  return !!s && (KNOWN_ROOMS.has(s) || /(室|楼|馆|厅|场|LAB)/iu.test(s))
+  return !!s && (KNOWN_ROOMS.has(s) || !!resolvePlaceLabel(s, getFoundation().places) || /(室|楼|馆|厅|场|LAB)/iu.test(s))
 }
 
 export function detectSource(sheet: DecodedSheet, instructionsText = ""): SourceDetection {
@@ -354,7 +355,8 @@ export function parseImport(
           if (cls.option && tch.id && cls.option.teacherIds.length && !cls.option.teacherIds.includes(tch.id)) notes.push("TEACHER_NOT_ASSIGNED")
 
           const roomText = part.locationText
-          const roomOk = !roomText || KNOWN_ROOMS.has(roomText)
+          const roomMatch = roomText ? KNOWN_ROOMS.has(roomText) ? roomText : resolvePlaceLabel(roomText, getFoundation().places) : null
+          const roomOk = !roomText || !!roomMatch
           if (!roomOk) notes.push("ROOM_TEXT_ONLY")
 
           const status: ImportRecord["status"] = !slot ? "error" : recIssues.length ? "pending" : "ok"
@@ -377,7 +379,7 @@ export function parseImport(
             classStatus: cls.status,
             teacherId: tch.id,
             teacherStatus: tch.status,
-            roomId: roomText && roomOk ? roomText : null,
+            roomId: roomMatch,
             roomStatus: roomOk ? "ok" : "pending",
             isActivity,
             status,

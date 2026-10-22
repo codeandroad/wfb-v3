@@ -18,12 +18,17 @@ export interface DepartmentItem {
   order: number
   referencedBy: number // 被引用的人员数（停用优先，不做一键删除断链）
   note?: string
+  legacySubjectGroup?: boolean
+  sourceRef?: string
+  sourceBatch?: string
+  sourceIds?: string[]
+  sourceReferencedBy?: number
 }
 
 export const DEPARTMENT_ITEMS: DepartmentItem[] = [
-  { id: "dep-math", name: "数学组", status: "active", order: 10, referencedBy: 3 },
-  { id: "dep-phy", name: "物理组", status: "active", order: 20, referencedBy: 2 },
-  { id: "dep-eng", name: "英语组", status: "active", order: 30, referencedBy: 1 },
+  { id: "dep-math", name: "数学组", status: "active", order: 10, referencedBy: 3, legacySubjectGroup: true },
+  { id: "dep-phy", name: "物理组", status: "active", order: 20, referencedBy: 2, legacySubjectGroup: true },
+  { id: "dep-eng", name: "英语组", status: "active", order: 30, referencedBy: 1, legacySubjectGroup: true },
   { id: "dep-affairs", name: "教务处", status: "active", order: 40, referencedBy: 2 },
   { id: "dep-admin", name: "行政部", status: "active", order: 50, referencedBy: 1 },
   {
@@ -45,6 +50,10 @@ export interface JobTitleItem {
   order: number
   referencedBy: number
   note?: string
+  sourceRef?: string
+  sourceBatch?: string
+  sourceIds?: string[]
+  sourceReferencedBy?: number
 }
 
 export const JOB_TITLE_ITEMS: JobTitleItem[] = [

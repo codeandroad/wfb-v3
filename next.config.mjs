@@ -1,5 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  outputFileTracingExcludes: {
+    "/*": ["./.local-artifacts/**/*", "./.local-data/**/*"],
+  },
   typescript: {
     ignoreBuildErrors: true,
   },

@@ -12,6 +12,7 @@ import {
   UserRound,
 } from "lucide-react"
 import { useState, type ReactNode } from "react"
+import { useSchoolSystem } from "./use-school-system"
 import { AccountsPanel } from "./accounts-panel"
 import { AdminClassPanel } from "./admin-class-panel"
 import { FoundationPanel } from "./foundation-panel"
@@ -46,7 +47,8 @@ const TABS: TabDef[] = [
   { id: "accounts", label: "账号与权限", icon: <KeyRound className="size-4" /> },
 ]
 
-export function SchoolHub({ initialTab }: { initialTab?: string }) {
+export function SchoolHub({ initialTab, initialSection }: { initialTab?: string; initialSection?: string }) {
+  const system = useSchoolSystem()
   const [tab, setTab] = useState<TabId>(() => TABS.find((t) => t.id === initialTab)?.id ?? "year")
   const activeLabel = TABS.find((t) => t.id === tab)?.label ?? "学校管理"
 
@@ -57,12 +59,14 @@ export function SchoolHub({ initialTab }: { initialTab?: string }) {
           <p className="text-[13px] font-medium text-muted-foreground">学校管理 · {CURRENT_TERM_LABEL}</p>
           <h1 className="mt-1 text-[22px] font-semibold leading-tight text-foreground">{activeLabel}</h1>
         </div>
+        <div className="flex items-center gap-3">
         <span
           className="mt-1 shrink-0 rounded-full border border-border bg-muted/40 px-2.5 py-1 text-[11.5px] text-muted-foreground"
           title="本原型展示改进后的目标流程，不代表当前学校系统已全部实现。"
         >
           目标原型 · 示例数据
         </span>
+        </div>
       </div>
 
       <div className="thin-scroll -mx-1 mb-6 overflow-x-auto px-1">
@@ -90,12 +94,13 @@ export function SchoolHub({ initialTab }: { initialTab?: string }) {
         </div>
       </div>
 
+      {(tab === "staff" || tab === "foundation") && (!system.ready || system.error) ? <p role={system.error ? "alert" : "status"} className="text-sm text-muted-foreground">{system.error || "正在读取学校资料…"}</p> : null}
       {tab === "year" ? <YearTermPanel /> : null}
       {tab === "admin" ? <AdminClassPanel /> : null}
       {tab === "teaching" ? <TeachingClassPanel /> : null}
-      {tab === "staff" ? <StaffPanel /> : null}
+      {tab === "staff" && system.ready ? <StaffPanel /> : null}
       {tab === "students" ? <StudentsPanel /> : null}
-      {tab === "foundation" ? <FoundationPanel /> : null}
+      {tab === "foundation" && system.ready ? <FoundationPanel initialTab={initialSection} /> : null}
       {tab === "accounts" ? <AccountsPanel /> : null}
     </div>
   )

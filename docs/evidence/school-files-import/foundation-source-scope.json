@@ -1,0 +1,78 @@
+{
+  "date": "2026-10-22",
+  "baseline": "96c4b1341627d596108c47d720beb24fffb0629d",
+  "branch": "main",
+  "status": "IMPLEMENTED_AWAITING_USER_CONTENT_VERIFICATION",
+  "committed": false,
+  "pushed": false,
+  "request": "从学校管理进入基础资料仍像旧数据，查明原因并修正默认显示",
+  "rootCause": "导入已保存到正式目录，旧示例和历史学科部门标签按原顺序排前且未区分来源",
+  "scopeFingerprint": "acaa75038a830cbbf026a82709dc6ff9a614bd98f8e7c77c64cbfc50640853ba",
+  "files": {
+    "components/school/foundation-panel.tsx": "18a996e8fa5226ffa6a9169ee37a56633724e60cd0d706089b51ce4931ea12c9",
+    "components/school/local-school-import.tsx": "50287c07b7c6a154fd743115c02f41b499b76ceaa68cb04e207090882a610763",
+    "lib/school/foundation-store.ts": "958a496294bd7fdb45e1ff71abbf3e32ad80e1251d1b288483d6e82363472c46",
+    "lib/school/foundation-view.ts": "f4422e2783dafdfd2ea205338744cfa494bbd20d5e84f1ef66d792f3de0b6b72",
+    "tests/school-foundation.test.cjs": "7a32506916b5b37d7cc1e71df741043cb34628c957907fa1159a9a446bb9b4c2"
+  },
+  "verification": {
+    "nodeTests": {
+      "passed": 291,
+      "failed": 0
+    },
+    "typecheck": "PASS",
+    "webpackBuild": "PASS",
+    "finalDiffCheck": "PASS",
+    "firstDiffCheck": "FAILED: trailing blank line; formatting fixed and final check passed",
+    "independentReviewReport": "docs/reviews/2026-10-22-school-files-import.md",
+    "userContentVerification": "PENDING",
+    "independentReview": "PASS",
+    "independentFocusedTestsPassed": 27,
+    "independentReviewSha256": "2ddfe282a7c14d96b27dca668016fa7eeb7d721a3c8a39090ceeeee1df3fd1fc"
+  },
+  "browserUi": {
+    "method": "cua_repl existing in-app browser; no real personnel names emitted",
+    "enteredFromSidebarSchoolLink": true,
+    "defaultScope": "imports",
+    "importedCounts": {
+      "departments": 6,
+      "jobs": 39,
+      "places": 60
+    },
+    "allCountsChecked": {
+      "departments": 11,
+      "places": 65
+    },
+    "allScopePreservesLegacyLabels": true,
+    "backToImportsCount": 6,
+    "freshSchoolNavigationDefaultsToImports": true,
+    "sharedDepartmentIncluded": true,
+    "verificationPageSavedDataRestored": true,
+    "leftOpenUrl": "http://localhost:3109/school?tab=foundation&section=departments"
+  },
+  "compatibility": {
+    "sourceOnlyRenameWithoutSpecialPageVisit": "PASS synthetic regression",
+    "visibleOnlyReorderPreservesHiddenRows": "PASS synthetic regression",
+    "provenanceMergePreservesOriginalIdAndEdits": "PASS synthetic regression",
+    "noImportKeepsAllCatalogDefault": "PASS synthetic regression",
+    "manualCreateSwitchesToAll": "code path reviewed; no real record created for testing"
+  },
+  "privacy": {
+    "sourcePersonNamesInDeltaFiles": 0,
+    "privatePathsInProductionTracing": 0,
+    "sourceFilesRewritten": false
+  },
+  "localScreenshot": {
+    "path": ".local-artifacts/foundation-imported-scope.png",
+    "sha256": "5f2a8d9d7b80111f036594770ab29dadae531b2b50821a09998bd756109bb015",
+    "realPersonNames": false,
+    "gitIgnored": true
+  },
+  "logs": {
+    ".local-artifacts/foundation-source-scope-tests.log": "2719f9d5f5004121d62fc2a70747ae5ed0f5d19d6e404a7c641b01e550f1cd3d",
+    ".local-artifacts/foundation-source-scope-build.log": "ec1449eb3a406080d38c8e5b543bc72467f263398a9de743da450372e25f2eda"
+  },
+  "supersededBy": "persisted-ordinary-entry.json",
+  "limitationConfirmedByUser": "本证据仅覆盖已经导入的核验浏览器；用户后续截图确认独立浏览器仍没有来源资料。仅排序并非完整根因。",
+  "supersedingUserInstruction": "Excel仅一次性提取写入业务存储；普通页面禁止从本机导入包自动补载。历史测试结果保留，不代表当前设计。"
+}

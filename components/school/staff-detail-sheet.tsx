@@ -244,7 +244,7 @@ export function StaffDetailSheet({ staff, endedDutyIds, onClose, onOpenDuty, onA
 
       {tab === "duties" ? (
         <div className="flex flex-col gap-3">
-          <InfoNote>教研工作在此统一安排：同一教研组的组长与参与教师职责可以同时存在，分别按各自任期生效，也可单独结束。教研组不是二级人事部门，不从任课自动归组。</InfoNote>
+          <InfoNote>教研工作在此统一安排：同一教研组的组长与参与教师职责可以同时存在，分别按各自任期生效，也可单独结束。教研组归口教务处；人员部门或待核对学科不自动产生组内职责。</InfoNote>
           {duties.some(duty => duty.history?.some(item => item.text.startsWith("撤销错误的职责互斥修正"))) && <InfoNote>此前错误裁剪且未被后续修改的参与职责已按原始备份恢复。其他职责的正常结束与修订未被覆盖，恢复依据保留在职责历史中。</InfoNote>}
 
           {currentDuties.length ? (

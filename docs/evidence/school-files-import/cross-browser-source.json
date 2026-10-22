@@ -1,0 +1,133 @@
+{
+  "date": "2026-10-22",
+  "baseline": "96c4b1341627d596108c47d720beb24fffb0629d",
+  "branch": "main",
+  "status": "IMPLEMENTED_AWAITING_USER_BROWSER_VERIFICATION",
+  "feedback": "U-IMPORT-20261022-03",
+  "committed": false,
+  "pushed": false,
+  "rootCause": "此前核验窗口存储不代表用户当前浏览器。默认来源范围只能改善已导入目录的显示，不能使独立空浏览器取得资料。",
+  "files": {
+    "app/(app)/school/page.tsx": "da712dbc90719db23dd25a7e363a71998265cf6f44c3c934e941f72feabf61c5",
+    "app/(app)/school/local-import/page.tsx": "ae8c9c4992b1262c9c891a38515299c7dd78cba99a0e08506ac0e09aed9451c3",
+    "app/api/local-school-catalog/route.ts": "2912e9039b0a2d96af5f1657ab2799ab1b37167ed688204d4c4a66205d3bbced",
+    "app/api/local-school-import/route.ts": "f4884fd42dfcd683136a890de3d74740728e41a6e70f0e6c041671aa75074b2d",
+    "components/school/school-hub.tsx": "56fc6a4d4d110c996a279372335c290051eee9f249ec816b0ed735857a28c0b3",
+    "components/school/local-school-import.tsx": "1fecd27cb4689c8a5484ce58be88063f4bbda890c6c2ec731d1d929b2d161e64",
+    "components/school/use-local-school-source.ts": "0f69fa8830ab12c1219d152f75bd1219271e7df2445408e458ac1eb564cc4c35",
+    "components/school/foundation-panel.tsx": "0a319d51eb0b99eb2ea84593a5d459daf8a739cb8e072222785fb9846661eeeb",
+    "lib/demo/foundation.ts": "fd7017d00bb29d00710ca0d616c67085e9ef2e7ef4499e571487d3061251cfde",
+    "lib/school/foundation-store.ts": "603500826e4a0b3d57be151bd70530ec21cde5b158f39d8b837d1540c64d6718",
+    "lib/school/foundation-view.ts": "71f96ed26aa450a4742718b4ec370036b6ab5ed7ceffc75201c223c9ae6413d3",
+    "lib/school/local-import-model.ts": "c38cc472e58e1ba488e385c469d395262a71f0525b309dc00cfbaf1ad275eeea",
+    "lib/school/local-import-server.ts": "6430e1c80461bd0d2ded54c3033302774b2f7e1d10ab3595f22f36359247df7f",
+    "lib/school/local-source.ts": "1a754af2caf55561095b82f7e585f9ebe98cf89368b7b3d70f8d83a964728947",
+    "lib/school/local-import-commit.ts": "2fc666283d8796628e6cf7defa6dc642e3c8ed511e1c07cce645661f83e2c469",
+    "tests/local-school-source.test.cjs": "6fce894386e58899506b1ebcce4408a53420881173b062c3db641f6c765360ff",
+    "tests/local-school-import-access.test.cjs": "8357cf4fc50525b2d6715626013cc40c9a321dbc89ef22912e4892197ed8e913",
+    "tests/school-foundation.test.cjs": "86322ee67a83106fabd7a56b9917f755d5b3da5c09a109e0b1d68c6c7c1bb0e8"
+  },
+  "scopeFingerprint": "a6a7e46af08fdaee144d6a5c57ea237a53cf01d59542e332bd15a21013d6658f",
+  "verification": {
+    "nodeTests": {
+      "passed": 304,
+      "failed": 0
+    },
+    "pythonParserTests": {
+      "passed": 4,
+      "failed": 0
+    },
+    "typecheck": "PASS",
+    "webpackBuild": "PASS",
+    "diffCheck": "PASS",
+    "independentReview": "PASS",
+    "independentTestsPassed": 51,
+    "independentReport": "docs/reviews/2026-10-22-school-files-import.md",
+    "makeCheck": "NOT_RUN: independent prototype has no matching target; user forbids committing",
+    "userBrowserVerification": "PENDING"
+  },
+  "http": {
+    "noCookieCatalog": {
+      "status": 200,
+      "counts": {
+        "departments": 6,
+        "jobs": 39,
+        "places": 60
+      },
+      "sourceStaffNamesPresent": false,
+      "staffPayloadPresent": false,
+      "cacheControl": "no-store, private"
+    },
+    "noCookiePrivate": {
+      "status": 404,
+      "emptyBody": true
+    },
+    "validExistingCapability": {
+      "status": 200,
+      "staffCount": 117,
+      "httpOnlyCookie": true,
+      "sameSiteStrict": true
+    },
+    "existingCookieRestore": {
+      "status": 200,
+      "staffCount": 117
+    },
+    "ordinarySchool": {
+      "status": 200,
+      "sourceStaffNamesInHTML": false,
+      "batchMetadataPresent": true
+    },
+    "production": {
+      "catalogStatus": 404,
+      "privateStatus": 404,
+      "ordinarySchoolStatus": 200,
+      "sourceBatchInPage": false,
+      "traceFilesChecked": 38,
+      "privateTraceEntries": 0
+    }
+  },
+  "browser": {
+    "method": "cua_repl existing verification browser",
+    "ordinarySchoolReloadShowsCatalog": true,
+    "sourceSummary": {
+      "departments": 6,
+      "jobs": 39,
+      "places": 60
+    },
+    "wasFreshBrowser": false,
+    "userContextConnected": "NOT_CLAIMED",
+    "screenshot": {
+      "path": ".local-artifacts/cross-browser-school-catalog.png",
+      "sha256": "5f2a8d9d7b80111f036594770ab29dadae531b2b50821a09998bd756109bb015",
+      "realPersonNames": false,
+      "gitIgnored": true
+    }
+  },
+  "compatibility": {
+    "twoIndependentEmptySyntheticStores": "PASS",
+    "preAliasRenamedKnownSeed": "PASS",
+    "renamedSourceAliasesRemainStable": "PASS",
+    "publicPlaceEditsPreservedIncludingMutatingUpdater": "PASS",
+    "sourceReferenceCountsSeparateFromLegacyCounts": "PASS",
+    "cancelledResponseDoesNotMerge": "PASS",
+    "protectedFilesUnchanged": 6
+  },
+  "privacy": {
+    "changedFilesChecked": 48,
+    "changedFilesContainingSourcePersonNames": 0,
+    "privateFolderMode": "700",
+    "privateFileModes": [
+      "600"
+    ],
+    "privateDataIgnored": true,
+    "tokenRecordedInEvidence": false,
+    "sourceWorkbooksRewritten": false
+  },
+  "limitations": [
+    "完整人员资料需要在实际使用的浏览器通过现有专用链接连接；普通目录接口不签发人员读取能力。",
+    "本机会话仍是原型能力隔离，不代表生产身份认证。",
+    "后续修改保存在相应浏览器，自动补载保留现有修改，并非多用户实时同步。"
+  ],
+  "supersededBy": "persisted-ordinary-entry.json",
+  "supersedingUserInstruction": "Excel仅一次性提取写入业务存储；普通页面禁止从本机导入包自动补载。历史测试结果保留，不代表当前设计。"
+}

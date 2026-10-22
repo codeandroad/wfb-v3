@@ -91,7 +91,7 @@ export function migrateLegacyResearchDuties(value: unknown): StaffDutyAssignment
   })
   const assignments = [...appointments, ...grants]
   const groups = structuredClone(RESEARCH_GROUPS)
-  for (const duty of assignments) for (const ref of duty.scopeRefs) if (!groups.some(group => group.id === ref.id)) groups.push({ id: ref.id, name: duty.scopeLabel, kind: "research_group", department: "教学部", subject: "", active: false })
+  for (const duty of assignments) for (const ref of duty.scopeRefs) if (!groups.some(group => group.id === ref.id)) groups.push({ id: ref.id, name: duty.scopeLabel, kind: "research_group", department: "教务处", subject: "", active: false })
   return validateStaffDutyState({ schema: 1, assignments, groups }).assignments
 }
 
@@ -104,7 +104,7 @@ function validDutyRefs(state: StaffDutyState, duty: StaffDutyAssignment) {
 export function validateStaffDutyState(value: unknown): StaffDutyState {
   if (!isRecord(value) || value.schema !== 1 || !Array.isArray(value.assignments) || !Array.isArray(value.groups)) throw new Error("统一职责数据无法读取，原数据未清空。")
   const state = value as unknown as StaffDutyState
-  if (state.groups.some(group => !isRecord(group) || typeof group.id !== "string" || !group.id.trim() || typeof group.name !== "string" || !group.name.trim() || group.kind !== "research_group" || group.department !== "教学部" || typeof group.active !== "boolean" || typeof group.subject !== "string") || new Set(state.groups.map(group => group.id)).size !== state.groups.length) throw new Error("负责对象目录格式无效，原数据未清空。")
+  if (state.groups.some(group => !isRecord(group) || typeof group.id !== "string" || !group.id.trim() || typeof group.name !== "string" || !group.name.trim() || group.kind !== "research_group" || (typeof group.department !== "string" || !group.department.trim() || group.department.length > 80) || typeof group.active !== "boolean" || typeof group.subject !== "string") || new Set(state.groups.map(group => group.id)).size !== state.groups.length) throw new Error("负责对象目录格式无效，原数据未清空。")
   if (state.assignments.some(duty => !isRecord(duty) || typeof duty.id !== "string" || !duty.id.trim() || typeof duty.staffId !== "string" || !duty.staffId.trim() || !validDutyRefs(state, duty) || !dutyDateValid(duty.start) || duty.end !== undefined && (!dutyDateValid(duty.end) || duty.end < duty.start) || !["active", "pending", "paused", "ended"].includes(duty.status) || !["rw", "ro", "paused"].includes(duty.workMode) || duty.history !== undefined && (!Array.isArray(duty.history) || duty.history.some(item => !isRecord(item) || typeof item.date !== "string" || typeof item.text !== "string"))) || new Set(state.assignments.map(duty => duty.id)).size !== state.assignments.length) throw new Error("职责人员、负责对象或任期格式无效，原数据未清空。")
   return state
 }
@@ -215,9 +215,9 @@ export function applyStaffDutyCommand(state: StaffDutyState, actor: DutyActor, c
   requireCondition(actor.enabled && operator && operator.status !== "left" && operator.accountStatus === "enabled", "当前账号不可办理职责安排。")
   if (command.type === "save-group") {
     requireCondition(canMaintainResearchGroups(state, people, actor), "只有学校有权人员可以维护负责对象目录。")
-    const group = { ...command.group, name: command.group.name.trim() }
+    const group = { ...command.group, name: command.group.name.trim(), department: typeof command.group.department === "string" ? command.group.department.trim() : "" }
     const existing = state.groups.find(item => item.id === group.id)
-    requireCondition(group.id && group.name && group.name.length <= 40 && group.kind === "research_group" && group.department === "教学部", "请填写有效教研组名称；目录不是二级部门。")
+    requireCondition(group.id && group.name && group.name.length <= 40 && group.kind === "research_group" && typeof group.department === "string" && !!group.department.trim() && group.department.length <= 80, "请填写有效教研组名称；目录不是二级部门。")
     requireCondition(!existing || command.expected && JSON.stringify(existing) === JSON.stringify(command.expected), "负责对象目录已被修订，请重新打开。")
     requireCondition(!state.groups.some(item => item.id !== group.id && item.name === group.name), "目录已有同名教研组，请使用原对象，勿重复创建。")
     return validateStaffDutyState({ ...state, groups: existing ? state.groups.map(item => item.id === group.id ? group : item) : [...state.groups, group] })

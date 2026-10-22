@@ -179,10 +179,10 @@ export function InviteSheet({
               返回邀请
             </Button>
             <Button
-              onClick={() => {
+              onClick={async () => {
                 staffForm.set("touched", true)
                 if (!operatorCanCreateStaff) return
-                const person = staffForm.save()
+                const person = await staffForm.save()
                 if (!person) return
                 setPersonName(person.name)
                 setPersonStaffId(person.id)

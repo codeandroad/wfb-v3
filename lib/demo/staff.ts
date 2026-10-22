@@ -605,6 +605,12 @@ export interface StaffProfile {
   wechat?: string
   interests?: string[]
   specialties?: string[] // 仅保留历史存储，不再在普通资料采集或展示
+  // 私有本机导入来源与待核对组织信息；不参与账号、角色或教研权限判断。
+  sourceBatch?: string
+  sourceRefs?: string[]
+  departmentAffiliations?: string[]
+  suggestedResearchSubjects?: string[]
+  duplicateName?: boolean
   }
 
 export const STAFF: StaffProfile[] = [

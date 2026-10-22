@@ -58,3 +58,5 @@ export function commitPeople(plan: Plan, batchId: string, authorized: boolean) {
   try { window.sessionStorage.setItem(`tgs-proto:import-receipt:${batchId}`, JSON.stringify(receipt)) } catch { /* use in-memory receipt */ }
   return receipt.map((item) => item.mapping)
 }
+
+export function discardPeopleReceipt(batchId:string){receipts.delete(batchId);try{window.sessionStorage.removeItem(`tgs-proto:import-receipt:${batchId}`)}catch{}}

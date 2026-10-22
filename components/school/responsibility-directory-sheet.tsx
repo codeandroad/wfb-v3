@@ -9,12 +9,14 @@ import { Button } from "@/components/ui/button"
 import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { useCatalog } from "@/lib/school/catalog-store"
 import { canMaintainResearchGroups } from "@/lib/school/duty-model"
-import type { ResearchGroup } from "@/lib/school/responsibility-scopes"
+import { RESEARCH_DEPARTMENT, type ResearchGroup } from "@/lib/school/responsibility-scopes"
 import { useStaffDutyContext } from "@/lib/school/staff-store"
+import { useFoundation } from "@/lib/school/foundation-store"
 
 export function ResponsibilityDirectorySheet({ onClose }: { onClose: () => void }) {
   const { state, people, actor, ready, error, command } = useStaffDutyContext()
   const catalog = useCatalog()
+  const foundation = useFoundation()
   const { push } = useToast()
   const formId = useId()
   const [editor, setEditor] = useState<{ draft: ResearchGroup; expected?: ResearchGroup } | null>(null)
@@ -24,14 +26,14 @@ export function ResponsibilityDirectorySheet({ onClose }: { onClose: () => void 
   const disabling = !!editor?.expected?.active && !editor.draft.active
 
   function edit(group?: ResearchGroup) {
-    setEditor({ draft: group ? { ...group } : { id: `rg-${crypto.randomUUID()}`, name: "", kind: "research_group", department: "教学部", subject: "", active: true }, ...(group ? { expected: { ...group } } : {}) })
+    setEditor({ draft: group ? { ...group } : { id: `rg-${crypto.randomUUID()}`, name: "", kind: "research_group", department: RESEARCH_DEPARTMENT, subject: "", active: true }, ...(group ? { expected: { ...group } } : {}) })
     setConfirmed(false)
     setFailure("")
   }
 
-  return <Sheet open onClose={onClose} title="教研负责对象目录" desc="教研组是可选择的工作对象，不是人事二级部门，也不是另一套人员任命。" width="max-w-xl">
+  return <Sheet open onClose={onClose} title="教研负责对象目录" desc="教研组归口所属部门，组内职责和编辑权限仍单独安排。" width="max-w-xl">
     <div className="flex flex-col gap-5 font-sans text-sm leading-relaxed" data-testid="responsibility-directory" data-ready={ready}>
-      <Alert role="note"><AlertTitle>一级部门与教研负责对象分开维护</AlertTitle><AlertDescription>一级部门沿用校长室、办公室、教学部、教务部、学生部和后勤部。教研组归口教学部，但不建立部门树、不自动加入教师；新增、重命名或停用对象不授予人员职责。</AlertDescription></Alert>
+      <Alert role="note"><AlertTitle>部门归属与教研职责分别记录</AlertTitle><AlertDescription>学科教研组默认归口教务处。人员所属部门、导入的待核对学科用于组织信息；进入组内工作和维护资料，仍须安排有效的教研职责。调整归口不改变已有任期与权限。</AlertDescription></Alert>
       {error && <Alert variant="destructive"><AlertTitle>负责对象目录无法保存</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
       {editor ? <form className="flex flex-col gap-4" aria-label="维护教研负责对象" onSubmit={event => {
         event.preventDefault()
@@ -44,6 +46,7 @@ export function ResponsibilityDirectorySheet({ onClose }: { onClose: () => void 
         <h3 className="text-balance font-semibold">{editor.expected ? "修订负责对象" : "新增教研负责对象"}</h3>
         <FieldGroup>
           <Field data-disabled={!canManage}><FieldLabel htmlFor={`${formId}-name`}>教研组名称</FieldLabel><Input id={`${formId}-name`} value={editor.draft.name} required maxLength={40} disabled={!canManage} onChange={event => setEditor({ ...editor, draft: { ...editor.draft, name: event.target.value } })} /><FieldDescription>名称可修订，编号保持不变；职责引用对象编号，而非部门文字。</FieldDescription></Field>
+          <Field data-disabled={!canManage}><FieldLabel htmlFor={`${formId}-department`}>归口部门</FieldLabel><Select id={`${formId}-department`} value={editor.draft.department} disabled={!canManage} onChange={event => setEditor({ ...editor, draft: { ...editor.draft, department: event.target.value } })}>{[...new Set([RESEARCH_DEPARTMENT, editor.draft.department, ...foundation.departments.filter(department => department.status === "active" && !department.legacySubjectGroup).map(department => department.name)])].filter(Boolean).map(department => <option key={department} value={department}>{department}</option>)}</Select><FieldDescription>只记录组织归口，不按部门自动加入成员或授予权限。</FieldDescription></Field>
           <Field data-disabled={!canManage}><FieldLabel htmlFor={`${formId}-subject`}>学科关联（可暂不关联）</FieldLabel><Select id={`${formId}-subject`} value={editor.draft.subject} disabled={!canManage} onChange={event => setEditor({ ...editor, draft: { ...editor.draft, subject: event.target.value } })}><option value="">暂不关联</option>{catalog.subjects.map(subject => <option key={subject.code} value={subject.code}>{subject.name}</option>)}</Select><FieldDescription>责任课程仍在原课程目录中明确设置，不因同名学科自动取得课程权限。</FieldDescription></Field>
           <Field orientation="horizontal" data-disabled={!canManage}><input id={`${formId}-active`} type="checkbox" checked={editor.draft.active} disabled={!canManage} className="size-4 shrink-0 accent-primary" onChange={event => { setEditor({ ...editor, draft: { ...editor.draft, active: event.target.checked } }); setConfirmed(false) }} /><FieldLabel htmlFor={`${formId}-active`}>启用为可选择的负责对象</FieldLabel></Field>
           {disabling && <><Alert role="note"><AlertTitle>停用不删除历史</AlertTitle><AlertDescription>停用后不再提供新的职责选择，也不再凭该对象进入组内工作区。既有职责、任期、资料和任务保留，可经核验后恢复启用。</AlertDescription></Alert><Field orientation="horizontal"><input id={`${formId}-confirm`} type="checkbox" checked={confirmed} onChange={event => setConfirmed(event.target.checked)} required className="size-4 shrink-0 accent-primary" /><FieldLabel htmlFor={`${formId}-confirm`}>确认停用此负责对象并保留已有记录</FieldLabel></Field></>}

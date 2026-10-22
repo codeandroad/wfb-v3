@@ -1,5 +1,17 @@
 # 我的教学 · 现行设计索引
 
+- [2026-10-22 学校资料改进验收与发布](2026-10-22-school-files-import/DESIGN_AND_IMPLEMENTATION.md)：Owner核验未发现问题，授权提交推送；发布结果及干净代码复验见[evidence](../evidence/school-files-import/publication.json)，此前同主题未提交状态为历史记录。
+
+- [2026-10-22 学校统一业务库与界面还原（当前有效）](2026-10-22-school-files-import/DESIGN_AND_IMPLEMENTATION.md)：移除导入UI，人员/基础目录和历史工号统一SQLite，旧数据迁移保留、跨独立存储及刷新已核验；319项测试、独立66项PASS，暂不提交。下方同主题各阶段为已替代历史。
+
+- [2026-10-22 Excel一次性导入与普通学校入口持久化](2026-10-22-school-files-import/DESIGN_AND_IMPLEMENTATION.md)：撤销自动文件补载，普通页面直接读取已保存记录；导入源不可用及刷新保留已核验，原数据保留、暂不提交。下方跨浏览器自动补载是已替代的历史方案。
+
+- [2026-10-22 学校资料跨浏览器自动载入修正](2026-10-22-school-files-import/DESIGN_AND_IMPLEMENTATION.md)：不再依赖核验窗口的本地存储；目录自动载入、人员受限会话、手工修改保留。304项测试与51项独立复核通过，用户核验PENDING，未提交。
+
+- [2026-10-22 基础资料来源默认范围修正](2026-10-22-school-files-import/DESIGN_AND_IMPLEMENTATION.md)：默认显示导入的6部门/39职务/60场所，全部资料保留原示例；291项测试与浏览器范围核对通过，未提交。
+
+- [2026-10-22 人员组织映射与场所导入](2026-10-22-school-files-import/DESIGN_AND_IMPLEMENTATION.md)：教务处与教研职责分开、私有本机文件接入、持久化场所目录；保留已有数据，等待人工核验，未提交。
+
 - [2026-10-22 当前大纲与真题预览交付状态](../evidence/research-delivery-2026-10-22/publication.json)：代码 `906d636` 已通过干净提交验证并推送；范围及远端回执统一记录，人工视觉验收另行核验。
 
 - [2026-10-22 真题预览样式与原文件空间优化](2026-10-22-paper-preview-refresh/DESIGN_AND_IMPLEMENTATION.md)：参考HTML预览、现有操作保留、原文件顶部压缩；本地待人工核验，不提交。

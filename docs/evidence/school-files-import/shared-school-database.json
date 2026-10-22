@@ -1,0 +1,200 @@
+{
+  "date": "2026-10-22",
+  "recordedAt": "2026-10-22T15:12:04.125229+00:00",
+  "request": "U-IMPORT-20261022-05",
+  "status": "LOCAL_IMPLEMENTATION_VERIFIED_AWAITING_USER",
+  "branch": "main",
+  "baseline": "96c4b1341627d596108c47d720beb24fffb0629d",
+  "committed": false,
+  "pushed": false,
+  "scopeFingerprint": "057a1abc086e48440e27734b45c7fd73fd38767e2959936dcabe2b994adf6c06",
+  "files": {
+    ".gitignore": "aa089ba95af9e4a05dedd0e3a2e612af1eb1d534c4b570d28e7e5cea06d97951",
+    "app/(app)/layout.tsx": "62fa5ea05eed3fb58e5d2f0ded448031e5688cd22e64e097aa5dd80904e874dc",
+    "app/(app)/school/local-import/page.tsx": "ae8c9c4992b1262c9c891a38515299c7dd78cba99a0e08506ac0e09aed9451c3",
+    "app/(app)/school/page.tsx": "c8475bb684981e5d0684a82fd92327dd3b75f5e63e3f1bcfedb2f71fc0258ca9",
+    "app/api/local-school-import/route.ts": "f4884fd42dfcd683136a890de3d74740728e41a6e70f0e6c041671aa75074b2d",
+    "app/api/school/records/route.ts": "a70ce9bcc57d234f8ebe5b575e884863dc7d43daaa16f6e2f5519b5e399e1378",
+    "app/api/school/session/route.ts": "f637ec38761f0b31f41c04d060a48b2036f6363306653dc37a9a498fe3f220db",
+    "components/import/workbook/step-confirm.tsx": "dc505a1a453b31225dd76f22e9562f7566509eef5bc04ac62e9100363db326c9",
+    "components/import/workbook/step-result.tsx": "da3208abab5b991c110c49d3b3e38282b77ed69c4d82b2ecc12bf58907c6d025",
+    "components/school/foundation-panel.tsx": "4203cde88a4d2789ccd44eeebda773f4d956c7884b832a60115e688b2b6a66bd",
+    "components/school/invite-sheet.tsx": "9701846f3bc07e7e6e74d3cb7692e01fed05f5a64be60cde4658af6fb65a690a",
+    "components/school/local-school-import.tsx": "6a5f21ab103a4b2d0ce1ad6d9b6ec4bc291124a450dfee4349be2166c9fb0539",
+    "components/school/responsibility-directory-sheet.tsx": "e2821c34c256e1f137a391d6ef62800307cd3f127c2063c5bf953d36181f0942",
+    "components/school/school-hub.tsx": "83ec992ac2409b9ab8210e9e461777a37586a728267030aacc5822151f50dae5",
+    "components/school/staff-actions.tsx": "b124f18394286a651ac76fcb23d7924c73ac9f5567d6112716bde45a9a005575",
+    "components/school/staff-create-modal.tsx": "5cf860020c85703af202c6c242fb9642e38bb1fd3610820ef00249dfbc52bff9",
+    "components/school/staff-detail-sheet.tsx": "08be343aad5a49d3c434e8d0b3b8566cab37f707bd4cef194434277c3d2cb013",
+    "components/school/staff-form-fields.tsx": "73b759bfedd5a71d2c5dbab4efaba4881b701d3cb9f0b61ce9f2244209c99c0c",
+    "components/school/staff-panel.tsx": "66282d6fa825be76c87af5a5e981efe59f13fd7fdd1266959179c7670def3337",
+    "components/school/use-school-system.ts": "fbe1dd06cc197c3dd49909665dfa664e3091f0540ae44e8074d3fb049b66065d",
+    "components/timetable/detail.tsx": "a38e8103e1dd03deadd6d03c4ce5871ded86c493e377b9419b5603140ccf5013",
+    "components/timetable/lesson-dialog.tsx": "ecf8b0dcb0b9552e4f4b3556c12ddccb11dade8c74da4029e4a52a935a5b33f3",
+    "lib/demo/foundation.ts": "fd7017d00bb29d00710ca0d616c67085e9ef2e7ef4499e571487d3061251cfde",
+    "lib/demo/staff.ts": "147dc33c1ea5f5182b3848604cbe0f2f0aaeb2723db7a4283438a02c778c2958",
+    "lib/import/commit-people.ts": "909333484b9b67f28bb032163ba8adce67a4cedada7fe7f23ce4a2ba96b996ac",
+    "lib/school/duty-model.ts": "fda68afc85c3c6de168728a699a50b9ada1ed32a4f6e41cd680d7c4f57e7c153",
+    "lib/school/duty-store.ts": "d63a2d99fe5964e6d3750b1f1e40cbe18831762c5953bdf154890f15e2dcd18c",
+    "lib/school/foundation-model.ts": "c038fc7134b9707702752e8bf6b75012ea3b41bb7a664e2ae41ffafadbc6af2a",
+    "lib/school/foundation-store.ts": "1cf6d0f645368fe3262962de4fd517eeb303d865cb371e578e8148c424d86305",
+    "lib/school/foundation-view.ts": "71f96ed26aa450a4742718b4ec370036b6ab5ed7ceffc75201c223c9ae6413d3",
+    "lib/school/local-import-commit.ts": "502ed8b52b873fc739128fbb4dadd62ff9db2b78008a076fd1005507a0c2873b",
+    "lib/school/local-import-model.ts": "f388625dda40b03c30b45cc61742f4c57d1e81868f843c8eae63f61b458fda43",
+    "lib/school/local-import-server.ts": "32cf804bf0c9b644a13de24a67b2cf819a6ebf628be583dbbafb598ae47e0269",
+    "lib/school/person-no.ts": "c841ce4f51084d80322edbfbc1cc9e8250c8f4324452012cc8972cfaa091bba8",
+    "lib/school/responsibility-scopes.ts": "c9ceb68308c894ef933a3ac18b2a2cd90b13d541d2986b9877ce8d887aa36a3f",
+    "lib/school/staff-storage-keys.ts": "c5c087c758c127b79a4e865eb2cf41199422c3cd311259007314577b93c14cc1",
+    "lib/school/staff-store.ts": "c27dda329a9a3a1307faf542f653b4fc200f6bba46cce3fdc127170db9836ac8",
+    "lib/school/system-auth.ts": "8a5b358e0d33da15b1a6b1c423f7962d22ba0ebd8b0989a16f7f5afde7f1a62b",
+    "lib/school/system-cache.ts": "d32215070944b8786722e806998cb7701b25e72ec56d74d27fd18ee7ac8c1d98",
+    "lib/school/system-client.ts": "7ce1eb702ad36438dd2d0a0fd9b1e276fb414dac64c79095742e79db82d5acc2",
+    "lib/school/system-model.ts": "93ff7c1ea47d766090292048e1c7ea420f3af27be34aaaab31914685a666e278",
+    "lib/school/system-repository.ts": "44bec13bd5d835d87445ae7f7f2611973750d551ae9f798b69082c7d4d04d2a7",
+    "lib/timetable/grid-import.ts": "4d02226a8add12ecfa5ad564fc53ddd32235613d44b7910f7b4dc93764f05ef3",
+    "next.config.mjs": "b749370001f52c3448669612a8fdac246a3bcdc428affcbeee9ecdec72954fae",
+    "scripts/import-school-database.cjs": "94e2cc5ea8874447ef58662a74e02241e4a83ecd8054d183016611ec7c35bebc",
+    "scripts/prepare-local-school-import.py": "a34edbfacec1e0ef576132f835cbea81f1cfb4975e7df520effb4a8ac2c0056f",
+    "tests/local-school-import-access.test.cjs": "2f1aab96dde61069da5dee151f73b1991dc6adc04eaae2961f7d68a5686c114f",
+    "tests/local-school-import.test.cjs": "0dc15fbb8569f84386f3624404fdb2497b1e11496d9293ad76514b73721a57af",
+    "tests/local_school_import_parser_test.py": "34240d88c8ad7787b09a867e8fef8a350dfdc55584bbe03480f6ae258496a553",
+    "tests/research-workflows.test.cjs": "2a4959ca517fc0177e54f847cc5b022aee40d585a544bea33a6bad10cd3cba1b",
+    "tests/school-foundation.test.cjs": "86322ee67a83106fabd7a56b9917f755d5b3da5c09a109e0b1d68c6c7c1bb0e8",
+    "tests/school-persistence.test.cjs": "eb1b032023bd374717fd45019e41c03d654b1be519f6865b7a46108f4d94530b",
+    "tests/school-system.test.cjs": "e149f110b27975777ae3d7204d71e1e6d86caab77f3406ae3b9857dbc83d1a33",
+    "tests/staff-local-import.test.cjs": "4b714be69de039fe5c67570196ea4a0f0c16c507bf4c5a854ac5dae545465218"
+  },
+  "currentArchitecture": {
+    "authoritativeStore": "server-side SQLite; fixed school; private ignored data directory",
+    "scope": [
+      "staff profiles and patches",
+      "departments",
+      "job titles",
+      "places",
+      "current and historical employee number claims"
+    ],
+    "browserStorage": "optional cache with in-memory fallback; not authoritative",
+    "startupSourceReads": false,
+    "initialImport": "explicit operator action only",
+    "legacyMigration": "three-way merge, retained backup and idempotent server receipt; conflicts do not overwrite records",
+    "writes": "await server acknowledgement, SQLite transaction and revision CAS",
+    "identityBoundary": "existing development loopback simulated personas with signed HttpOnly session; not production authentication",
+    "productionApi": "disabled"
+  },
+  "ui": {
+    "removed": [
+      "import summary banner",
+      "imported/all scope toggle",
+      "import staff count",
+      "source explanation and review badges",
+      "ordinary-page local verification link"
+    ],
+    "originalShellPreserved": true,
+    "layoutChange": "nonvisual provider only",
+    "homeworkUnchanged": true
+  },
+  "data": {
+    "sourceStaffRecords": 117,
+    "sourceFormalDepartments": 6,
+    "sourcePlaces": 60,
+    "staffIncludingPreservedRecords": 127,
+    "departmentsIncludingPreservedRecords": 11,
+    "placesIncludingPreservedRecords": 65,
+    "existingManualChangesPreserved": true,
+    "rawSourceIncludedInGit": false
+  },
+  "verification": {
+    "nodeTests": {
+      "passed": 319,
+      "failed": 0
+    },
+    "sharedDatabaseTests": {
+      "passed": 15,
+      "failed": 0
+    },
+    "independentRelatedTests": {
+      "passed": 66,
+      "failed": 0
+    },
+    "pythonParserTests": {
+      "passed": 4,
+      "failed": 0
+    },
+    "typecheck": "PASS",
+    "webpackBuild": "PASS",
+    "independentReview": "PASS: no required findings remain",
+    "diffCheck": "PASS",
+    "parentMakeCheck": "NOT_RUN: standalone prototype has no corresponding target",
+    "userManualContentVerification": "PENDING"
+  },
+  "browserVerification": {
+    "method": "cua_repl; original localhost storage and independent 127.0.0.1 origin storage",
+    "differentBrowserProductsManuallyTested": false,
+    "ordinarySchoolEntry": true,
+    "refreshRetainsRecords": true,
+    "departmentCount": 11,
+    "independentStaffCount": 127,
+    "independentPlaceCount": 65,
+    "importControlsAbsent": true,
+    "repeatImportRequired": false,
+    "temporaryIndependentTabClosed": true,
+    "departmentPageLeftOpen": true,
+    "screenshot": {
+      "localOnly": true,
+      "path": ".local-artifacts/shared-school-departments.png",
+      "sha256": "eeaf089c3ee8160d50aed9536ae73cf15240f17355c6e1b7ea452534ff6cddfd",
+      "containsRealStaffNames": false
+    }
+  },
+  "sourceUnavailableVerification": {
+    "sourceUnavailable": true,
+    "restoredUnchanged": true,
+    "independentSessions": [
+      {
+        "origin": "http://localhost:3109",
+        "login": 204,
+        "revision": 4,
+        "staff": 127,
+        "departments": 11,
+        "places": 65
+      },
+      {
+        "origin": "http://127.0.0.1:3109",
+        "login": 204,
+        "revision": 4,
+        "staff": 127,
+        "departments": 11,
+        "places": 65
+      }
+    ]
+  },
+  "privacyChecks": {
+    "checkedFiles": 64,
+    "sourceNamesInChangedFiles": 0,
+    "checkedClientBundles": 93,
+    "sourceNamesInClientBundles": 0,
+    "productionTraces": 41,
+    "privateTraceReferences": 0,
+    "sourceWorkbooksUnchanged": true,
+    "databaseIgnored": true,
+    "directoryMode": "0o700",
+    "databaseMode": "0o600",
+    "sourcePackagePresent": true,
+    "literalNameSubstringMatchesInBundles": 1,
+    "preExistingCopySubstringMatches": 1,
+    "bundleScanNote": "One two-character source name coincides with existing Chinese UI copy already present in HEAD; no new source-name content in bundles."
+  },
+  "logs": {
+    ".local-artifacts/shared-school-tests-final.log": "b09b7d14bb70782fa8b607fac8665b7f20a8beb0123410e8a5da2f3ed525e98c",
+    ".local-artifacts/shared-school-typecheck-final.log": "71322f3a5e902c7c296ca827d919591ea7b30265f382923d16c5ea0a8440b9e8",
+    ".local-artifacts/shared-school-build-final.log": "6c7cced0771e4d26f75cb75525a37459270edcd0001742739ec95636a2cf401e"
+  },
+  "review": "docs/reviews/2026-10-22-school-files-import.md",
+  "manualGuide": "docs/milestones/school-files-import/MANUAL_VERIFICATION_GUIDE.md",
+  "supersedes": [
+    "browser-only persistence",
+    "automatic runtime source loading",
+    "imported/all view controls"
+  ],
+  "historicalEvidencePreserved": true
+}

@@ -1,20 +1,24 @@
 "use client"
 
+import { commitSchoolChange } from "@/lib/school/system-client"
 import { Field, Input, Select } from "@/components/kit"
 import { Button } from "@/components/ui/button"
 import { FieldGroup } from "@/components/ui/field"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
-import { DEPARTMENT_ITEMS, JOB_TITLE_ITEMS } from "@/lib/demo/foundation"
 import type { EducationExperience, WorkExperience } from "@/lib/demo/staff"
 import { checkPersonNo, nextPersonNo, patternFor, yyyymmOf } from "@/lib/school/person-no"
 import { BriefcaseBusiness, GraduationCap, Plus, Trash2 } from "lucide-react"
 import { useRef, useState } from "react"
 import { backgroundError, cleanEducation, cleanWork, workRangeInvalid } from "@/lib/school/staff-background"
-import { createStaff, useStaffPermission } from "@/lib/school/staff-store"
+import { createStaff, useStaffList, useStaffPermission } from "@/lib/school/staff-store"
+import { useFoundation } from "@/lib/school/foundation-store"
 import { SearchSelect, type SearchOption } from "./search-select"
 
-const DEPT_OPTIONS: SearchOption[] = DEPARTMENT_ITEMS.map((item) => ({ value: item.name, label: item.name, inactive: item.status === "inactive" }))
-const JOB_OPTIONS: SearchOption[] = JOB_TITLE_ITEMS.map((item) => ({ value: item.name, label: item.name, inactive: item.status === "inactive" }))
+function catalogOptions(items: { name: string; status: string }[], retained: (string | null)[]): SearchOption[] {
+  const options = new Map(items.map(item => [item.name, { value: item.name, label: item.name, inactive: item.status === "inactive" }]))
+  for (const value of retained) if (value && !options.has(value)) options.set(value, { value, label: value, inactive: false })
+  return [...options.values()]
+}
 const EDUCATION_LEVELS = ["未填写", "高中/中专及以下", "大专", "本科", "硕士研究生", "博士研究生", "其他"]
 const INTEREST_SUGGESTIONS = ["阅读", "摄影", "徒步", "音乐", "书法"]
 export type NumberIntent = "auto" | "manual"
@@ -66,20 +70,20 @@ export function useStaffForm(initial?: Partial<StaffFormState>) {
     numberError = noCheck.status === "invalid" ? noCheck.detail : noCheck.status === "valid" && noCheck.monthMismatch ? "工号年月与首次入职日期不一致。" : ""
   }
   const noValid = !numberError && (!state.joinedAt || !!yyyymmOf(state.joinedAt))
-  function save() {
+  async function save() {
     if (saved.current) return saved.current
     if (!canManage) { setSaveError("当前身份无权维护人员资料。"); return null }
     if (!nameValid || !noValid || dataError) { setSaveError(dataError || numberError || "请检查姓名和首次入职日期。"); return null }
     try {
       const employeeNo = state.numberIntent === "auto" ? nextPersonNo("E", yyyymmOf(state.joinedAt)!) : noCheck.status === "empty" ? "" : state.customNo
-      saved.current = createStaff({
+      saved.current = await commitSchoolChange(()=>createStaff({
         id: `u-${crypto.randomUUID()}`, name: state.name.trim(), employeeNo, department: state.department ?? "", jobTitle: state.jobTitle ?? "",
         joinedAt: state.joinedAt || undefined, phone: state.phone.trim(), email: state.email.trim(), englishName: state.englishName.trim() || undefined,
         gender: state.gender === "男" || state.gender === "女" ? state.gender : "未透露", birthplace: state.birthplace.trim() || undefined,
         birthMonth: state.birthMonth || undefined, firstWorkAt: state.firstWorkAt || undefined, educationExperiences: cleanEducation(state.educationExperiences), workExperiences: cleanWork(state.workExperiences),
         wechat: state.wechat.trim() || undefined, interests: [...new Set([...state.interests, ...state.interestExtra.split(/[,，]/).map((item) => item.trim()).filter(Boolean)])],
         status: "active", accountStatus: "none", systemRoles: [], duties: [], history: [],
-      })
+      }))
       return saved.current
     } catch (error) { setSaveError(error instanceof Error ? error.message : "保存失败，请重试。"); return null }
   }
@@ -88,6 +92,10 @@ export function useStaffForm(initial?: Partial<StaffFormState>) {
 }
 
 export function StaffFormFields({ state, set, hideNumber = false }: { state: StaffFormState; set: <K extends keyof StaffFormState>(key: K, value: StaffFormState[K]) => void; canMaintainCatalog?: boolean; hideNumber?: boolean }) {
+  const foundation = useFoundation()
+  const people = useStaffList()
+  const departmentOptions = catalogOptions(foundation.departments.filter(item => !item.legacySubjectGroup), [state.department, ...people.map(person => person.department)])
+  const jobOptions = catalogOptions(foundation.jobs, [state.jobTitle, ...people.map(person => person.jobTitle)])
   const [showMore, setShowMore] = useState(false)
   const nameMissing = state.touched && !state.name.trim()
   const numberCheck = checkPersonNo(state.customNo, "E", state.joinedAt)
@@ -105,10 +113,10 @@ export function StaffFormFields({ state, set, hideNumber = false }: { state: Sta
       </Field>
       <Field label="联系电话"><Input value={state.phone} onChange={(event) => set("phone", event.target.value)} /></Field>
       <Field label="所属部门">
-        <SearchSelect value={state.department} onChange={(value) => set("department", value)} options={DEPT_OPTIONS} placeholder="搜索部门" />
+        <SearchSelect value={state.department} onChange={(value) => set("department", value)} options={departmentOptions} placeholder="搜索部门" />
       </Field>
       <Field label="当前职务">
-        <SearchSelect value={state.jobTitle} onChange={(value) => set("jobTitle", value)} options={JOB_OPTIONS} placeholder="搜索职务" />
+        <SearchSelect value={state.jobTitle} onChange={(value) => set("jobTitle", value)} options={jobOptions} placeholder="搜索职务" />
       </Field>
       <Field label="首次入职日期" hint={state.joinedAt.length === 7 ? `原记录为 ${state.joinedAt}，尚未登记具体日期；不修改则保留原记录。` : undefined}>
         <Input aria-label="首次入职日期" type="date" value={state.joinedAt.length === 10 ? state.joinedAt : ""} onChange={(event) => set("joinedAt", event.target.value)} />

@@ -32,6 +32,7 @@ import { useStaffDutyContext } from "@/lib/school/staff-store"
 import { ResponsibilityDirectorySheet } from "./responsibility-directory-sheet"
 import { isResearchDuty } from "@/lib/school/duty-model"
 import { historicalNumbers } from "@/lib/school/person-no"
+import { useFoundation } from "@/lib/school/foundation-store"
 
 const STAFF_DEPTS = DEPARTMENTS
 const STAFF_TITLES = JOB_TITLES
@@ -80,6 +81,8 @@ type ListState = "data" | "empty" | "restricted"
 export function StaffPanel() {
   const { push } = useToast()
   const { people: staffList, ready } = useStaffDutyContext()
+  const foundation = useFoundation()
+  const filterGroups = STAFF_FILTER_GROUPS.map(group => group.key === "dept" ? { ...group, options: [...new Set([...foundation.departments.filter(item => !item.legacySubjectGroup).map(item => item.name), ...staffList.flatMap(person => [person.department, ...(person.departmentAffiliations ?? [])])])].filter(Boolean).map(value => ({ value, label: value })) } : group.key === "jobTitle" ? { ...group, options: [...new Set([...foundation.jobs.map(item => item.name), ...staffList.map(person => person.jobTitle)])].filter(Boolean).map(value => ({ value, label: value })) } : group)
   const [directoryOpen, setDirectoryOpen] = useState(false)
   const [q, setQ] = useState("")
   const [filters, setFilters] = useState<FilterState>({})
@@ -133,7 +136,7 @@ export function StaffPanel() {
             search={q}
             onSearch={setQ}
             searchPlaceholder="搜索姓名、工号或账号"
-            groups={STAFF_FILTER_GROUPS}
+            groups={filterGroups}
             value={filters}
             onChange={setFilters}
             resultCount={listState === "data" ? rows.length : undefined}

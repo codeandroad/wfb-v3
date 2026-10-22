@@ -1,0 +1,143 @@
+{
+  "date": "2026-10-22",
+  "feedback": "U-IMPORT-20261022-04",
+  "status": "IMPLEMENTED_BROWSER_VERIFIED_AWAITING_USER_CONTENT_CHECK",
+  "branch": "main",
+  "baseline": "96c4b1341627d596108c47d720beb24fffb0629d",
+  "committed": false,
+  "pushed": false,
+  "requirement": "Excel只用于一次性提取和显式导入；普通学校管理页面及刷新读取已保存业务记录，不再读取导入文件。",
+  "design": {
+    "ordinarySchoolReadsImportMetadata": false,
+    "ordinaryPanelsCallImportApi": false,
+    "publicCatalogRouteExists": false,
+    "autoHydratorExists": false,
+    "storage": "existing browser localStorage staff and foundation stores",
+    "explicitImportEntryRetained": true,
+    "originalDataAndEditsPreserved": true
+  },
+  "scopeFingerprint": "a3f4cc14bff83ec9309be919b6e3140bb1cae45d8f3d9df3d3322faffee09358",
+  "files": {
+    ".gitignore": "4d54771817012a738d02eb9689ebde97daa3043cc785725ee6b9e31b8e9055b2",
+    "app/(app)/school/local-import/page.tsx": "ae8c9c4992b1262c9c891a38515299c7dd78cba99a0e08506ac0e09aed9451c3",
+    "app/(app)/school/page.tsx": "c8475bb684981e5d0684a82fd92327dd3b75f5e63e3f1bcfedb2f71fc0258ca9",
+    "app/api/local-school-import/route.ts": "f4884fd42dfcd683136a890de3d74740728e41a6e70f0e6c041671aa75074b2d",
+    "components/school/foundation-panel.tsx": "0a319d51eb0b99eb2ea84593a5d459daf8a739cb8e072222785fb9846661eeeb",
+    "components/school/local-school-import.tsx": "3dcb5fd5aaf04f531e92c96eb6495cef77767058d64076bd53a0d5c61aaad903",
+    "components/school/responsibility-directory-sheet.tsx": "e2821c34c256e1f137a391d6ef62800307cd3f127c2063c5bf953d36181f0942",
+    "components/school/school-hub.tsx": "3c0230da2431b647ca1c0136ee953456be946b3e795fd55b156073b0cad7331e",
+    "components/school/staff-actions.tsx": "9d766a9e8e2104aa67c3e97c2753e1d9108fb162e3232fadbd991bb354bf2305",
+    "components/school/staff-detail-sheet.tsx": "ace158993f1213051142cb672e10a6b073c1003affa71b7d2473dd98f616f387",
+    "components/school/staff-form-fields.tsx": "e2b883d80dff5083afcf5872f74223dd53c0e53057c406b34e4bfa8417d351b9",
+    "components/school/staff-panel.tsx": "ed55bcaf12854d6bce0faaa447552e94e61d2652120030ae058bee7c1759e4c3",
+    "components/timetable/detail.tsx": "a38e8103e1dd03deadd6d03c4ce5871ded86c493e377b9419b5603140ccf5013",
+    "components/timetable/lesson-dialog.tsx": "ecf8b0dcb0b9552e4f4b3556c12ddccb11dade8c74da4029e4a52a935a5b33f3",
+    "lib/demo/foundation.ts": "fd7017d00bb29d00710ca0d616c67085e9ef2e7ef4499e571487d3061251cfde",
+    "lib/demo/staff.ts": "147dc33c1ea5f5182b3848604cbe0f2f0aaeb2723db7a4283438a02c778c2958",
+    "lib/school/duty-model.ts": "fda68afc85c3c6de168728a699a50b9ada1ed32a4f6e41cd680d7c4f57e7c153",
+    "lib/school/duty-store.ts": "d63a2d99fe5964e6d3750b1f1e40cbe18831762c5953bdf154890f15e2dcd18c",
+    "lib/school/foundation-store.ts": "603500826e4a0b3d57be151bd70530ec21cde5b158f39d8b837d1540c64d6718",
+    "lib/school/foundation-view.ts": "71f96ed26aa450a4742718b4ec370036b6ab5ed7ceffc75201c223c9ae6413d3",
+    "lib/school/local-import-commit.ts": "502ed8b52b873fc739128fbb4dadd62ff9db2b78008a076fd1005507a0c2873b",
+    "lib/school/local-import-model.ts": "f388625dda40b03c30b45cc61742f4c57d1e81868f843c8eae63f61b458fda43",
+    "lib/school/local-import-server.ts": "32cf804bf0c9b644a13de24a67b2cf819a6ebf628be583dbbafb598ae47e0269",
+    "lib/school/person-no.ts": "2268a0ddb918fb4c7aa2cad7ec1e06c9cfeb7e0817cab2f9ad01bbfd16269667",
+    "lib/school/responsibility-scopes.ts": "c9ceb68308c894ef933a3ac18b2a2cd90b13d541d2986b9877ce8d887aa36a3f",
+    "lib/school/staff-storage-keys.ts": "c5c087c758c127b79a4e865eb2cf41199422c3cd311259007314577b93c14cc1",
+    "lib/school/staff-store.ts": "111dd895ff5acd84db00f4fc18a7f995728aa4fac45d0945a667fc484b27bfb9",
+    "lib/timetable/grid-import.ts": "4d02226a8add12ecfa5ad564fc53ddd32235613d44b7910f7b4dc93764f05ef3",
+    "next.config.mjs": "a63d96529bf344b04c26d2f3d9a1d936a806b0d89d03910b9b5bcf5df863c296",
+    "scripts/prepare-local-school-import.py": "a34edbfacec1e0ef576132f835cbea81f1cfb4975e7df520effb4a8ac2c0056f",
+    "tests/local-school-import-access.test.cjs": "2f1aab96dde61069da5dee151f73b1991dc6adc04eaae2961f7d68a5686c114f",
+    "tests/local-school-import.test.cjs": "0dc15fbb8569f84386f3624404fdb2497b1e11496d9293ad76514b73721a57af",
+    "tests/local_school_import_parser_test.py": "34240d88c8ad7787b09a867e8fef8a350dfdc55584bbe03480f6ae258496a553",
+    "tests/research-workflows.test.cjs": "2a4959ca517fc0177e54f847cc5b022aee40d585a544bea33a6bad10cd3cba1b",
+    "tests/school-foundation.test.cjs": "86322ee67a83106fabd7a56b9917f755d5b3da5c09a109e0b1d68c6c7c1bb0e8",
+    "tests/school-persistence.test.cjs": "7bd59d4a7d9b0e1347d6d59dc4ae198a5f325121e1744b1e86815deb50acf4e2",
+    "tests/staff-local-import.test.cjs": "4b714be69de039fe5c67570196ea4a0f0c16c507bf4c5a854ac5dae545465218"
+  },
+  "verification": {
+    "nodeTests": {
+      "passed": 304,
+      "failed": 0
+    },
+    "pythonParserTests": {
+      "passed": 4,
+      "failed": 0
+    },
+    "typecheck": "PASS",
+    "webpackBuild": "PASS",
+    "diffCheck": "PASS",
+    "initialTypecheck": "FAILED: retired route remained in ignored Next generated types; removed only stale generated route types and regenerated types before final full checks",
+    "independentReview": "PASS",
+    "independentFocusedTests": 50,
+    "independentAdditionalImportSuiteTests": 6,
+    "reviewReport": "docs/reviews/2026-10-22-school-files-import.md",
+    "userContentAcceptance": "PENDING",
+    "parentMakeCheck": "NOT_RUN: separate prototype has no matching target; code must remain uncommitted",
+    "reviewReportSha256": "b20a31c307bdfce9656d150d8e256e6a6efc8c9275e234726603992c46bd7c56"
+  },
+  "browser": {
+    "method": "cua_repl existing in-app browser; AX counts only, no personnel text logged",
+    "ordinarySidebarSchoolEntry": true,
+    "staffImported": 117,
+    "staffTotalWithPreservedDemo": 127,
+    "departmentsImported": 6,
+    "placesImported": 60,
+    "staffRetainedAfterWholePageRefresh": true,
+    "departmentsRetainedAfterWholePageRefresh": true,
+    "placesRetainedAfterNavigationAndWholePageRefresh": true,
+    "specialImportLinkUsedDuringCheck": false,
+    "privateSourceBundleUnavailableDuringCheck": true,
+    "needsPersonnelConnectionPrompt": false,
+    "finalOrdinaryUrl": "http://localhost:3109/school?tab=foundation&section=departments",
+    "screenshot": {
+      "path": ".local-artifacts/persisted-school-departments.png",
+      "sha256": "4259af1d9db2830f118d3ee40636d1d9503d0b4bb21936a80106cb5ae9d1f9ad",
+      "realPersonNames": false,
+      "gitIgnored": true
+    }
+  },
+  "sourceUnavailableProof": {
+    "generatedPrivateBundleTemporarilyMoved": true,
+    "originalExcelFilesTouched": false,
+    "fullChecksWhileSourceUnavailable": true,
+    "sourceRestoredWithSameHash": true,
+    "http": {
+      "ordinaryStaff": 200,
+      "ordinaryDepartments": 200,
+      "ordinaryPlaces": 200,
+      "privateImportPostWithoutSource": 404,
+      "retiredPublicCatalog": 404,
+      "importMetadataInOrdinaryHTML": false
+    }
+  },
+  "privacy": {
+    "originalExcelHashesUnchanged": true,
+    "privateSourceRestored": true,
+    "changedFilesScanned": 46,
+    "sourcePersonNamesInChangedFiles": 0,
+    "productionTraceFiles": 37,
+    "privateTraceEntries": 0,
+    "protectedFilesUnchanged": 6,
+    "realPeopleOrTokensInEvidence": false
+  },
+  "regressions": [
+    "actual ordinary panels render saved import with source module and all fetch calls blocked",
+    "clearing session and reloading business/page modules retains saved personnel, departments and places",
+    "saved staff job, department rename/status and place usage survive refresh",
+    "ordinary reads do not mutate persisted import data",
+    "legacy partial catalog compatibility remains explicit-import-only",
+    "reused place source aliases allow manual location correction and explicit idempotent import"
+  ],
+  "logs": {
+    ".local-artifacts/school-persistence-tests.log": "458690203ac2321c639fa00f2e44b1c8841a3d8292a4122848be2d5d0b619465",
+    ".local-artifacts/school-persistence-typecheck.log": "71322f3a5e902c7c296ca827d919591ea7b30265f382923d16c5ea0a8440b9e8",
+    ".local-artifacts/school-persistence-build.log": "5f87491fa8b66a57966d8dda20bb50b52101b11612a66255553d6616530e6a58"
+  },
+  "limitations": [
+    "Persistence remains per browser; this does not create a backend database or cross-browser synchronization.",
+    "Clearing site storage or using a separate empty browser requires explicit import; ordinary startup never silently imports source data.",
+    "User verification of real personnel and place content is still pending."
+  ]
+}

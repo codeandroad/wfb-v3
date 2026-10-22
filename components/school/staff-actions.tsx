@@ -1,5 +1,6 @@
 "use client"
 
+import { commitSchoolChange } from "@/lib/school/system-client"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/components/kit"
 import { type StaffProfile } from "@/lib/demo/staff"
@@ -82,6 +83,7 @@ function EditForm({ staff, onDone, onCancel }: FormProps) {
   const initial: StaffFormState = { ...initialStaffForm(), name: staff.name, department: staff.department || null, jobTitle: staff.jobTitle || null, gender: staff.gender, joinedAt: staff.joinedAt ?? "", phone: staff.phone, email: staff.email, englishName: staff.englishName ?? "", birthMonth: staff.birthMonth ?? "", birthplace: staff.birthplace ?? "", firstWorkAt: staff.firstWorkAt ?? "", educationExperiences: educationExperiencesOf(staff), workExperiences: staff.workExperiences ?? [], interests: staff.interests ?? [], wechat: staff.wechat ?? "" }
   const [state, setState] = useState(initial)
   const [editingNumber, setEditingNumber] = useState(false)
+  const [failure, setFailure] = useState("")
   const { push } = useToast()
   const set = <K extends keyof StaffFormState>(key: K, value: StaffFormState[K]) => setState((current) => ({ ...current, [key]: value }))
   const canManage = useStaffPermission()
@@ -108,17 +110,17 @@ function EditForm({ staff, onDone, onCancel }: FormProps) {
       />
     </div>
   )
-  return <form className="flex flex-col gap-4" onSubmit={(event) => {
+  return <form className="flex flex-col gap-4" onSubmit={async (event) => {
     event.preventDefault()
     set("touched", true)
     if (!canManage || !valid || !changed) return
-    updateStaff(staff.id, {
+    try { await commitSchoolChange(()=>updateStaff(staff.id, {
       name: state.name.trim(), department: state.department ?? "", jobTitle: state.jobTitle ?? "", gender: state.gender === "男" || state.gender === "女" ? state.gender : "未透露",
       joinedAt: state.joinedAt || undefined, email: state.email.trim(), phone: state.phone.trim(), englishName: state.englishName.trim() || undefined,
       birthMonth: state.birthMonth || undefined, birthplace: state.birthplace.trim() || undefined, educationLevel: undefined, firstWorkAt: state.firstWorkAt || undefined,
       educationExperiences: cleanEducation(state.educationExperiences), workExperiences: cleanWork(state.workExperiences), wechat: state.wechat.trim() || undefined,
       interests: [...new Set([...state.interests, ...state.interestExtra.split(/[,，]/).map((item) => item.trim()).filter(Boolean)])],
-    }, "资料更新")
+    }, "资料更新")) } catch (cause) { setFailure(cause instanceof Error ? cause.message : "保存失败，请重试。"); return }
     onDone("资料已保存；工号与任职状态保持不变")
   }}>
     <div className="flex flex-wrap items-center gap-3">
@@ -130,7 +132,7 @@ function EditForm({ staff, onDone, onCancel }: FormProps) {
     </div>
     {monthMismatch ? <p className="text-sm text-muted-foreground">工号年月与首次入职日期不一致；保存资料不会自动改号。</p> : null}
     <StaffFormFields state={state} set={set} hideNumber />
-    {error ? <p role="alert" className="text-sm text-destructive">{error}</p> : null}
+    {failure || error ? <p role="alert" className="text-sm text-destructive">{failure || error}</p> : null}
     <Actions onCancel={onCancel} submitLabel="保存修改" disabled={!canManage || !valid || !changed} />
   </form>
 }
@@ -154,14 +156,13 @@ function NumberForm({ staff, onDone, onCancel }: Omit<FormProps, "onDone"> & { o
   }
   const valid = canManage && !error && (mode !== "clear" || !!staff.employeeNo)
   const change = () => { setConfirmed(false); setFailure("") }
-  return <form className="flex flex-col gap-4" onSubmit={(event) => {
+  return <form className="flex flex-col gap-4" onSubmit={async (event) => {
     event.preventDefault()
     if (!valid || !confirmed) return
     try {
       if (mode === "manual") { const check = checkPersonNo(value, "E", staff.joinedAt); if (check.status !== "valid" || check.monthMismatch) throw new Error("工号校验未通过，请重新检查。") }
       if (mode === "auto" && nextPersonNo("E", yyyymmOf(joinedAt)!) !== next) throw new Error("号段已变化，请重新确认新号。")
-      if (next) registerIssued(next, "E", staff.id)
-      updateStaff(staff.id, { employeeNo: next, ...(mode === "auto" && joinedAt !== staff.joinedAt ? { joinedAt } : {}) }, `${mode === "clear" ? "清空" : staff.employeeNo ? "修改" : "设置"}工号：${staff.employeeNo || "待编号"} → ${next || "待编号"}；操作者 ${PERSONAS[demo.persona].label}；${new Date().toISOString()}${note.trim() ? `；备注：${note.trim()}` : ""}`)
+      await commitSchoolChange(()=>updateStaff(staff.id, { employeeNo: next, ...(mode === "auto" && joinedAt !== staff.joinedAt ? { joinedAt } : {}) }, `${mode === "clear" ? "清空" : staff.employeeNo ? "修改" : "设置"}工号：${staff.employeeNo || "待编号"} → ${next || "待编号"}；操作者 ${PERSONAS[demo.persona].label}；${new Date().toISOString()}${note.trim() ? `；备注：${note.trim()}` : ""}`))
       onDone(mode === "clear" ? "工号已清空，历史号码仍保留" : "工号已保存，内部ID与业务关系不变", mode === "auto" ? joinedAt : undefined)
     } catch (cause) { setFailure(cause instanceof Error ? cause.message : "保存失败，请重试。"); setConfirmed(false) }
   }}>
@@ -178,6 +179,7 @@ function NumberForm({ staff, onDone, onCancel }: Omit<FormProps, "onDone"> & { o
 }
 
 function LeaveForm({ staff, onDone, onCancel }: FormProps) {
+  const [failure, setFailure] = useState("")
   const [start, setStart] = useState(today())
   const [end, setEnd] = useState("")
   const [reason, setReason] = useState("")
@@ -185,15 +187,15 @@ function LeaveForm({ staff, onDone, onCancel }: FormProps) {
   return (
     <form
       className="flex flex-col gap-4"
-      onSubmit={(e) => {
+      onSubmit={async (e) => {
         e.preventDefault()
         if (invalid) return
         const range = end ? `${start} 至 ${end}` : `${start} 起（未定返岗日）`
-        updateStaff(
+        try { await commitSchoolChange(()=>updateStaff(
           staff.id,
           { status: "leave", statusNote: `请假 ${range}${reason ? `，${reason}` : ""}。职责保留；请假期间日常操作按只读处理。` },
           `请假开始 ${range}（职责保留）`,
-        )
+        )) } catch (cause) { setFailure(cause instanceof Error ? cause.message : "保存失败，请重试。"); return }
         onDone(`已登记 ${staff.name} 请假`)
       }}
     >
@@ -214,19 +216,21 @@ function LeaveForm({ staff, onDone, onCancel }: FormProps) {
         <li>账号不会停用；请假期间教学内容编辑按只读处理。</li>
         <li>如需他人代课，请在课表中心安排代课，不在此处转移职责。</li>
       </ul>
+      {failure ? <p role="alert" className="text-sm text-destructive">{failure}</p> : null}
       <Actions onCancel={onCancel} submitLabel="确认请假" disabled={invalid} />
     </form>
   )
 }
 
 function ReturnForm({ staff, onDone, onCancel }: FormProps) {
+  const [failure, setFailure] = useState("")
   const [date, setDate] = useState(today())
   return (
     <form
       className="flex flex-col gap-4"
-      onSubmit={(e) => {
+      onSubmit={async (e) => {
         e.preventDefault()
-        updateStaff(staff.id, { status: "active", statusNote: undefined }, `销假返岗 ${date}`)
+        try { await commitSchoolChange(()=>updateStaff(staff.id, { status: "active", statusNote: undefined }, `销假返岗 ${date}`)) } catch (cause) { setFailure(cause instanceof Error ? cause.message : "保存失败，请重试。"); return }
         onDone(`${staff.name} 已销假返岗`)
       }}
     >
@@ -234,12 +238,14 @@ function ReturnForm({ staff, onDone, onCancel }: FormProps) {
         <input type="date" required className={inputClass} value={date} onChange={(e) => setDate(e.target.value)} />
       </Field>
       <p className="text-xs text-muted-foreground">返岗后恢复全部可读写操作，职责无需重新安排。</p>
+      {failure ? <p role="alert" className="text-sm text-destructive">{failure}</p> : null}
       <Actions onCancel={onCancel} submitLabel="确认销假" />
     </form>
   )
 }
 
 function ResignForm({ staff, onDone, onCancel }: FormProps) {
+  const [failure, setFailure] = useState("")
   const [date, setDate] = useState(today())
   const [reason, setReason] = useState("")
   const [disableAccount, setDisableAccount] = useState(staff.accountStatus !== "none")
@@ -250,10 +256,10 @@ function ResignForm({ staff, onDone, onCancel }: FormProps) {
   return (
     <form
       className="flex flex-col gap-4"
-      onSubmit={(e) => {
+      onSubmit={async (e) => {
         e.preventDefault()
         if (!ok) return
-        updateStaff(
+        try { await commitSchoolChange(()=>updateStaff(
           staff.id,
           {
             status: "left",
@@ -261,7 +267,7 @@ function ResignForm({ staff, onDone, onCancel }: FormProps) {
             ...(disableAccount && staff.accountStatus !== "none" ? { accountStatus: "disabled" as const } : {}),
           },
           `办理离职 ${date}${disableAccount && staff.accountStatus !== "none" ? "，账号停用" : ""}`,
-        )
+        )) } catch (cause) { setFailure(cause instanceof Error ? cause.message : "保存失败，请重试。"); return }
         onDone(`已为 ${staff.name} 办理离职`)
       }}
     >
@@ -297,6 +303,7 @@ function ResignForm({ staff, onDone, onCancel }: FormProps) {
       <Field label={`输入姓名「${staff.name}」以确认`}>
         <input className={inputClass} value={confirmName} onChange={(e) => setConfirmName(e.target.value)} />
       </Field>
+      {failure ? <p role="alert" className="text-sm text-destructive">{failure}</p> : null}
       <Actions onCancel={onCancel} submitLabel="确认离职" disabled={!ok} danger />
     </form>
   )

@@ -1,0 +1,26 @@
+{
+  "date": "2026-10-22",
+  "status": "AUTHORIZED_PENDING_CLEAN_COMMIT_VERIFICATION",
+  "ownerFeedback": {
+    "id": "U-IMPORT-20261022-06",
+    "text": "核验没发现问题，请把当前代码提交并推送。",
+    "acceptedScope": "current school data import, shared persistence and UI restoration prototype",
+    "productionAcceptance": false
+  },
+  "baseline": "96c4b1341627d596108c47d720beb24fffb0629d",
+  "branch": "main",
+  "remote": "origin/main",
+  "scopeFingerprint": "057a1abc086e48440e27734b45c7fd73fd38767e2959936dcabe2b994adf6c06",
+  "verifiedImplementationFiles": 54,
+  "backup": {
+    "path": ".local-artifacts/school-import-publication/accepted-source.tar.gz",
+    "sha256": "dfe0296b0ddb51ad26a6a7ac14ae0bc7893876c4b3967d3e8bd1bb8ed7bcbe27",
+    "containsPrivateRecords": false
+  },
+  "codeCommit": null,
+  "cleanCommitChecks": "PENDING",
+  "pushed": false,
+  "privateDatabaseAndSourcesExcluded": true,
+  "previousEvidence": "docs/evidence/school-files-import/shared-school-database.json",
+  "review": "docs/reviews/2026-10-22-school-files-import.md"
+}

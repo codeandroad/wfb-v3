@@ -20,3 +20,6 @@ next-env.d.ts
 
 # Local verification logs
 .local-artifacts/
+__pycache__/
+
+.local-data/

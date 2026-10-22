@@ -5,10 +5,12 @@ import type { StaffProfile } from "@/lib/demo/staff"
 import { seedCourseMaterialDuties, applyStaffDutyCommand, migrateLegacyResearchDuties, restoreCoexistingResearchDuties, staffDutySeed, validateStaffDutyState, type DutyActor, type StaffDutyCommand, type StaffDutyState } from "./duty-model"
 
 import { getCatalog } from "./catalog-store"
+import { migrateResearchGroupDepartments } from "./responsibility-scopes"
 
 export const STAFF_DUTY_STORAGE_KEY = "tgs:staff-duties-prototype:v1"
 export const STAFF_DUTY_REPAIR_BACKUP_KEY = `${STAFF_DUTY_STORAGE_KEY}:before-overlap-repair`
 export const STAFF_DUTY_COEXISTENCE_BACKUP_KEY = `${STAFF_DUTY_STORAGE_KEY}:before-coexistence-restore`
+export const STAFF_DUTY_DEPARTMENT_BACKUP_KEY = `${STAFF_DUTY_STORAGE_KEY}:before-department-affiliation`
 const LEGACY_KEYS = ["tgs:research-prototype:v2", "tgs:research-prototype:v1"]
 const seed = staffDutySeed()
 const serverStatus = { error: "" }
@@ -35,7 +37,7 @@ export function getStaffDuties(): StaffDutyState {
           else {
             const assignments = migrateLegacyResearchDuties(data)
             const groups = structuredClone(seed.groups)
-            for (const duty of assignments) for (const ref of duty.scopeRefs) if (!groups.some(group => group.id === ref.id)) groups.push({ id: ref.id, name: duty.scopeLabel, kind: "research_group", department: "教学部", subject: "", active: false })
+            for (const duty of assignments) for (const ref of duty.scopeRefs) if (!groups.some(group => group.id === ref.id)) groups.push({ id: ref.id, name: duty.scopeLabel, kind: "research_group", department: "教务处", subject: "", active: false })
             next = validateStaffDutyState({ schema: 1, assignments, groups })
           }
         }
@@ -49,12 +51,15 @@ export function getStaffDuties(): StaffDutyState {
           next = restoreCoexistingResearchDuties(next, backup)
         }
       }
+      const departmentMigration = next.groups.some(group => group.department === "教学部")
+      next = { ...next, groups: migrateResearchGroupDepartments(next.groups) }
       next = seedCourseMaterialDuties(next)
       const serialized = JSON.stringify(next)
       if (!raw || JSON.stringify(JSON.parse(raw)) !== serialized) {
         if (raw) {
-          const backup = window.localStorage.getItem(STAFF_DUTY_COEXISTENCE_BACKUP_KEY)
-          if (backup !== raw) window.localStorage.setItem(backup ? `${STAFF_DUTY_COEXISTENCE_BACKUP_KEY}:${crypto.randomUUID()}` : STAFF_DUTY_COEXISTENCE_BACKUP_KEY, raw)
+          const backupKey = departmentMigration ? STAFF_DUTY_DEPARTMENT_BACKUP_KEY : STAFF_DUTY_COEXISTENCE_BACKUP_KEY
+          const backup = window.localStorage.getItem(backupKey)
+          if (backup !== raw) window.localStorage.setItem(backup ? `${backupKey}:${crypto.randomUUID()}` : backupKey, raw)
         }
         // 原始快照与后续变更均保留；内容服务不再保存第二份授权。
         window.localStorage.setItem(STAFF_DUTY_STORAGE_KEY, serialized)

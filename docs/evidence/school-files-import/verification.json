@@ -1,0 +1,165 @@
+{
+  "date": "2026-10-22",
+  "baseline": "96c4b1341627d596108c47d720beb24fffb0629d",
+  "branch": "main",
+  "status": "LOCAL_IMPLEMENTATION_VERIFIED_AWAITING_USER",
+  "committed": false,
+  "pushed": false,
+  "scopeFingerprint": "cff7de83d62da97b710f3e1ccd997ce4f8af08dd097d54ac2cc76995217ee7de",
+  "files": {
+    ".gitignore": "4d54771817012a738d02eb9689ebde97daa3043cc785725ee6b9e31b8e9055b2",
+    "app/(app)/school/local-import/page.tsx": "ae8c9c4992b1262c9c891a38515299c7dd78cba99a0e08506ac0e09aed9451c3",
+    "app/(app)/school/page.tsx": "77ee91fece6a524f32a13699bea66bd58cc0b8645fa28d2156408119cc04c25d",
+    "app/api/local-school-import/route.ts": "9f67e90bfe0f2c093a1c2d7e110bb7890428051cae8a647b2f5419820a4a0185",
+    "components/school/foundation-panel.tsx": "25be8299fe20aca62abb78851cd26edd8238062d13119a5b8f4b8e35281d9a7e",
+    "components/school/local-school-import.tsx": "bd573411ea472f05590363411c038bfd71292a7f48b021d73f5a7c485adc1b70",
+    "components/school/responsibility-directory-sheet.tsx": "e2821c34c256e1f137a391d6ef62800307cd3f127c2063c5bf953d36181f0942",
+    "components/school/school-hub.tsx": "a8d436669eded71d12c9f4bbe90a6280e99e9cf534d6d533da10cf360fe419de",
+    "components/school/staff-actions.tsx": "9d766a9e8e2104aa67c3e97c2753e1d9108fb162e3232fadbd991bb354bf2305",
+    "components/school/staff-detail-sheet.tsx": "ace158993f1213051142cb672e10a6b073c1003affa71b7d2473dd98f616f387",
+    "components/school/staff-form-fields.tsx": "e2b883d80dff5083afcf5872f74223dd53c0e53057c406b34e4bfa8417d351b9",
+    "components/school/staff-panel.tsx": "9664d1813e78b8c40157c14e9ad5f294706983d95b87ad4945b59e361d0269cf",
+    "components/timetable/detail.tsx": "a38e8103e1dd03deadd6d03c4ce5871ded86c493e377b9419b5603140ccf5013",
+    "components/timetable/lesson-dialog.tsx": "ecf8b0dcb0b9552e4f4b3556c12ddccb11dade8c74da4029e4a52a935a5b33f3",
+    "lib/demo/foundation.ts": "9ba2800254ae804a51712c356b326068506e6a4fa178579ac8e2c36ac8bb53b1",
+    "lib/demo/staff.ts": "147dc33c1ea5f5182b3848604cbe0f2f0aaeb2723db7a4283438a02c778c2958",
+    "lib/school/duty-model.ts": "fda68afc85c3c6de168728a699a50b9ada1ed32a4f6e41cd680d7c4f57e7c153",
+    "lib/school/duty-store.ts": "d63a2d99fe5964e6d3750b1f1e40cbe18831762c5953bdf154890f15e2dcd18c",
+    "lib/school/foundation-store.ts": "8cc5bfd39cc0ba4890a37201d3e4d8b1de82b7ec676f824f6c5de760dce23cdd",
+    "lib/school/local-import-commit.ts": "2fc666283d8796628e6cf7defa6dc642e3c8ed511e1c07cce645661f83e2c469",
+    "lib/school/local-import-model.ts": "73695b9fad25242a82225ea19f18efac2da8cf1850319bf63e7c705fafcbef2b",
+    "lib/school/local-import-server.ts": "32cf804bf0c9b644a13de24a67b2cf819a6ebf628be583dbbafb598ae47e0269",
+    "lib/school/person-no.ts": "2268a0ddb918fb4c7aa2cad7ec1e06c9cfeb7e0817cab2f9ad01bbfd16269667",
+    "lib/school/responsibility-scopes.ts": "c9ceb68308c894ef933a3ac18b2a2cd90b13d541d2986b9877ce8d887aa36a3f",
+    "lib/school/staff-storage-keys.ts": "c5c087c758c127b79a4e865eb2cf41199422c3cd311259007314577b93c14cc1",
+    "lib/school/staff-store.ts": "111dd895ff5acd84db00f4fc18a7f995728aa4fac45d0945a667fc484b27bfb9",
+    "lib/timetable/grid-import.ts": "4d02226a8add12ecfa5ad564fc53ddd32235613d44b7910f7b4dc93764f05ef3",
+    "next.config.mjs": "a63d96529bf344b04c26d2f3d9a1d936a806b0d89d03910b9b5bcf5df863c296",
+    "scripts/prepare-local-school-import.py": "a34edbfacec1e0ef576132f835cbea81f1cfb4975e7df520effb4a8ac2c0056f",
+    "tests/local-school-import-access.test.cjs": "31e6484fc27af7dafe3414b655ef87f8d175c039ad4d862babd8e2c7ff57ea3b",
+    "tests/local-school-import.test.cjs": "54f444b35f7cda7fdc8a04c3778c75d774b3ba691386a5b9372a78eeedcfa155",
+    "tests/local_school_import_parser_test.py": "34240d88c8ad7787b09a867e8fef8a350dfdc55584bbe03480f6ae258496a553",
+    "tests/research-workflows.test.cjs": "2a4959ca517fc0177e54f847cc5b022aee40d585a544bea33a6bad10cd3cba1b",
+    "tests/school-foundation.test.cjs": "5d25ec95b85d3cee5edf2e5ba20f2cde07a6afefcd9a418285daa9c8f0e98112",
+    "tests/staff-local-import.test.cjs": "4b714be69de039fe5c67570196ea4a0f0c16c507bf4c5a854ac5dae545465218"
+  },
+  "sources": [
+    {
+      "kind": "staff_workbook",
+      "sha256": "ab2769574c0721e73743f8db8ae5ae28e16c5a9b2860b46f5e519969e3a46b6c",
+      "bytes": 17631,
+      "readOnly": true
+    },
+    {
+      "kind": "places_workbook",
+      "sha256": "8a0f9ed99b1faeec72ddae64863e16df64b0a4a3c1c00556c62cbebb7a3b1d5b",
+      "bytes": 11184,
+      "readOnly": true
+    }
+  ],
+  "sourceSummary": {
+    "staffRows": 117,
+    "departmentCount": 6,
+    "jobLabels": 39,
+    "places": 60,
+    "duplicateNameRows": 2,
+    "multiUsePlaces": 1
+  },
+  "verification": {
+    "nodeTests": {
+      "passed": 286,
+      "failed": 0
+    },
+    "pythonParserTests": {
+      "passed": 4,
+      "failed": 0
+    },
+    "typecheck": "PASS",
+    "webpackBuild": "PASS",
+    "diffCheck": "PASS",
+    "independentReview": "PASS",
+    "browserAutomation": "NOT_RUN",
+    "userManualVerification": "PENDING",
+    "parentMakeCheck": "NOT_RUN: standalone prototype has no parent target"
+  },
+  "developmentHttp": {
+    "metadataPageStatus": 200,
+    "sourceNamesInHtml": 0,
+    "fullStaffPayloadInHtml": false,
+    "anonymousPost": 404,
+    "wrongTokenPost": 404,
+    "crossOriginPost": 404,
+    "authorizedPost": 200,
+    "authorizedStaffCount": 117,
+    "authorizedPlaceCount": 60,
+    "cache": "no-store, private"
+  },
+  "productionHttp": {
+    "productionPageStatus": 200,
+    "productionNoBatchMessage": true,
+    "productionNameMatches": 0,
+    "productionApiStatus": 404,
+    "productionApiBytes": 0
+  },
+  "privacyChecks": {
+    "productionTracePrivateFileReferences": 0,
+    "changedFilesContainingSourcePersonNames": 0,
+    "checkedChangedFiles": 40
+  },
+  "privateFiles": {
+    "gitIgnored": true,
+    "fileMode": "0600",
+    "directoryMode": "0700",
+    "excludedFromBuildTracing": true
+  },
+  "launch": {
+    "url": "http://localhost:3109/school/local-import",
+    "capabilityLocation": "private browser fragment; deliberately omitted",
+    "openInCodexResult": "queued",
+    "browserImportCompletion": "NOT_OBSERVED"
+  },
+  "review": "docs/reviews/2026-10-22-school-files-import.md",
+  "logs": {
+    ".local-artifacts/school-import-tests.log": "a428bb8d198b65b996403d68875fc72faeddc501f5e46713d3a585161ae0b8a4",
+    ".local-artifacts/school-import-build.log": "6d0722ab7f7590358feb9bd1e7af7bbbd097c4894a090750c0a0a2720434b5f2"
+  },
+  "preservedAreas": {
+    "homework": true,
+    "appShell": true
+  },
+  "browserFollowUp": {
+    "request": "打开本机核验页面，完成两份文件导入，暂不提交代码",
+    "status": "IMPORT_COMPLETION_AND_PERSISTENCE_OBSERVED",
+    "method": "cua_repl; existing in-app browser tab; UI-only checks",
+    "verificationUrl": "http://localhost:3109/school/local-import",
+    "batchCounts": {
+      "staffRecords": 117,
+      "formalDepartments": 6,
+      "places": 60
+    },
+    "managementTotalsIncludingPreservedExamples": {
+      "staffRecords": 127,
+      "departmentEntries": 11,
+      "places": 65
+    },
+    "checks": {
+      "completionBanner": true,
+      "restoredAfterReload": true,
+      "officialDepartmentsPresent": true,
+      "staffSourceHintsPresent": true,
+      "duplicateReviewPresent": true,
+      "placeDirectoryAndFiltersPresent": true,
+      "verificationPageLeftOpen": true
+    },
+    "screenshot": {
+      "localOnly": true,
+      "path": ".local-artifacts/school-import-completed.png",
+      "sha256": "5761f64454ae94dc2a254be3b9518af958b8e6fb817c59131e9288b131cda5c1",
+      "containsRealPersonNames": false
+    },
+    "userContentVerification": "PENDING",
+    "productCodeChanged": false,
+    "committed": false,
+    "pushed": false
+  }
+}

@@ -36,9 +36,9 @@ export function StaffCreateModal({
     onClose()
   }
 
-  function submit() {
+  async function submit() {
     set("touched", true)
-    const person = save()
+    const person = await save()
     if (!person) return
     setIssuedNo(person.employeeNo)
     setStep("done")
@@ -51,7 +51,7 @@ export function StaffCreateModal({
         onClose={close}
         width="max-w-lg"
         title="教职工档案已建立（示例）"
-        desc="已保存到本次会话的共享原型档案，未写入正式后台。"
+        desc="已保存至学校原型资料，账号与具体职责可在后续分别安排。"
         footer={<Button onClick={close}>完成</Button>}
       >
         <div className="space-y-4">

@@ -843,7 +843,7 @@ test("group leaders maintain public assets while participants use resources and 
 test("flat responsibility objects keep stable references through renaming and disabling without creating departments", () => {
   let state = seed()
   assert.deepEqual(DEPARTMENTS, ["校长室", "办公室", "教学部", "教务部", "学生部", "后勤部"])
-  assert(state.groups.every(group => group.kind === "research_group" && group.department === "教学部"))
+  assert(state.groups.every(group => group.kind === "research_group" && group.department === "教务处"))
   const original = state.groups.find(group => group.id === "math")
   const assignments = structuredClone(state.staffDuties)
   state = dutyCommand(state, { type: "save-group", group: { ...original, name: "数学与建模教研组" }, expected: original })

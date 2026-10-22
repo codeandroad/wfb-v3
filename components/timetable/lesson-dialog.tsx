@@ -2,6 +2,7 @@
 
 import { Modal, Segmented, Select } from "@/components/kit"
 import { Button } from "@/components/ui/button"
+import { usePlaceOptions } from "@/lib/school/foundation-store"
 import { PERIODS, ROOMS, TERM_END, WEEKDAYS, type DisplayMode, type EditAction, type ProjectedEntry } from "@/lib/timetable/data"
 import { canonicalClassName, createDuty, dutiesForClass, dutyName, renameDuty, setDutyActive, teachingObjectsFor, useDuties, type DutyDef } from "@/lib/timetable/duty-store"
 
@@ -49,7 +50,7 @@ export function LessonDialog({
   scopeLocked = false,
   onScope,
   defaultSubject = "",
-  rooms = ROOMS,
+  rooms: legacyRooms = ROOMS,
   onCreate,
   onEdit,
   onRemove,
@@ -86,6 +87,7 @@ export function LessonDialog({
   }) => EditResult
   onRemove?: () => EditResult
 }) {
+  const rooms = usePlaceOptions(legacyRooms, entry?.room)
   const isEdit = mode === "edit"
   const readOnly = isEdit && !!entry && (entry.kind === "history" || !!entry.locked)
 
@@ -257,7 +259,7 @@ export function LessonDialog({
           <ReadRow k="班级 / 课程名称">{entry!.className}</ReadRow>
           <ReadRow k="科目">{entry!.subject}</ReadRow>
           {entry!.group ? <ReadRow k="教学分工">{dutyName(duties, entry!.className, entry!.group)}</ReadRow> : null}
-          <ReadRow k="教室">{entry!.room ?? "未排教室"}</ReadRow>
+          <ReadRow k="场所">{entry!.room ?? "未安排场所"}</ReadRow>
           {entry!.note ? <ReadRow k="备注">{entry!.note}</ReadRow> : null}
         </dl>
         <p className="mt-3 text-xs text-muted-foreground">该课次已记录 / 锁定，为只读，不可编辑。</p>
@@ -323,13 +325,13 @@ export function LessonDialog({
           <Select
             value={room}
             onChange={(e) => setRoom(e.target.value)}
-            aria-label="教室"
+            aria-label="场所"
             className="h-8 w-28 shrink-0 py-0 text-[13px]"
           >
             {rooms.map((r) => (
               <option key={r} value={r}>{r}</option>
             ))}
-            <option value="">未排教室</option>
+            <option value="">未安排场所</option>
           </Select>
         </Row>
 
