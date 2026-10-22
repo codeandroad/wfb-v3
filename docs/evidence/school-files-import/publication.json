@@ -1,6 +1,6 @@
 {
   "date": "2026-10-22",
-  "status": "AUTHORIZED_PENDING_CLEAN_COMMIT_VERIFICATION",
+  "status": "CODE_PUSH_VERIFIED",
   "ownerFeedback": {
     "id": "U-IMPORT-20261022-06",
     "text": "核验没发现问题，请把当前代码提交并推送。",
@@ -17,10 +17,48 @@
     "sha256": "dfe0296b0ddb51ad26a6a7ac14ae0bc7893876c4b3967d3e8bd1bb8ed7bcbe27",
     "containsPrivateRecords": false
   },
-  "codeCommit": null,
-  "cleanCommitChecks": "PENDING",
-  "pushed": false,
+  "codeCommit": "d7e3a4d6746806f36935f57620cf0c7faa3c71f6",
+  "cleanCommitChecks": {
+    "codeCommit": "d7e3a4d6746806f36935f57620cf0c7faa3c71f6",
+    "cleanBeforeChecks": true,
+    "cleanAfterChecks": true,
+    "checks": {
+      "nodeTests": {
+        "passed": 319,
+        "failed": 0
+      },
+      "pythonParserTests": {
+        "passed": 4,
+        "failed": 0
+      },
+      "typecheck": "PASS",
+      "webpackBuild": "PASS",
+      "diffCheck": "PASS",
+      "parentMakeCheck": "NOT_RUN: standalone prototype has no corresponding target"
+    },
+    "privacy": {
+      "changedFilesChecked": 66,
+      "sourceNamesInChangedFiles": 0,
+      "privateFilesInProductionTracing": 0,
+      "productionTracesChecked": 41,
+      "databaseAndSourcesExcluded": true
+    },
+    "logs": {
+      ".local-artifacts/school-import-publication/tests.log": "625ba7fa0de7c0fd3788aa6aea56b28325d33030ec7368b806904b182cd061e6",
+      ".local-artifacts/school-import-publication/typecheck.log": "71322f3a5e902c7c296ca827d919591ea7b30265f382923d16c5ea0a8440b9e8",
+      ".local-artifacts/school-import-publication/parser.log": "feabb4add9e2ca3374e538560634d1ec97dc4f4ce89aab12f3d726e36ea9b2f6",
+      ".local-artifacts/school-import-publication/build.log": "7900368ab76717ae583d5ec6c64d03ef8d071ea8ead6b1b8e6248940da6a3d03"
+    }
+  },
+  "pushed": true,
   "privateDatabaseAndSourcesExcluded": true,
   "previousEvidence": "docs/evidence/school-files-import/shared-school-database.json",
-  "review": "docs/reviews/2026-10-22-school-files-import.md"
+  "review": "docs/reviews/2026-10-22-school-files-import.md",
+  "remoteVerification": {
+    "ref": "refs/heads/main",
+    "sha": "d7e3a4d6746806f36935f57620cf0c7faa3c71f6",
+    "matchesCodeCommit": true,
+    "verifiedAt": "2026-10-22T15:18:56.525048+00:00"
+  },
+  "documentationReceipt": "Follow-up documentation-only commit records this verified code publication; implementation unchanged."
 }

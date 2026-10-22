@@ -1,6 +1,6 @@
 # 当前设计依据
 
-2026-10-22 Owner已核验当前学校资料改进并授权提交推送（U-IMPORT-20261022-06）。验收对象为已审查指纹 `057a1abc086e48440e27734b45c7fd73fd38767e2959936dcabe2b994adf6c06`；不修改产品实现，完成干净提交复验后发布到origin/main。实际SHA与回执见[发布记录](../evidence/school-files-import/publication.json)。下方同主题人工PENDING和未提交描述保留当时状态。
+2026-10-22 Owner已核验当前学校资料改进并授权提交推送（U-IMPORT-20261022-06）。验收对象为已审查指纹 `057a1abc086e48440e27734b45c7fd73fd38767e2959936dcabe2b994adf6c06`；代码已提交为 `d7e3a4d`，在干净提交上复验319项测试、Python4项、类型与构建均通过，已普通推送origin/main并核对远端SHA。后续文档提交仅记录回执，不修改产品实现。实际SHA与回执见[发布记录](../evidence/school-files-import/publication.json)。下方同主题人工PENDING和未提交描述保留当时状态。
 
 2026-10-22 当前有效：[学校统一业务库与界面还原](2026-10-22-school-files-import/DESIGN_AND_IMPLEMENTATION.md)。移除导入汇总、范围开关与来源说明，人员/部门/职务/场所及历史工号由学校SQLite持久化，旧浏览器资料无损迁移，跨独立存储和刷新保留已核验。319项测试、Python4项、类型与构建通过，独立66项PASS，人工内容PENDING，未提交。此前浏览器唯一持久化及自动源补载方案均已替代；详见[本轮证据](../evidence/school-files-import/shared-school-database.json)。
 

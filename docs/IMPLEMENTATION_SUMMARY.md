@@ -4,7 +4,7 @@ Owner反馈 U-IMPORT-20261022-06：“核验没发现问题，请把当前代码
 
 提交前核对54个实现/配置/测试文件与已审查交付证据完全一致，指纹 `057a1abc086e48440e27734b45c7fd73fd38767e2959936dcabe2b994adf6c06`。本地main与origin/main基线均为 `96c4b1341627d596108c47d720beb24fffb0629d`。本轮仅记录验收和发布，不修改已验收产品实现。真实工作簿、业务库、迁移备份、会话密钥与浏览器资料不纳入Git，继续留在本机忽略目录。
 
-将对干净代码提交复跑319项测试、Python解析、类型检查与Webpack构建，通过后普通推送既有origin/main。实际提交SHA、复验和远端回执补入 [发布证据](evidence/school-files-import/publication.json)。下方PENDING/未提交均为先前阶段状态，保留历史不倒写。
+代码已提交为 `d7e3a4d6746806f36935f57620cf0c7faa3c71f6`，在该干净提交上复验319项测试、4项Python解析、类型检查、Webpack构建与差异检查均通过，检查前后工作区干净。已普通推送origin/main并通过远端查询核对同一SHA。真实资料未纳入提交，生产追踪无私有目录引用；本地源码备份与日志校验见[发布证据](evidence/school-files-import/publication.json)。后续仅以文档提交记录回执，不修改已测实现。下方PENDING/未提交均为先前阶段状态，保留历史不倒写。
 
 ---
 

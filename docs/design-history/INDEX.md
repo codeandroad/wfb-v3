@@ -1,6 +1,6 @@
 # 我的教学 · 现行设计索引
 
-- [2026-10-22 学校资料改进验收与发布](2026-10-22-school-files-import/DESIGN_AND_IMPLEMENTATION.md)：Owner核验未发现问题，授权提交推送；发布结果及干净代码复验见[evidence](../evidence/school-files-import/publication.json)，此前同主题未提交状态为历史记录。
+- [2026-10-22 学校资料改进验收与发布](2026-10-22-school-files-import/DESIGN_AND_IMPLEMENTATION.md)：Owner核验未发现问题；代码`d7e3a4d`已通过干净提交完整复验并推送origin/main，远端SHA一致；发布结果及证据见[evidence](../evidence/school-files-import/publication.json)，此前同主题未提交状态为历史记录。
 
 - [2026-10-22 学校统一业务库与界面还原（当前有效）](2026-10-22-school-files-import/DESIGN_AND_IMPLEMENTATION.md)：移除导入UI，人员/基础目录和历史工号统一SQLite，旧数据迁移保留、跨独立存储及刷新已核验；319项测试、独立66项PASS，暂不提交。下方同主题各阶段为已替代历史。
 
