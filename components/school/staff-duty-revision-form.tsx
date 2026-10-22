@@ -9,21 +9,24 @@ import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/c
 import { DUTY_BY_KEY } from "@/lib/demo/staff"
 import { dutyDateValid, manageableResearchGroups, sameStaffDuty, staffDutyConflicts, staffDutyValidationError, type StaffDutyAssignment } from "@/lib/school/duty-model"
 import { researchGroupName } from "@/lib/school/responsibility-scopes"
+import { useCatalog } from "@/lib/school/catalog-store"
+import { manageableMaterialCourses } from "@/lib/school/course-material"
 import { useStaffDutyContext } from "@/lib/school/staff-store"
 
 export function StaffDutyRevisionForm({ duty, mode, onCancel, onDone }: { duty: StaffDutyAssignment; mode: "revise" | "end"; onCancel: () => void; onDone: (message: string) => void }) {
   const { state, people, actor, ready, error, command } = useStaffDutyContext()
+  const catalog = useCatalog()
   const formId = useId()
   const [previous] = useState(() => structuredClone(duty))
   const [draft, setDraft] = useState(() => ({ ...duty, ...(mode === "end" ? { end: actor.date } : {}) }))
   const [confirmed, setConfirmed] = useState(false)
   const [failure, setFailure] = useState("")
   const person = people.find(item => item.id === duty.staffId)
-  const groupName = researchGroupName(state.groups, duty.scopeRefs[0].id)
+  const groupName = duty.type === "course_material" ? duty.scopeLabel : researchGroupName(state.groups, duty.scopeRefs[0].id)
   const title = mode === "end" ? "结束职责" : "修订职责任期"
   const current = state.assignments.find(item => item.id === previous.id)
   const stale = !current || !sameStaffDuty(current, previous)
-  const allowed = ready && !error && manageableResearchGroups(state, people, actor, duty.type, mode === "end").includes(duty.scopeRefs[0].id) && (person?.status !== "left" || mode === "end")
+  const allowed = ready && !error && (duty.type === "course_material" ? duty.scopeRefs.every(ref => manageableMaterialCourses(people, actor, catalog, mode === "end").includes(ref.id)) : manageableResearchGroups(state, people, actor, duty.type, mode === "end").includes(duty.scopeRefs[0].id)) && (person?.status !== "left" || mode === "end")
   const dateError = !dutyDateValid(draft.start) || draft.end !== undefined && (!dutyDateValid(draft.end) || draft.end < draft.start) || mode === "end" && !!previous.end && !!draft.end && draft.end > previous.end
   const validation = staffDutyValidationError(state, draft, previous, mode)
   const conflicts = mode === "end" ? staffDutyConflicts(state, draft) : []
@@ -56,7 +59,7 @@ export function StaffDutyRevisionForm({ duty, mode, onCancel, onDone }: { duty: 
       {validation && <FieldError id={`${formId}-validation`}>{validation}</FieldError>}
       {mode === "end" && <>
         {conflicts.length > 0 && <Alert role="note"><AlertTitle>存在重叠旧记录，可单独结束本项</AlertTitle><AlertDescription><p>重叠记录不会阻止缩短本项任期；不会一并结束其他记录，其他仍有效的明确授权继续保留。</p><ul className="flex list-inside list-disc flex-col gap-1">{conflicts.map(item => <li key={item.id}>{people.find(person => person.id === item.staffId)?.name || item.staffId} · {DUTY_BY_KEY[item.type].label} · {item.start} 至 {item.end || "未设结束日期"}</li>)}</ul></AlertDescription></Alert>}
-        <Alert role="note"><AlertTitle>已生效职责可以结束，只影响本项</AlertTitle><AlertDescription>教研组长与教研参与教师可以在同一教研组同时存在；结束其中一项，不会结束另一项或其他教研组的职责。不删除人员、账号、教学资料或历史记录；其他仍有效的职责继续保留。</AlertDescription></Alert>
+        <Alert role="note"><AlertTitle>已生效职责可以结束，只影响本项</AlertTitle><AlertDescription>结束所选职责不会结束该人员的其他职责，也不会改变课程或科组归属。不删除人员、账号、教学资料或历史记录；其他仍有效的职责继续保留。</AlertDescription></Alert>
         <Field orientation="horizontal" data-disabled={!allowed || !!validation || stale}><input id={`${formId}-confirm`} type="checkbox" required checked={confirmed} disabled={!allowed || !!validation || stale} onChange={event => setConfirmed(event.target.checked)} className="size-4 shrink-0 accent-primary" /><FieldLabel htmlFor={`${formId}-confirm`}>确认本项职责于 {draft.end || "所选日期"} 最后一天有效</FieldLabel></Field>
       </>}
     </FieldGroup>

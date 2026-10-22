@@ -1186,41 +1186,44 @@
 .replica.replica :global(.pp-workspace .pcard-heading .qcount+.go){margin-left:0}
 .replica.replica :global(.pp-workspace .pcard .files){display:flex;flex-wrap:wrap;gap:4px;margin:5px 0 0}
 .replica.replica :global(.pp-workspace .pcard .fchip){font-size:10.5px;font-weight:600;padding:1px 6px;line-height:1.6;border-radius:4px}
-/* The reader fills the screen and places the stem next to the marking scheme. */
-.replica.replica :global(#reader){align-items:stretch;gap:0}
+/* Match the supplied paper reader: question index and a centered reading column. */
+.replica.replica:global(.pp-embed){--tx:#1a2421;--mut:#6b7673;--line:#e2eae6;--card:#fff}
+.replica.replica :global(#reader){display:flex;align-items:stretch;gap:0;background:#f7faf8}
 .replica.replica :global(#reader .r-top){padding:9px 14px;gap:10px;flex:none;width:100%}
-.replica.replica :global(#reader .r-top h2){font-size:14px;line-height:1.5}
-.replica.replica :global(#reader .r-top .back){padding:6px 10px;font-size:12px;border-radius:7px}
-.replica.replica :global(#reader .r-tabs){border-radius:7px}
+.replica.replica :global(#reader .r-top h2){font-size:14px;line-height:1.5;flex:1 1 240px;min-width:0;overflow-wrap:anywhere}
+.replica.replica :global(#reader .r-top .back){padding:6px 10px;font-size:12px;border-radius:7px;flex:none}
+.replica.replica :global(#reader .r-actions){display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap;margin-left:auto}
+.replica.replica :global(#reader .r-tabs){border-radius:7px;flex:none}
 .replica.replica :global(#reader .r-tabs button){padding:6px 13px;font-size:12px;border-radius:5px}
-.replica.replica :global(#reader .r-top>.btn){padding:6px 10px;font-size:12px}
-.replica.replica :global(#reader .r-body){min-height:0;width:100%}
-.replica.replica :global(#reader .r-nav){width:152px;padding:8px;min-height:0}
-.replica.replica :global(#reader .r-nav .qbtn){padding:6px 8px;border-radius:6px;font-size:12px;margin-bottom:2px}
-.replica.replica :global(#reader .r-main){max-width:none;margin:0;padding:12px;min-width:0;min-height:0}
-.replica.replica :global(#reader .qcard){padding:12px 14px;border-radius:10px;margin-bottom:10px;min-width:0}
-.replica.replica :global(#reader .qcard .qh){gap:7px;margin-bottom:8px}
-.replica.replica :global(#reader .qcard .qno){font-size:13px;padding:3px 9px;border-radius:5px}
-.replica.replica :global(#reader .qcard .marks){font-size:11px;padding:2px 7px}
-.replica.replica :global(#reader .r-content){display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}
+.replica.replica :global(#reader .r-actions>.btn){padding:6px 10px;font-size:12px}
+.replica.replica :global(#reader .r-body){min-height:0;min-width:0;width:100%;flex:1;display:flex;overflow:hidden}
+.replica.replica :global(#reader .r-nav){width:220px;padding:12px;min-height:0;flex:none;overflow-y:auto}
+.replica.replica :global(#reader .r-nav .qbtn){padding:9px 12px;border-radius:10px;font-size:13px;margin-bottom:2px}
+.replica.replica :global(#reader .r-main){max-width:900px;width:100%;margin:0 auto;padding:24px;min-width:0;min-height:0;overflow-y:auto}
+.replica.replica :global(#reader .qcard){padding:22px 24px;border-radius:16px;margin-bottom:16px;min-width:0;scroll-margin-top:20px}
+.replica.replica :global(#reader .qcard .qh){gap:10px;margin-bottom:12px}
+.replica.replica :global(#reader .qcard .qno){font-size:15px;padding:4px 12px;border-radius:8px}
+.replica.replica :global(#reader .qcard .marks){font-size:12px;padding:3px 10px}
+.replica.replica :global(#reader .qr-topics){display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.replica.replica :global(#reader .qr-topics:empty){display:none}
+.replica.replica :global(#reader .r-content){display:block}
 .replica.replica :global(#reader .r-question),.replica.replica :global(#reader .qcard .ms){min-width:0;overflow-wrap:anywhere}
-.replica.replica :global(#reader .qcard .qp){font-size:13px;line-height:1.65;margin-bottom:6px}
-.replica.replica :global(#reader .qcard .ms){padding:0 0 0 14px;border-top:0;border-left:1px solid var(--line)}
-.replica.replica :global(#reader .qcard .ms .mlbl){margin-bottom:5px;flex-wrap:wrap;font-size:11.5px;gap:5px}
-.replica.replica :global(#reader .qcard .ms .mtext),.replica.replica :global(#reader .ms-list li){font-size:13px;line-height:1.65}
-.replica.replica :global(#reader .ms-list li){padding:4px 0 4px 18px}
-.replica.replica :global(#reader .ms-list li::before){top:12px}
-.replica.replica :global(#reader .qcard .btn){padding:4px 8px;font-size:11px;border-radius:6px}
-.replica.replica :global(#reader .math-placeholder){padding:9px;gap:8px;border-radius:8px}
-.replica.replica :global(#reader .math-placeholder .mp-icon){width:26px;height:26px;font-size:15px}
-.replica.replica :global(#reader .math-placeholder div){font-size:12px}
-.replica.replica :global(#reader .mode-qp .r-content),.replica.replica :global(#reader .mode-ms .r-content){grid-template-columns:minmax(0,1fr)}
-.replica.replica :global(#reader .mode-ms .r-question){display:none}
-.replica.replica :global(#reader .mode-ms .qcard .ms){border-left:0;padding-left:0}
+.replica.replica :global(#reader .r-question){padding-bottom:14px}
+.replica.replica :global(#reader .qcard .qp){font-size:14px;line-height:1.7;margin-bottom:10px}
+.replica.replica :global(#reader .qcard .ms){padding:14px 0 0;border-left:0;border-top:1px dashed var(--line)}
+.replica.replica :global(#reader .qcard .ms .mlbl){margin-bottom:8px;flex-wrap:wrap;font-size:12px;gap:6px}
+.replica.replica :global(#reader .qcard .ms .mtext),.replica.replica :global(#reader .ms-list li){font-size:13.5px;line-height:1.7}
+.replica.replica :global(#reader .qcard .btn){padding:5px 10px;font-size:12px;border-radius:7px}
+.replica.replica :global(#reader .math-placeholder){padding:18px;gap:14px;border-radius:14px}
+.replica.replica :global(#reader .math-placeholder .mp-icon){width:44px;height:44px;font-size:22px}
+.replica.replica :global(#reader .math-placeholder div){font-size:13px}
+.replica.replica :global(#reader .r-content>[hidden]){display:none}
+.replica.replica :global(#reader .mode-ms .qcard .ms){border-top:0;padding-top:0}
+.replica.replica :global(#reader .mode-qp .r-question){padding-bottom:0}
 .replica.replica :global(#reader .katex-display){overflow-x:auto;overflow-y:hidden;margin:6px 0}
 @media(max-width:1100px){.replica.replica :global(.pp-workspace .paper-group){grid-template-columns:minmax(150px,175px) minmax(0,1fr)}}
-@media(max-width:900px){.replica.replica :global(#reader .r-body){flex-direction:column}.replica.replica :global(#reader .r-nav){display:flex;flex:none;width:100%;gap:4px;padding:6px 8px;border-right:0;border-bottom:1px solid var(--line);overflow-x:auto;overflow-y:hidden}.replica.replica :global(#reader .r-nav .qbtn){width:auto;flex:none;margin:0;white-space:nowrap}.replica.replica :global(#reader .r-content){grid-template-columns:minmax(0,1fr);gap:10px}.replica.replica :global(#reader .qcard .ms){border-left:0;border-top:1px dashed var(--line);padding:9px 0 0}.replica.replica :global(#reader .mode-ms .qcard .ms){border-top:0;padding-top:0}}
-@media(max-width:760px){.replica.replica :global(.pp-workspace .paper-group){grid-template-columns:minmax(0,1fr);gap:8px;padding:9px 10px}.replica.replica :global(.pp-workspace .paper-head){display:flex;align-items:baseline;gap:6px;flex-wrap:wrap}.replica.replica :global(.pp-workspace .paper-head h2){font-size:13px;margin:0}.replica.replica :global(.pp-workspace .paper-head .meta){font-size:10.5px}.replica.replica :global(.pp-workspace .cards){grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.replica.replica :global(.pp-workspace .pcard){padding:7px}.replica.replica :global(.pp-workspace .pcard-heading){gap:4px}.replica.replica :global(.pp-workspace .pcard .vnum){font-size:12px}.replica.replica :global(.pp-workspace .pcard .qcount){font-size:10px}.replica.replica :global(.pp-workspace .pcard .go){font-size:12px}.replica.replica :global(.pp-workspace .pcard .fchip){font-size:10px;padding:1px 4px}.replica.replica :global(.pp-workspace .pp-paper-controls){gap:8px}.replica.replica :global(.pp-periods){gap:8px}.replica.replica :global(.pp-periods .sess-tabs button){padding:6px 10px}.replica.replica :global(#reader .r-top){gap:6px;padding:8px 10px}.replica.replica :global(#reader .r-top h2){order:3;flex-basis:100%;font-size:12.5px}.replica.replica :global(#reader .r-main){padding:8px}.replica.replica :global(#reader .qcard){padding:10px}}
+@media(max-width:900px){.replica.replica :global(#reader .r-nav){width:180px}.replica.replica :global(#reader .r-main){padding:18px}}
+@media(max-width:760px){.replica.replica :global(.pp-workspace .paper-group){grid-template-columns:minmax(0,1fr);gap:8px;padding:9px 10px}.replica.replica :global(.pp-workspace .paper-head){display:flex;align-items:baseline;gap:6px;flex-wrap:wrap}.replica.replica :global(.pp-workspace .paper-head h2){font-size:13px;margin:0}.replica.replica :global(.pp-workspace .paper-head .meta){font-size:10.5px}.replica.replica :global(.pp-workspace .cards){grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.replica.replica :global(.pp-workspace .pcard){padding:7px}.replica.replica :global(.pp-workspace .pcard-heading){gap:4px}.replica.replica :global(.pp-workspace .pcard .vnum){font-size:12px}.replica.replica :global(.pp-workspace .pcard .qcount){font-size:10px}.replica.replica :global(.pp-workspace .pcard .go){font-size:12px}.replica.replica :global(.pp-workspace .pcard .fchip){font-size:10px;padding:1px 4px}.replica.replica :global(.pp-workspace .pp-paper-controls){gap:8px}.replica.replica :global(.pp-periods){gap:8px}.replica.replica :global(.pp-periods .sess-tabs button){padding:6px 10px}.replica.replica :global(#reader .r-top){gap:6px;padding:8px 10px}.replica.replica :global(#reader .r-top h2){order:3;flex-basis:100%;font-size:12.5px}.replica.replica :global(#reader .r-main){padding:8px}.replica.replica :global(#reader .qcard){padding:16px}.replica.replica :global(#reader .r-body){flex-direction:column}.replica.replica :global(#reader .r-nav){display:flex;width:100%;gap:4px;padding:6px 8px;border-right:0;border-bottom:1px solid var(--line);overflow-x:auto;overflow-y:hidden}.replica.replica :global(#reader .r-nav .qbtn){width:auto;flex:none;margin:0;white-space:nowrap}.replica.replica :global(#reader .r-actions){justify-content:flex-start;gap:6px}.replica.replica :global(#reader .math-placeholder){flex-wrap:wrap;padding:12px;gap:8px}}
 .replica.replica:global(.assess-mode) :global(#course-workspace-header){display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
 .replica.replica:global(.assess-mode) :global(#course-workspace-header[hidden]){display:none!important}
 .replica.replica:global(.assess-mode) :global(.cw-heading){flex:1;gap:10px;min-height:0;margin:0}
@@ -1370,4 +1373,36 @@
 .replica.replica :global(.original-toolbar){min-height:48px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .replica.replica:global(.assess-mode) :global(#cw-detail-actions){min-height:0}
 .replica.replica :global(.original-toolbar .push){margin-left:auto}
+.replica.replica :global(.cw-access-notice){display:flex;align-items:center;flex-wrap:wrap;gap:8px 14px;border:1px solid var(--line);border-radius:8px;background:var(--card);padding:10px 12px;margin-bottom:8px;font-size:12px}
+.replica.replica :global(.cw-access-notice>div){display:flex;align-items:center;flex-wrap:wrap;gap:6px 14px;flex:1;min-width:0}
+.replica.replica :global(.cw-access-notice>small){flex-basis:100%;color:var(--mut);line-height:1.6}
+.replica.replica :global(.cw-permission-summary){font-size:12px;color:var(--mut);line-height:1.6;margin:8px 0}
+.replica.replica :global(.cw-permission-summary a){color:var(--brand);text-decoration:underline;text-underline-offset:3px}
+.replica.replica :global(.cw-school-course){display:flex;align-items:center;gap:8px;font-size:12px}
+.replica.replica :global(.cw-school-course select){max-width:100%;min-width:200px}
+@media(max-width:760px){.replica.replica :global(.cw-school-course){width:100%}.replica.replica :global(.cw-school-course select){flex:1;min-width:0}.replica.replica :global(.cw-access-notice){align-items:flex-start}}
 @media(max-width:760px){.replica.replica :global(.exact-filter-bar input[type=search]){width:100%;min-width:0}.replica.replica :global(#ry-course-context){flex-wrap:wrap}.replica.replica :global(.pb-cols){grid-template-columns:1fr}.replica.replica :global(.context-main){width:100%;min-width:0}}
+
+/* Original files: one compact header, with each selector beside its PDF. */
+.replica.replica:global(.paper-original-root){height:100%;min-height:0}
+.replica.replica :global(.paper-original){height:100%;min-height:0;display:flex;flex-direction:column;overflow:hidden;background:#f4f7f6}
+.replica.replica :global(.original-head){display:flex;align-items:center;gap:12px;flex:none;min-height:52px;padding:8px 14px;background:var(--card);border-bottom:1px solid var(--line)}
+.replica.replica :global(.original-head>.btn){flex:none;padding:6px 10px;font-size:12px}
+.replica.replica :global(.original-head h2){flex:1;min-width:0;font-size:14px;line-height:1.5;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.replica.replica :global(.original-modes){display:flex;flex:none;gap:2px;padding:3px;background:#edf1ef;border-radius:7px;margin-left:auto}
+.replica.replica :global(.original-modes button){border:0;background:transparent;color:var(--mut);font-size:12px;font-weight:600;line-height:1.5;padding:5px 12px;border-radius:5px;cursor:pointer}
+.replica.replica :global(.original-modes button.on){color:var(--tx);background:var(--card);box-shadow:0 1px 4px #0000001a}
+.replica.replica :global(.original-modes button:disabled){opacity:.45;cursor:default}
+.replica.replica :global(.original-panes){flex:1;min-height:0;min-width:0;display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr);gap:8px;padding:8px}
+.replica.replica :global(.original-panes.paired){grid-template-columns:repeat(2,minmax(0,1fr))}
+.replica.replica :global(.original-pane){min-width:0;min-height:0;display:flex;flex-direction:column;overflow:hidden;border:1px solid var(--line);border-radius:8px;background:var(--card)}
+.replica.replica :global(.original-pane-head){display:flex;align-items:center;justify-content:space-between;gap:8px;padding:5px 10px;flex:none;border-bottom:1px solid var(--line)}
+.replica.replica :global(.original-file-picker){display:flex;align-items:center;gap:8px;flex:1;min-width:0;margin:0;font-size:12px;color:var(--mut)}
+.replica.replica :global(.original-file-picker>span){flex:none}
+.replica.replica :global(.original-file-picker select){width:auto;max-width:260px;min-width:0;padding:4px 8px;font-size:12px;line-height:1.5;flex:1;color:var(--tx)}
+.replica.replica :global(.original-pane-head>a){flex:none;white-space:nowrap;font-size:12px;color:var(--brand);text-decoration:underline;text-underline-offset:3px;padding:4px 0}
+.replica.replica :global(.original-frame){display:block;width:100%;height:100%;min-height:0;flex:1;border:0;background:#e8e8e8}
+.replica.replica :global(.original-empty),.replica.replica :global(.original-download){flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:24px;text-align:center;color:var(--mut);font-size:13px;overflow:auto}
+.replica.replica :global(.original-download a){color:var(--brand);text-decoration:underline;text-underline-offset:3px}
+@media(max-width:760px){.replica.replica :global(.original-head){flex-wrap:wrap;gap:6px 10px;padding:6px 10px}.replica.replica :global(.original-head h2){order:3;flex-basis:100%;font-size:12px}.replica.replica :global(.original-modes button){padding:6px 9px}.replica.replica :global(.original-panes.paired){grid-template-columns:minmax(0,1fr);grid-template-rows:repeat(2,minmax(360px,70dvh));overflow:auto}.replica.replica :global(.original-pane-head){padding:5px 8px}.replica.replica :global(.original-file-picker select){max-width:none}}
+@media(pointer:coarse){.replica.replica :global(.original-head>.btn),.replica.replica :global(.original-modes button),.replica.replica :global(.original-pane-head>a),.replica.replica :global(.original-file-picker select),.replica.replica :global(#reader .r-top button),.replica.replica :global(#reader .r-nav .qbtn){min-height:44px}.replica.replica :global(.original-pane-head>a){display:flex;align-items:center}}

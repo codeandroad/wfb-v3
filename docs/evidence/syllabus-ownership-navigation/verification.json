@@ -1,0 +1,260 @@
+{
+  "date": "2026-10-22",
+  "recorded_at": "2026-10-22T14:07:13.607281+08:00",
+  "scope": "School/group/personal syllabus ownership and maintenance permissions; course resource navigation context",
+  "baseline": "d2530f155fbd03e65a4e409ea573737d01ee987e",
+  "branch": "main",
+  "tested_tree": "Uncommitted working tree; user explicitly requested no commit/push",
+  "implementation_fingerprint": "9a4e6672a9139b1909623587de95348f41626bd6bd585e11a7c56cc382a53b31",
+  "product_and_test_fingerprint": "06354a9b36f18630917c3af46d5e78e53a59058730ebcfcc7be57eb4543b9f32",
+  "fingerprint_method": "SHA-256 of alphabetically sorted sha256 + two spaces + path + newline manifest",
+  "files": [
+    {
+      "path": "components/research/course-workspace.tsx",
+      "sha256": "f838d659712bc675ba2ba48cea77d837fc5280371ff7fe6b24bceb31901fc1f8"
+    },
+    {
+      "path": "components/research/replica.module.css",
+      "sha256": "2cfd13bd2237772aa9be2e5364899edfde00a61e5a350f644bdb211f40cd4c2d"
+    },
+    {
+      "path": "components/research/school-syllabi.tsx",
+      "sha256": "86e90dfb5cfc6f2477d0871920f2ce4ebdb89b454597f123ea80354e0d7ca0c9"
+    },
+    {
+      "path": "components/research/school-workspace.tsx",
+      "sha256": "d7110a1ffb0b774ebc8ac186e1d69b552b02708e5d9c6ba52e12110c0bd4a506"
+    },
+    {
+      "path": "components/research/source-access.tsx",
+      "sha256": "b57a6f8c9e9b71b2a9d813afae84568866afc08ee20c25a9eb42312603f72733"
+    },
+    {
+      "path": "components/research/source-assessments.tsx",
+      "sha256": "dde7ec3a5f0f723f35b3174fcebe69075cb561bb1417ee0e0ca121cf1e8ccadb"
+    },
+    {
+      "path": "components/research/source-library.tsx",
+      "sha256": "f3cc924e145310cf26665a3e7a18277ad8fdba5911068745ab6fa1092b300475"
+    },
+    {
+      "path": "components/research/source-metadata.tsx",
+      "sha256": "4f789f68d9a686a3b4004e0601c9dafe3aacddaad6a64da2350049b9d2be371e"
+    },
+    {
+      "path": "components/research/source-reader.tsx",
+      "sha256": "b8bc3bea2f551b7324e19236c0c52026d8ba253f1e7a9fa3161cb42e944eda57"
+    },
+    {
+      "path": "components/research/source-versions.tsx",
+      "sha256": "4bc1f71aa93914912676640e95927e0f60a1810be7afb1cd58a9da482cb7500e"
+    },
+    {
+      "path": "components/research/workspace.tsx",
+      "sha256": "bb7c4309f905d4dca95acc795546f6c0bc2dd6285a2401bd34fb3ab56896b528"
+    },
+    {
+      "path": "components/school/catalog-panel.tsx",
+      "sha256": "0431357ba503305e992a32f42ec3f2b134a390dd071d7a68bc713b5249fa3200"
+    },
+    {
+      "path": "components/school/duty-arrange-sheet.tsx",
+      "sha256": "16b5b8a4a5cd71545a2424ac2fff898c63999fb754d74db1baaffc297f4b8d23"
+    },
+    {
+      "path": "components/school/duty-detail-sheet.tsx",
+      "sha256": "da0dc171b0aa1a04325a774de380d21838fc53155246a0996f9e3e9b8d166f48"
+    },
+    {
+      "path": "components/school/staff-duty-revision-form.tsx",
+      "sha256": "be07361d764da05fe5db654f5a258cf799b131763d7474d9d3650a5bd662729e"
+    },
+    {
+      "path": "lib/demo/staff.ts",
+      "sha256": "e3a8994dbf952b4be67c0d0761b77bab6f6ddfddeb6fb8bd05ed8eabb01b6ce1"
+    },
+    {
+      "path": "lib/research/commands.ts",
+      "sha256": "f5e0c082927f8bcebf0bba6edc59d25096c696fcbd70a4bee9d761c6239dd621"
+    },
+    {
+      "path": "lib/research/context.ts",
+      "sha256": "eeeb7de0ebe043bfa652bcad8b56cbeaf695e54f26482568801153f00515f65e"
+    },
+    {
+      "path": "lib/research/document-presentation.ts",
+      "sha256": "e81a8c4ab70c3264e0cc1f48c0965763d0d3e6214417743a2502ba865d82f94d"
+    },
+    {
+      "path": "lib/research/model.ts",
+      "sha256": "168b5ae0141f5017b34fe5a78dc7aa28a4b8e32a80e3b2bbdc32c9e42fa6c6e3"
+    },
+    {
+      "path": "lib/research/navigation.ts",
+      "sha256": "aa70bcc6571b6475677aa8f533db5af8a9f621e04aaac60b56e8aec62863e764"
+    },
+    {
+      "path": "lib/research/store.ts",
+      "sha256": "ea57c6a64e59b51f1766574c9cfe58b3809fbe7ebefb49bdced02f96ea1c60e5"
+    },
+    {
+      "path": "lib/school/catalog-store.ts",
+      "sha256": "d389276e201c77f06d5eb4e40594628f98cecfa31ae84c65cab3101c03370df1"
+    },
+    {
+      "path": "lib/school/course-material.ts",
+      "sha256": "d77037d250787f6a09b8956c72aa0ab0c871b248578ec20c24c79620fea1deeb"
+    },
+    {
+      "path": "lib/school/duty-model.ts",
+      "sha256": "f231c9f1b0a8a0b3e64c1a8d5465dfd13a9d8b4a4b10b486ca13e8dcf8a24b5e"
+    },
+    {
+      "path": "lib/school/duty-store.ts",
+      "sha256": "68a488690191dd63822505e208e049a95a4a0390ab1797b37d2468e563c20bb2"
+    },
+    {
+      "path": "lib/school/staff-store.ts",
+      "sha256": "db8b1b0eb003e3e915437199e3906420113e5d4fab2d2cb099190fe426d96b16"
+    },
+    {
+      "path": "tests/research-navigation.test.cjs",
+      "sha256": "a6cf7e03481d236045c9d12c0e500c757e564506d9bc0c3518424a6fa0697dfb"
+    },
+    {
+      "path": "tests/research-workflows.test.cjs",
+      "sha256": "1757451924b371eb682a6002345fb39a2a9a30defc0071b0b48576ac214d0cc3"
+    },
+    {
+      "path": "tests/school-syllabus-permissions.test.cjs",
+      "sha256": "bba569d484f44121077b7e0770b8c038f03b3c43ede687732e4e5ab9f6b5a1c8"
+    }
+  ],
+  "checks": {
+    "full_test": {
+      "status": "PASS",
+      "command": "pnpm test",
+      "exit_code": 0,
+      "passed": 246,
+      "failed": 0,
+      "log": ".local-artifacts/syllabus-ownership-navigation/tests-final.log"
+    },
+    "typecheck": {
+      "status": "PASS",
+      "command": "pnpm typecheck",
+      "exit_code": 0,
+      "log": ".local-artifacts/syllabus-ownership-navigation/typecheck.log"
+    },
+    "build": {
+      "status": "PASS",
+      "command": "pnpm build --webpack",
+      "exit_code": 0,
+      "log": ".local-artifacts/syllabus-ownership-navigation/build.log"
+    },
+    "diff_check": {
+      "status": "PASS",
+      "command": "git diff --check",
+      "exit_code": 0,
+      "log": ".local-artifacts/syllabus-ownership-navigation/diff-check.log"
+    },
+    "independent_review": {
+      "status": "PASS",
+      "reviewer": "timetable_review",
+      "report": "docs/reviews/2026-10-22-syllabus-ownership-navigation.md",
+      "related_tests": 96,
+      "live_revocation_scenarios": 7,
+      "fingerprint_matches": true
+    },
+    "http": {
+      "status": "PASS",
+      "base": "http://localhost:3109",
+      "responses": [
+        {
+          "path": "/catalog?tab=syllabi&course=C101&view=syllabus&sub=list",
+          "status": 200
+        },
+        {
+          "path": "/research?group=math&tab=courses&course=C101&view=resources",
+          "status": 200
+        },
+        {
+          "path": "/timetable",
+          "status": 200
+        },
+        {
+          "path": "/homework",
+          "status": 200
+        }
+      ],
+      "log": ".local-artifacts/syllabus-ownership-navigation/http.json"
+    },
+    "browser_visual": {
+      "status": "NOT_RUN",
+      "reason": "Browser automation was previously denied; no alternative browser automation attempted. SSR/events and HTTP are not visual or real browser verification."
+    },
+    "parent_make_check": {
+      "status": "NOT_RUN",
+      "reason": "Independent prototype has no Makefile. Used its pnpm test, typecheck and build. User forbids creating a commit for clean-commit checks."
+    },
+    "owner_manual": {
+      "status": "PENDING",
+      "guide": "docs/milestones/syllabus-ownership-navigation/MANUAL_VERIFICATION_GUIDE.md"
+    },
+    "documentation": {
+      "status": "PASS",
+      "log": ".local-artifacts/syllabus-ownership-navigation/docs-check.json",
+      "note": "UTF-8 decoding, current-scope links, valid JSON and no new replacement characters; existing unrelated INDEX history text preserved."
+    }
+  },
+  "failures_and_fixes": [
+    {
+      "evidence": ".local-artifacts/syllabus-ownership-navigation/tests.log",
+      "status": "SUPERSEDED_BY_FINAL_PASS",
+      "details": "Intermediate full run had three failures while work was in progress: legacy migration expected only research duties, duty UI assertion used former researchAssignments identifier, delegation test selected a disabled account. Final assertions explicitly preserve legacy records plus exact one-time course grants, verify managedAssignments, and use an active test account while testing disabled-account denial separately. Failure log retained."
+    },
+    {
+      "review": "R1",
+      "status": "FIXED",
+      "details": "School assessment past papers button now explicitly exits to shared course papers and retains school return context; real component event regression added."
+    },
+    {
+      "review": "R2",
+      "status": "FIXED",
+      "details": "Independent course maintainers have a home entry without needing research-group membership or school coordination; grant/revocation event coverage added."
+    }
+  ],
+  "preservation": {
+    "browser_storage_reset": false,
+    "existing_source_ids_owners_versions_rewritten": false,
+    "unchanged_boundaries": {
+      "components/app-shell.tsx": true,
+      "lib/demo/nav.ts": true,
+      "app/(app)/homework/page.tsx": true,
+      "lib/mt/store.tsx": true,
+      "components/timetable/week-grid.tsx": true,
+      "lib/research/source-seed.ts": true,
+      "lib/research/source-layout.ts": true
+    },
+    "course_duty_migration": "One-time explicit course-code seed mapping; existing duty IDs/history/status preserved; no fuzzy scope mapping or revoked-duty resurrection.",
+    "no_backend_claim": "Local interactive prototype permission enforcement; not a deployed multi-user backend authorization claim."
+  },
+  "local_evidence_sha256": {
+    "reviewer-probe.log": "dc06e01f26dd0df8f3db328fc2147a53b8038096af7f9c7c772b4339083c3d3f",
+    "reviewer-unchanged-boundaries.json": "7d1788a45b71687017e861eacbe49e366f22b266c460a5ca1c8d35974b571f32",
+    "reviewer-implementation-manifest.txt": "9a4e6672a9139b1909623587de95348f41626bd6bd585e11a7c56cc382a53b31",
+    "typecheck.log": "71322f3a5e902c7c296ca827d919591ea7b30265f382923d16c5ea0a8440b9e8",
+    "diff-check.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "http.json": "eb9c642685507c95558c79a1a8c08229983bfb449b16bbc9ab4c4be1b2c99462",
+    "tests-final.log": "a94dcb1caa09a331187c7d45533836d09def0959530f47f7a7eae6d507064c89",
+    "tests.log": "a2c9df789512aa01d232b3fc265b169d53eb0deebc124f5374a595b210e16619",
+    "reviewer-product-test-manifest.txt": "06354a9b36f18630917c3af46d5e78e53a59058730ebcfcc7be57eb4543b9f32",
+    "reviewer-tests.log": "1bb3974cb5d764aef421b4d05d8a1aa29271f1186c8eae1514dfa4b367a109b1",
+    "build.log": "aa6be48f97b27d7ef67f972400d1c8c625ead72ed9e698efe17401776b2a0422",
+    "docs-check.json": "939e50c8a4ed25ea413d66eed29cb86692817839221608997d76d9e020c3087f"
+  },
+  "git_actions": {
+    "committed": false,
+    "pushed": false,
+    "instruction": "Keep changes local pending user manual verification"
+  }
+}

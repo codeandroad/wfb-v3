@@ -1,0 +1,26 @@
+{
+  "date": "2026-10-22",
+  "user_instruction": "请把当前代码提交并推送。",
+  "authorization": "Explicit commit and push authorization supersedes previous temporary no-commit instruction; does not assert complete manual visual acceptance.",
+  "branch": "main",
+  "remote": "origin",
+  "target_ref": "refs/heads/main",
+  "baseline": "d2530f155fbd03e65a4e409ea573737d01ee987e",
+  "reviewed_files": 33,
+  "reviewed_fingerprint": "2748c531c5398992fabe1466fb8324e595519fa2c46db675a29b340caa16c596",
+  "status": "PREPARED_FOR_CLEAN_COMMIT_VERIFICATION",
+  "code_commit": null,
+  "clean_commit_checks": {
+    "status": "PENDING"
+  },
+  "push": {
+    "status": "PENDING"
+  },
+  "owner_visual_acceptance": "PENDING",
+  "review_documents": [
+    "docs/reviews/2026-10-22-syllabus-ownership-navigation.md",
+    "docs/reviews/2026-10-22-paper-preview-refresh.md"
+  ],
+  "local_evidence_directory": ".local-artifacts/research-delivery-2026-10-22",
+  "scope": "Syllabus ownership/maintenance permissions, group course resource navigation, paper preview layout and compact original-file controls; all previous prototype data preserved."
+}

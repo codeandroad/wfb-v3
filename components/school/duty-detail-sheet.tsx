@@ -7,6 +7,8 @@ import { DUTY_BY_KEY, WORK_MODE_LABEL, type DutyRecord } from "@/lib/demo/staff"
 import { AdvancedBasis, CanCannotBlock, DutyStatusBadge, periodText } from "./duty-bits"
 import { CircleAlert } from "lucide-react"
 import { useId, useState } from "react"
+import { useCatalog } from "@/lib/school/catalog-store"
+import { manageableMaterialCourses } from "@/lib/school/course-material"
 import { isResearchDuty, manageableResearchGroups, staffDutyConflicts } from "@/lib/school/duty-model"
 import { useStaffDutyContext } from "@/lib/school/staff-store"
 import { StaffDutyRevisionForm } from "./staff-duty-revision-form"
@@ -36,14 +38,15 @@ export function DutyDetailSheet({
   const [confirmEnd, setConfirmEnd] = useState(false)
   const [revision, setRevision] = useState<"revise" | "end" | null>(null)
   const { state, people, actor, ready, error } = useStaffDutyContext()
+  const catalog = useCatalog()
   const def = DUTY_BY_KEY[duty.type]
-  const shared = isResearchDuty(duty.type) ? state.assignments.find(item => item.id === duty.id) : undefined
-  const canManage = !!shared && ready && !error && manageableResearchGroups(state, people, actor, shared.type).includes(shared.scopeRefs[0].id)
-  const canEnd = !!shared && ready && !error && manageableResearchGroups(state, people, actor, shared.type, true).includes(shared.scopeRefs[0].id)
+  const shared = isResearchDuty(duty.type) || duty.type === "course_material" ? state.assignments.find(item => item.id === duty.id) : undefined
+  const canManage = !!shared && ready && !error && (shared.type === "course_material" ? shared.scopeRefs.every(ref => manageableMaterialCourses(people, actor, catalog).includes(ref.id)) : manageableResearchGroups(state, people, actor, shared.type).includes(shared.scopeRefs[0].id))
+  const canEnd = !!shared && ready && !error && (shared.type === "course_material" ? shared.scopeRefs.every(ref => manageableMaterialCourses(people, actor, catalog, true).includes(ref.id)) : manageableResearchGroups(state, people, actor, shared.type, true).includes(shared.scopeRefs[0].id))
   const actionReasonId = useId()
   const ended = duty.status === "ended"
   const conflicts = shared && !ended ? staffDutyConflicts(state, shared) : []
-  const permissionReason = !shared ? "" : !ready ? "正在核验职责权限，请稍候。" : error || (!canEnd ? ["research_manage", "research_view"].includes(shared.type)
+  const permissionReason = !shared ? "" : !ready ? "正在核验职责权限，请稍候。" : error || (!canEnd ? shared.type === "course_material" ? "当前身份没有该课程的维护人安排权；本人维护权不包含再授权，请由有权教务或学校管理人员办理。" : ["research_manage", "research_view"].includes(shared.type)
     ? "学校教研统筹／查看属于学校级授权，仅具有有效「学校管理」职责的人员可调整或结束。当前身份不能变更这类授权，请由学校管理人员办理。"
     : "当前身份没有此教研组的职责安排权，请由有权的教研统筹或学校管理人员办理。" : "")
   const endReason = permissionReason || (shared && duty.status === "pending" ? "职责尚未生效，不能办理结束；请由有权人员调整未来任期。" : shared && duty.end === actor.date ? `已登记 ${actor.date} 为最后有效日，无需再次结束；次日起停止本项访问，其他有效授权不受影响。` : "")
@@ -90,7 +93,7 @@ export function DutyDetailSheet({
           {duty.scopeSub ? <p className="text-[13px] text-muted-foreground">范围补充：{duty.scopeSub}</p> : null}
 
           <CanCannotBlock duty={duty} />
-          {shared && <p className="text-sm leading-relaxed text-muted-foreground">来自教职工管理的同一份职责记录，按业务日期 {actor.date} 核验；结束日期含当日。{duty.end === actor.date ? "今日为最后有效日，次日起停止本项访问。" : "未生效与已结束职责不授予教研工作区访问。"}</p>}
+          {shared && <p className="text-sm leading-relaxed text-muted-foreground">来自教职工管理的同一份职责记录，按业务日期 {actor.date} 核验；结束日期含当日。{duty.end === actor.date ? "今日为最后有效日，次日起停止本项访问。" : "未生效与已结束职责不授予相应工作区权限。"}</p>}
           {shared && actionNotice && <Alert role="note" id={actionReasonId}><AlertTitle>职责变更限制</AlertTitle><AlertDescription>{actionNotice}</AlertDescription></Alert>}
           {conflicts.length > 0 && <Alert role="note"><AlertTitle>此职责与旧记录存在任期重叠</AlertTitle><AlertDescription><p>原记录及历史均已保留。有权人员可以结束本项职责；结束只影响所选记录，不会一并撤销其他授权。</p><ul className="flex list-inside list-disc flex-col gap-1">{conflicts.map(item => <li key={item.id}>{people.find(person => person.id === item.staffId)?.name || item.staffId} · {DUTY_BY_KEY[item.type].label} · {periodText(item)}</li>)}</ul></AlertDescription></Alert>}
 

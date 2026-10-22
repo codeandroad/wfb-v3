@@ -1,14 +1,52 @@
 "use client"
-import { Button } from "./button"
 import { useWorkspaceNavigation } from "@/lib/research/navigation"
 import { paperRecords } from "@/lib/research/papers"
 import assets from "@/lib/research/paper-assets.json"
 import type { Document } from "@/lib/research/model"
-import { RSelect } from "./primitives"
-const labels: Record<string,string> = { qp: "QP 试卷",ms: "MS 答案与评分",insert: "Insert 附件",in: "Insert 附件",sf: "Source 源文件",gt: "Grade Thresholds 等级线" }
-export function PaperReader({ document: doc,onStructured }: { document: Document;onStructured: () => void }) {
- const { params,navigate } = useWorkspaceNavigation(),p = paperRecords.find(p => p.id === doc.id || p.id === doc.paperSource?.id || doc.items.some(i => i.references.some(ref => ref.documentId === p.id))),files = Object.entries(p?.files || {}).flatMap(([type,path]) => { const asset = (assets as Record<string,{ url: string;sha256: string;bytes: number;kind: string }>)[path]; return asset ? [{ type,path,...asset }] : [] })
- const left = files.find(f => f.type === params.get("left")) || files.find(f => f.type === "qp") || files[0],right = files.find(f => f.type === params.get("right")) || files.find(f => f.type === "ms") || files[1],pair = params.get("pair") !== "0"
- if (!left) return <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-4 text-sm"><p className="text-muted-foreground">此试卷尚未导入原文件，可阅读和维护已有结构化题目。</p><Button variant="outline" size="sm" onClick={onStructured}>结构化题目与个人批注</Button></div>
- return <section className="flex min-w-0 flex-col gap-3" aria-label="试卷原文件对照阅读"><div className="flex flex-wrap items-end gap-2"><RSelect label="左侧原文件" value={left.type} options={files.map(f => ({ value: f.type,label: labels[f.type] || f.type.toUpperCase() }))} onChange={left => navigate({ left })} />{pair && right && <RSelect label="右侧原文件" value={right.type} options={files.map(f => ({ value: f.type,label: labels[f.type] || f.type.toUpperCase() }))} onChange={right => navigate({ right })} />}<Button size="sm" variant="outline" onClick={() => navigate({ pair: pair ? "0" : "1" })}>{pair ? "单文件阅读" : "QP / MS 对照"}</Button><Button size="sm" variant="outline" onClick={onStructured}>结构化题目与个人批注</Button></div><div className={pair && right ? "grid min-w-0 gap-3 lg:grid-cols-2" : "grid min-w-0 gap-3"}>{[left,...(pair && right ? [right] : [])].map((file,i) => <section key={`${i}:${file.url}`} className="min-w-0 overflow-hidden rounded-lg border bg-card"><header className="flex items-center justify-between gap-2 p-2 text-xs"><strong>{labels[file.type] || file.type.toUpperCase()}</strong><a href={file.url} target="_blank" rel="noopener noreferrer" className="text-primary underline">独立打开 / 下载</a></header>{file.kind === "pdf" ? <iframe title={`${i === 0 ? "左" : "右"}侧 ${labels[file.type] || file.type} 原 PDF`} src={file.url} className="h-[70vh] min-h-96 w-full border-t" /> : <div className="grid h-48 place-items-center border-t p-6 text-center text-sm"><p>此原文件需下载后使用对应软件打开（Word / ZIP），内容保持原件。<a className="mt-3 block text-primary underline" href={file.url} download>下载源文件</a></p></div>}<p className="break-all px-2 py-1.5 text-[10px] text-muted-foreground">{file.path.split("/").pop()} · {(file.bytes/1024/1024).toFixed(1)} MB</p></section>)}</div><p className="text-xs text-muted-foreground">原文件按内容哈希保存。页面中的 PDF 阅读器仅显示已导入的原 PDF；题干、分值、Topic 与评分解析需继续核对。</p></section>
+import { SButton } from "./source-ui"
+
+const labels: Record<string,string> = { qp: "QP 试卷", ms: "MS 答案与评分", insert: "Insert 附件", in: "Insert 附件", sf: "Source 源文件", gt: "Grade Thresholds 等级线" }
+
+export function PaperReader({ document: doc, onStructured }: { document: Document; onStructured: () => void }) {
+  const { params, navigate } = useWorkspaceNavigation()
+  const paper = paperRecords.find(p => p.id === doc.id || p.id === doc.paperSource?.id || doc.items.some(i => i.references.some(ref => ref.documentId === p.id)))
+  const files = Object.entries(paper?.files || {}).flatMap(([type, path]) => {
+    const asset = (assets as Record<string,{ url: string; sha256: string; bytes: number; kind: string }>)[path]
+    return asset ? [{ type, path, ...asset }] : []
+  })
+  const left = files.find(f => f.type === params.get("left")) || files.find(f => f.type === "qp") || files[0]
+  const right = files.find(f => f.type === params.get("right")) || files.find(f => f.type === "ms" && f !== left) || files.find(f => f !== left)
+  const pair = params.get("pair") !== "0" && files.length > 1
+  const visibleFiles = left ? [left, ...(pair && right ? [right] : [])] : []
+
+  return <section className="paper-original" aria-label="试卷原文件对照阅读">
+    <header className="original-head">
+      <SButton onClick={onStructured}>返回题目对照</SButton>
+      <h2 title={doc.title}>{doc.title}</h2>
+      {left && <div className="original-modes" role="group" aria-label="原文件阅读方式">
+        <button type="button" aria-pressed={!pair} className={!pair ? "on" : ""} onClick={() => navigate({ pair: "0" })}>单栏阅读</button>
+        <button type="button" aria-pressed={pair} className={pair ? "on" : ""} disabled={files.length < 2} onClick={() => navigate({ pair: "1" })}>双栏对照</button>
+      </div>}
+    </header>
+    {!left ? <div className="original-empty"><p>此试卷尚未导入原文件，可返回查看已有题目与个人批注。</p></div> :
+      <div className={`original-panes${pair ? " paired" : ""}`}>
+        {visibleFiles.map((file, index) => {
+          const side = index === 0 ? "左侧" : "右侧"
+          const name = labels[file.type] || file.type.toUpperCase()
+          return <section key={index} className="original-pane" aria-label={`${side}原文件预览`}>
+            <header className="original-pane-head">
+              <label className="original-file-picker">
+                <span>{pair ? side : "文件"}</span>
+                <select aria-label={`${side}原文件`} value={file.type} onChange={event => navigate({ [index === 0 ? "left" : "right"]: event.target.value })}>
+                  {files.map(f => <option key={f.type} value={f.type}>{labels[f.type] || f.type.toUpperCase()}</option>)}
+                </select>
+              </label>
+              <a href={file.url} target="_blank" rel="noopener noreferrer" aria-label={`独立打开或下载${side}${name}`} title={`${file.path.split("/").pop()} · ${(file.bytes / 1024 / 1024).toFixed(1)} MB`}>独立打开 / 下载</a>
+            </header>
+            {file.kind === "pdf" ? <iframe title={`${side} ${name} 原 PDF`} src={file.url} className="original-frame" /> :
+              <div className="original-download"><p>此文件需下载后使用对应软件打开（Word / ZIP）。</p><a href={file.url} download>下载源文件</a></div>}
+          </section>
+        })}
+      </div>}
+  </section>
 }

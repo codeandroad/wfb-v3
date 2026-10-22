@@ -2,7 +2,9 @@
 
 import { useSyncExternalStore } from "react"
 import type { StaffProfile } from "@/lib/demo/staff"
-import { applyStaffDutyCommand, migrateLegacyResearchDuties, restoreCoexistingResearchDuties, staffDutySeed, validateStaffDutyState, type DutyActor, type StaffDutyCommand, type StaffDutyState } from "./duty-model"
+import { seedCourseMaterialDuties, applyStaffDutyCommand, migrateLegacyResearchDuties, restoreCoexistingResearchDuties, staffDutySeed, validateStaffDutyState, type DutyActor, type StaffDutyCommand, type StaffDutyState } from "./duty-model"
+
+import { getCatalog } from "./catalog-store"
 
 export const STAFF_DUTY_STORAGE_KEY = "tgs:staff-duties-prototype:v1"
 export const STAFF_DUTY_REPAIR_BACKUP_KEY = `${STAFF_DUTY_STORAGE_KEY}:before-overlap-repair`
@@ -15,6 +17,8 @@ let status = serverStatus
 let hydrated = false
 let storedRaw: string | null = null
 const listeners = new Set<() => void>()
+
+export function refreshStaffDuties(): StaffDutyState { hydrated = false; return getStaffDuties() }
 
 export function getStaffDuties(): StaffDutyState {
   if (!hydrated && typeof window !== "undefined") {
@@ -45,6 +49,7 @@ export function getStaffDuties(): StaffDutyState {
           next = restoreCoexistingResearchDuties(next, backup)
         }
       }
+      next = seedCourseMaterialDuties(next)
       const serialized = JSON.stringify(next)
       if (!raw || JSON.stringify(JSON.parse(raw)) !== serialized) {
         if (raw) {
@@ -74,7 +79,7 @@ export function commitStaffDuty(actor: DutyActor, command: StaffDutyCommand, peo
     const current = getStaffDuties()
     if (refreshed) emit()
     if (status.error) return { ok: false, error: status.error }
-    const next = applyStaffDutyCommand(current, actor, command, people)
+    const next = applyStaffDutyCommand(current, actor, command, people, getCatalog(true))
     const serialized = JSON.stringify(next)
     try { window.localStorage.setItem(STAFF_DUTY_STORAGE_KEY, serialized) }
     catch { return { ok: false, error: "职责保存失败：本机存储不可用或空间不足，原职责未改变。请保留填写内容，恢复后重试。" } }

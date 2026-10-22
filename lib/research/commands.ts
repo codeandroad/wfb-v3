@@ -1,7 +1,7 @@
 import { applyWorkspaceCommand, canManageTask, validDate, localTime, referencesFor, type WorkspaceCommand } from "./workspace-model"
 import { lessonsOfWeek, taskById, weekOfDate } from "@/lib/mt/model"
 import { PERIODS } from "@/lib/timetable/data"
-import { canEditDocument, canEditGroup, canParticipateGroup, canLeadGroup, canReadActivity, canReadCriterion, canReadDocument, canRetainItem, copyDocument, courseTaskMap, coursesFor, groupDuties, itemReadable, schoolScopes, scopeValid, validateCriterion, validateDocument, type Actor, type Activity, type CatalogState, type Criterion, type Discussion, type Document, type Notice, type Outcome, type ResearchState, type SchoolTask, type SupportIssue, type Task } from "./model"
+import { SCHOOL_DOCUMENT_OWNER, canMaintainSchoolSyllabus, canEditDocument, canEditGroup, canParticipateGroup, canLeadGroup, canReadActivity, canReadCriterion, canReadDocument, canRetainItem, copyDocument, courseTaskMap, coursesFor, groupDuties, itemReadable, schoolScopes, scopeValid, validateCriterion, validateDocument, type Actor, type Activity, type CatalogState, type Criterion, type Discussion, type Document, type Notice, type Outcome, type ResearchState, type SchoolTask, type SupportIssue, type Task } from "./model"
 
 export type Command = WorkspaceCommand
   | { type: "save-group-slot"; slot: import("./model").GroupScheduleSlot }
@@ -33,7 +33,13 @@ export type Command = WorkspaceCommand
 function requireCondition(condition: unknown, message: string): asserts condition { if (!condition) throw new Error(message) }
 export function applyResearchCommand(state: ResearchState, actor: Actor, command: Command, catalog: CatalogState, accountEnabled: (staff: string) => boolean = () => true): ResearchState {
   requireCondition(actor.enabled,"当前账号不能操作教研资料。")
+  // 即使调用方缓存了授权列表，课程停用后也不能创建或修订学校大纲。
+  actor = { ...actor, schoolSyllabusCourses: actor.schoolSyllabusCourses?.filter(id => catalog.courses.some(course => course.code === id) && catalog.settings[id]?.active) }
   const next = { ...state }
+  const schoolSyllabus = (document: Document) => document.owner === SCHOOL_DOCUMENT_OWNER && document.kind === "大纲"
+  const validateSchoolScope = (document: Document) => {
+    requireCondition(document.kind === "大纲" && document.share.audience === "school" && !document.share.groups.length && !document.share.staff.length, "学校大纲固定校内共享，不能改变资料类型或共享范围。")
+  }
   const members = (group: string) => new Set(groupDuties(state, group, actor.date).map(duty => duty.staffId))
   switch (command.type) {
     case "save-group-slot": {
@@ -63,9 +69,10 @@ export function applyResearchCommand(state: ResearchState, actor: Actor, command
     }
     case "create-document": {
       const d = command.document
-      requireCondition(d.owner === actor.staff || canEditGroup(state,actor,d.owner),"组内公共资料由教研组长维护；参与教师可建立本人资料，学校查看与统筹职责不包含组内编辑权。")
+      requireCondition(d.owner === actor.staff || canEditGroup(state,actor,d.owner) || schoolSyllabus(d) && canMaintainSchoolSyllabus(actor,d.course),"组内公共资料由教研组长维护；参与教师可建立本人资料，学校查看与统筹职责不包含组内编辑权。")
       requireCondition(!state.documents.some(x => x.id === d.id),"内容已存在，请勿重复创建。")
-      requireCondition(d.author === actor.staff && (d.owner === actor.staff || coursesFor(catalog,d.owner).some(c => c.code === d.course)),"组内资料只能关联本组负责的有效课程。")
+      requireCondition(d.author === actor.staff && (d.owner === actor.staff || schoolSyllabus(d) && canMaintainSchoolSyllabus(actor,d.course) || coursesFor(catalog,d.owner).some(c => c.code === d.course)),"组内资料只能关联本组负责的有效课程。")
+      if (d.owner === SCHOOL_DOCUMENT_OWNER) validateSchoolScope(d)
       requireCondition(scopeValid(d,catalog),"课程／单元关联无效；整科范围不需要默认单元。")
       requireCondition(d.items.every(i => i.unitIds.every(id => catalog.units.some(u => u.code === id && u.courseCode === d.course))),"项目含其他课程的同名单元，不能保存。")
       validateDocument(d)
@@ -77,6 +84,7 @@ export function applyResearchCommand(state: ResearchState, actor: Actor, command
       const saved = state.documents.find(d => d.id === command.document.id)
       requireCondition(saved && canEditDocument(state,actor,saved),"当前没有修订权限，草稿未写入。")
       requireCondition(command.document.owner === saved.owner && command.document.course === saved.course,"不能在编辑中改变归属或课程标识。")
+      if (saved.owner === SCHOOL_DOCUMENT_OWNER) validateSchoolScope(command.document)
       next.drafts = { ...state.drafts, [`${actor.staff}|${saved.id}`]: { document: structuredClone(command.document), baseVersion: command.baseVersion, savedAt: new Date().toISOString() } }
       break
     }
@@ -86,6 +94,7 @@ export function applyResearchCommand(state: ResearchState, actor: Actor, command
       requireCondition(saved && canEditDocument(state,actor,saved),"当前没有修订权限。")
       requireCondition(saved.version === command.baseVersion,"来源已有新修订，请先核对；你的草稿已保留，不会覆盖他人的内容。")
       requireCondition(d.owner === saved.owner && d.course === saved.course,"归属与课程不能通过修订变更。")
+      if (saved.owner === SCHOOL_DOCUMENT_OWNER) validateSchoolScope(d)
       requireCondition(scopeValid(d,catalog),"请选择该课程的真实单元；整科范围不含默认单元。")
       requireCondition(d.items.every(i => i.unitIds.every(id => catalog.units.some(u => u.code === id && u.courseCode === d.course))),"项目含其他课程的同名单元，不能保存。")
       for (const i of d.items) requireCondition(!itemReadable(state,actor,i,d.owner) ? JSON.stringify(i) === JSON.stringify(saved.items.find(x => x.id === i.id)) : true,"无权改写受限引用内容。")

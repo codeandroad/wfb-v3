@@ -1,10 +1,12 @@
-import { DUTY_BY_KEY, type DutyKey, type DutyRecord, type StaffProfile } from "@/lib/demo/staff"
+import { STAFF, DUTY_BY_KEY, type DutyKey, type DutyRecord, type StaffProfile } from "@/lib/demo/staff"
+import type { CatalogState } from "@/lib/research/model"
+import { createCourseMaterialDuty, manageableMaterialCourses } from "./course-material"
 import { RESEARCH_GROUPS, researchGroupName, type ResearchGroup } from "./responsibility-scopes"
 
 export const RESEARCH_DUTY_KEYS = ["research_lead", "research_participate", "research_manage", "research_view"] as const
 export type ResearchDutyKey = (typeof RESEARCH_DUTY_KEYS)[number]
-export type StaffDutyAssignment = DutyRecord & { staffId: string; type: ResearchDutyKey; scopeRefs: { kind: "research_group"; id: string }[] }
-export type StaffDutyState = { schema: 1; assignments: StaffDutyAssignment[]; groups: ResearchGroup[] }
+export type StaffDutyAssignment = DutyRecord & { staffId: string; type: ResearchDutyKey | "course_material"; scopeRefs: { kind: "research_group" | "course"; id: string }[] }
+export type StaffDutyState = { schema: 1; assignments: StaffDutyAssignment[]; groups: ResearchGroup[]; courseMaterialSeeded?: true }
 export type DutyActor = { staff: string; date: string; enabled: boolean }
 export type StaffDutyCommand =
   | { type: "arrange"; assignments: StaffDutyAssignment[] }
@@ -58,7 +60,14 @@ export function staffDutySeed(): StaffDutyState {
     createResearchDuty("grant-lin-physics", "u-lin", "research_manage", "physics", "2026-09-01", "2027-07-31"),
     createResearchDuty("grant-xu-math", "u-xu", "research_view", "math", "2026-09-01", "2027-07-31"),
   ]
-  return { schema: 1, assignments, groups: structuredClone(RESEARCH_GROUPS) }
+  return seedCourseMaterialDuties({ schema: 1, assignments, groups: structuredClone(RESEARCH_GROUPS) })
+}
+
+/** 一次性接入已有明确课程代码的种子职责；不解析历史名称，也不覆盖已办理的任期。 */
+export function seedCourseMaterialDuties(state: StaffDutyState): StaffDutyState {
+  if (state.courseMaterialSeeded) return state
+  const seeds = STAFF.flatMap(person => person.duties.filter(duty => duty.type === "course_material" && duty.scopeRefs?.length && duty.scopeRefs.every(ref => ref.kind === "course")).map(duty => ({ ...structuredClone(duty), staffId: person.id }) as StaffDutyAssignment))
+  return { ...state, courseMaterialSeeded: true, assignments: [...state.assignments, ...seeds.filter(duty => !state.assignments.some(item => item.id === duty.id))] }
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -86,11 +95,17 @@ export function migrateLegacyResearchDuties(value: unknown): StaffDutyAssignment
   return validateStaffDutyState({ schema: 1, assignments, groups }).assignments
 }
 
+function validDutyRefs(state: StaffDutyState, duty: StaffDutyAssignment) {
+  if (!Array.isArray(duty.scopeRefs) || !duty.scopeRefs.length || new Set(duty.scopeRefs.map(ref => ref?.id)).size !== duty.scopeRefs.length) return false
+  if (duty.type === "course_material") return duty.scopeRefs.every(ref => isRecord(ref) && ref.kind === "course" && typeof ref.id === "string" && !!ref.id.trim()) && (duty.canDelegateMaterials === undefined || typeof duty.canDelegateMaterials === "boolean")
+  return isResearchDuty(duty.type) && duty.scopeRefs.length === 1 && duty.scopeRefs[0]?.kind === "research_group" && state.groups.some(group => group.id === duty.scopeRefs[0].id)
+}
+
 export function validateStaffDutyState(value: unknown): StaffDutyState {
   if (!isRecord(value) || value.schema !== 1 || !Array.isArray(value.assignments) || !Array.isArray(value.groups)) throw new Error("统一职责数据无法读取，原数据未清空。")
   const state = value as unknown as StaffDutyState
   if (state.groups.some(group => !isRecord(group) || typeof group.id !== "string" || !group.id.trim() || typeof group.name !== "string" || !group.name.trim() || group.kind !== "research_group" || group.department !== "教学部" || typeof group.active !== "boolean" || typeof group.subject !== "string") || new Set(state.groups.map(group => group.id)).size !== state.groups.length) throw new Error("负责对象目录格式无效，原数据未清空。")
-  if (state.assignments.some(duty => !isRecord(duty) || typeof duty.id !== "string" || !duty.id.trim() || typeof duty.staffId !== "string" || !duty.staffId.trim() || !isResearchDuty(duty.type) || !Array.isArray(duty.scopeRefs) || duty.scopeRefs.length !== 1 || !isRecord(duty.scopeRefs[0]) || duty.scopeRefs[0].kind !== "research_group" || !state.groups.some(group => group.id === duty.scopeRefs[0].id) || !dutyDateValid(duty.start) || duty.end !== undefined && (!dutyDateValid(duty.end) || duty.end < duty.start) || !["active", "pending", "paused", "ended"].includes(duty.status) || !["rw", "ro", "paused"].includes(duty.workMode) || duty.history !== undefined && (!Array.isArray(duty.history) || duty.history.some(item => !isRecord(item) || typeof item.date !== "string" || typeof item.text !== "string"))) || new Set(state.assignments.map(duty => duty.id)).size !== state.assignments.length) throw new Error("职责人员、负责对象或任期格式无效，原数据未清空。")
+  if (state.assignments.some(duty => !isRecord(duty) || typeof duty.id !== "string" || !duty.id.trim() || typeof duty.staffId !== "string" || !duty.staffId.trim() || !validDutyRefs(state, duty) || !dutyDateValid(duty.start) || duty.end !== undefined && (!dutyDateValid(duty.end) || duty.end < duty.start) || !["active", "pending", "paused", "ended"].includes(duty.status) || !["rw", "ro", "paused"].includes(duty.workMode) || duty.history !== undefined && (!Array.isArray(duty.history) || duty.history.some(item => !isRecord(item) || typeof item.date !== "string" || typeof item.text !== "string"))) || new Set(state.assignments.map(duty => duty.id)).size !== state.assignments.length) throw new Error("职责人员、负责对象或任期格式无效，原数据未清空。")
   return state
 }
 
@@ -167,14 +182,14 @@ function overlaps(a: DutyRecord, b: DutyRecord) {
 }
 
 export function staffDutyConflicts(state: StaffDutyState, duty: StaffDutyAssignment) {
-  return state.assignments.filter(item => item.id !== duty.id && item.status !== "ended" && item.scopeRefs.some(ref => ref.id === duty.scopeRefs[0].id) && overlaps(item, duty) && (
+  return state.assignments.filter(item => item.id !== duty.id && item.status !== "ended" && item.scopeRefs.some(ref => duty.scopeRefs.some(target => target.kind === ref.kind && target.id === ref.id)) && overlaps(item, duty) && (
     duty.type === "research_lead" && item.type === "research_lead" ||
     item.staffId === duty.staffId && item.type === duty.type
   ))
 }
 
 export function staffDutyValidationError(state: StaffDutyState, duty: StaffDutyAssignment, previous?: StaffDutyAssignment, mode: "arrange" | "revise" | "end" = previous ? "revise" : "arrange") {
-  if (!duty.id?.trim() || !duty.staffId?.trim() || !isResearchDuty(duty.type) || !Array.isArray(duty.scopeRefs) || duty.scopeRefs.length !== 1 || duty.scopeRefs[0].kind !== "research_group" || !state.groups.some(group => group.id === duty.scopeRefs[0].id)) return "请选择有效人员、职责模板与教研负责对象。"
+  if (!duty.id?.trim() || !duty.staffId?.trim() || !validDutyRefs(state, duty)) return "请选择有效人员、职责模板与负责对象。"
   if (!dutyDateValid(duty.start) || duty.end !== undefined && (!dutyDateValid(duty.end) || duty.end < duty.start)) return "任期日期无效：请填写真实日期，结束日期不得早于开始日期。"
   if (previous && (previous.id !== duty.id || previous.staffId !== duty.staffId || JSON.stringify(previous.scopeRefs) !== JSON.stringify(duty.scopeRefs) || previous.type !== duty.type)) return "修订不能更换人员、职责模板或负责对象；请结束原职责后另行安排。"
   if (mode === "end") {
@@ -185,7 +200,7 @@ export function staffDutyValidationError(state: StaffDutyState, duty: StaffDutyA
   const leader = conflicts.find(item => item.type === "research_lead")
   if (duty.type === "research_lead" && leader) return `该任期与已有教研组长职责重叠。结束日期含当日，接任须从次日或之后开始。已有任期：${leader.start} 至 ${leader.end || "未设结束日期"}。`
   const membership = conflicts.find(item => item.staffId === duty.staffId)
-  if (membership) return `该人员在此负责对象内已有重叠的同类职责，请修订原记录，勿重复安排。已有：${DUTY_BY_KEY[membership.type].label} · ${researchGroupName(state.groups, membership.scopeRefs[0].id)}（${membership.start} 至 ${membership.end || "未设结束日期"}）。`
+  if (membership) return `该人员在此负责对象内已有重叠的同类职责，请修订原记录，勿重复安排。已有：${DUTY_BY_KEY[membership.type].label} · ${membership.type === "course_material" ? membership.scopeLabel : researchGroupName(state.groups, membership.scopeRefs[0].id)}（${membership.start} 至 ${membership.end || "未设结束日期"}）。`
   return ""
 }
 
@@ -193,7 +208,7 @@ function requireCondition(value: unknown, message: string): asserts value {
   if (!value) throw new Error(message)
 }
 
-export function applyStaffDutyCommand(state: StaffDutyState, actor: DutyActor, command: StaffDutyCommand, people: StaffProfile[]): StaffDutyState {
+export function applyStaffDutyCommand(state: StaffDutyState, actor: DutyActor, command: StaffDutyCommand, people: StaffProfile[], catalog?: CatalogState): StaffDutyState {
   validateStaffDutyState(state)
   requireCondition(dutyDateValid(actor.date), "当前业务日期无效。")
   const operator = people.find(person => person.id === actor.staff)
@@ -211,17 +226,25 @@ export function applyStaffDutyCommand(state: StaffDutyState, actor: DutyActor, c
   requireCondition(assignments.length > 0 && new Set(assignments.map(item => item.id)).size === assignments.length, "请至少安排一项职责，记录不能重复。")
   let next = state
   for (const assignment of assignments) {
-    requireCondition(isResearchDuty(assignment.type) && Array.isArray(assignment.scopeRefs) && assignment.scopeRefs.length === 1 && assignment.scopeRefs[0].kind === "research_group", "请选择有效职责模板与负责对象。")
+    requireCondition(validDutyRefs(next, assignment), "请选择有效职责模板与负责对象。")
     const previous = next.assignments.find(item => item.id === assignment.id)
     const target = people.find(person => person.id === assignment.staffId)
     requireCondition(target, "安排人员不存在，请从教职工列表重新选择。")
     requireCondition(command.type === "arrange" ? !previous : previous && sameStaffDuty(previous, command.expected), "职责记录已被其他操作修订，请返回列表重新打开；不会覆盖最新记录。")
     const groupId = assignment.scopeRefs[0]?.id
-    requireCondition(manageableResearchGroups(next, people, actor, assignment.type, command.type === "end").includes(groupId), "没有该负责对象的职责安排权；组长、查看职责或人事部门不授予任命权。")
+    if (assignment.type === "course_material") {
+      requireCondition(catalog, "课程目录尚未准备完成，不能安排课程维护职责。")
+      // 重新从当前统一职责合成人员权限，不能用弹窗打开时的陈旧授权自授或扩大范围。
+      const livePeople = people.map(person => ({ ...person, duties: [...person.duties.filter(duty => duty.type !== "course_material"), ...next.assignments.filter(duty => duty.staffId === person.id && duty.type === "course_material")] }))
+      const allowed = manageableMaterialCourses(livePeople, actor, catalog, command.type === "end")
+      requireCondition(assignment.scopeRefs.every(ref => allowed.includes(ref.id)), "没有该课程的维护人安排权；组长或本人维护权不包含再授权。")
+      requireCondition(assignment.canDelegateMaterials === previous?.canDelegateMaterials, "不能通过安排或修订扩大维护人安排权限。")
+    } else requireCondition(manageableResearchGroups(next, people, actor, assignment.type, command.type === "end").includes(groupId), "没有该负责对象的职责安排权；组长、查看职责或人事部门不授予任命权。")
     requireCondition(command.type === "end" || target.status !== "left", "离职人员仅可结束已有职责，不能新增、修订或延长任期。")
     const error = staffDutyValidationError(next, assignment, previous, command.type)
     requireCondition(!error, error)
-    const saved = createResearchDuty(assignment.id, assignment.staffId, assignment.type, groupId, assignment.start, assignment.end, next.groups)
+    const saved = assignment.type === "course_material" && previous ? { ...structuredClone(previous), start: assignment.start, end: assignment.end } : assignment.type === "course_material" ? createCourseMaterialDuty(assignment.id, assignment.staffId, assignment.scopeRefs.map(ref => ref.id), assignment.start, assignment.end, catalog!) : createResearchDuty(assignment.id, assignment.staffId, assignment.type, groupId, assignment.start, assignment.end, next.groups)
+    if (previous?.canDelegateMaterials !== undefined) saved.canDelegateMaterials = previous.canDelegateMaterials
     if (previous) { saved.status = previous.status; saved.workMode = previous.workMode }
     if (previous?.note !== undefined) saved.note = previous.note
     saved.history = previous ? [...(previous.history ?? []), { date: actor.date, text: `${command.type === "end" ? "登记结束职责" : "修订职责任期"} · 原任期 ${previous.start} 至 ${previous.end || "未设结束日期"} → ${assignment.start} 至 ${assignment.end || "未设结束日期"}` }] : [{ date: actor.date, text: `安排职责 · ${DUTY_BY_KEY[saved.type].label} · 任期 ${saved.start} 至 ${saved.end || "未设结束日期"}` }]

@@ -288,7 +288,7 @@ export const STANDARD_TM_GRANTED: TmConfigItem[] = [
   {
     key: "course_material",
     duty: "课程资料维护",
-    actions: ["维护指定课程的校内说明", "维护获准发布的课程资源"],
+    actions: ["维护指定课程的校内说明", "维护获准发布的课程资源", "新建、修订与归档指定课程的学校大纲", "在 C101、C201 范围内安排、修订和结束课程资料维护职责"],
     scope: "共同范围：CAIE数学、CAIE物理（本校两门示例课程）",
     excludes: ["课程启停", "官方课程代码 / 版本", "被多课程共用的学科 / 单元字典"],
   },
@@ -329,6 +329,7 @@ export function STANDARD_TM_DUTIES(idPrefix: string): DutyRecord[] {
     type: c.key as DutyKey,
     scopeLabel: c.scope.replace(/^共同范围：/, ""),
     scopeSub: "标准教务配置",
+    ...(c.key === "course_material" ? { scopeRefs: [{ kind: "course" as const, id: "C101" }, { kind: "course" as const, id: "C201" }], canDelegateMaterials: true } : {}),
     status: "active" as DutyStatus,
     workMode: "rw" as WorkMode,
     start: "2026-09-01",
@@ -537,7 +538,8 @@ export interface DutyRecord {
   cannotDo?: string[] // 覆盖默认“不包含”
   note?: string
   basis: DutyBasis[] // 高级依据（默认折叠）；同一职责的多来源在此合并
-  scopeRefs?: { kind: "research_group"; id: string }[]
+  scopeRefs?: { kind: "research_group" | "course"; id: string }[]
+  canDelegateMaterials?: boolean // 仅显式学校配置允许在本课程范围内安排维护人
   history?: HistoryItem[]
 }
 
@@ -656,6 +658,7 @@ export const STAFF: StaffProfile[] = [
       {
         id: "d-lin-3",
         type: "course_material",
+        scopeRefs: [{ kind: "course", id: "C101" }],
         scopeLabel: "CAIE 数学",
         scopeSub: "校内说明与获准发布资源",
         status: "active",
@@ -760,6 +763,7 @@ export const STAFF: StaffProfile[] = [
       {
         id: "d-zhou-2",
         type: "course_material",
+        scopeRefs: [{ kind: "course", id: "C201" }],
         scopeLabel: "CAIE 物理",
         scopeSub: "校内说明与获准发布资源",
         status: "active",

@@ -12,7 +12,8 @@ export const catalogSeed: CatalogState = {
 let state = catalogSeed
 let hydrated = false
 const listeners = new Set<() => void>()
-export function getCatalog(): CatalogState {
+export function getCatalog(fresh = false): CatalogState {
+  if (fresh) hydrated = false
   if (!hydrated && typeof window !== "undefined") {
     hydrated = true
     const raw = window.localStorage.getItem(KEY)
@@ -20,7 +21,7 @@ export function getCatalog(): CatalogState {
       const saved = JSON.parse(raw)
       if (!Array.isArray(saved.courses) || !Array.isArray(saved.units) || !Array.isArray(saved.subjects)) throw new Error("目录存储格式不可读取，原数据已保留。")
       state = { ...catalogSeed, ...saved }
-    }
+    } else state = catalogSeed
   }
   return state
 }

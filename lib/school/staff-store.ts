@@ -134,8 +134,8 @@ function withSharedDuties(staff: StaffProfile, state: StaffDutyState, date: stri
   const research = state.assignments.filter(duty => duty.staffId === staff.id)
   return {
     ...staff,
-    duties: [...staff.duties.filter(duty => !isResearchDuty(duty.type)), ...research.map(duty => ({ ...duty, scopeLabel: duty.scopeRefs.map(ref => researchGroupName(state.groups, ref.id)).join("、"), status: dutyStatusAt(duty, date), ...(state.groups.some(group => duty.scopeRefs.some(ref => ref.id === group.id) && !group.active) ? { scopeSub: "负责对象已停用；历史保留，不授予当前访问" } : {}) }))],
-    history: [...staff.history, ...research.flatMap(duty => (duty.history ?? []).map(item => ({ ...item, text: `${item.text} · ${researchGroupName(state.groups, duty.scopeRefs[0].id)}` })))].sort((a, b) => a.date.localeCompare(b.date)),
+    duties: [...staff.duties.filter(duty => !isResearchDuty(duty.type) && (duty.type !== "course_material" || !duty.scopeRefs?.some(ref => ref.kind === "course"))), ...research.map(duty => ({ ...duty, scopeLabel: duty.type === "course_material" ? duty.scopeLabel : duty.scopeRefs.map(ref => researchGroupName(state.groups, ref.id)).join("、"), status: dutyStatusAt(duty, date), ...(state.groups.some(group => duty.scopeRefs.some(ref => ref.kind === "research_group" && ref.id === group.id) && !group.active) ? { scopeSub: "负责对象已停用；历史保留，不授予当前访问" } : {}) }))],
+    history: [...staff.history, ...research.flatMap(duty => (duty.history ?? []).map(item => ({ ...item, text: `${item.text} · ${duty.type === "course_material" ? duty.scopeLabel : researchGroupName(state.groups, duty.scopeRefs[0].id)}` })))].sort((a, b) => a.date.localeCompare(b.date)),
   }
 }
 

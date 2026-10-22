@@ -2,10 +2,11 @@
 
 import { useSyncExternalStore } from "react"
 import { getStaffList } from "@/lib/school/staff-store"
-import { getStaffDuties, subscribeStaffDuties } from "@/lib/school/duty-store"
+import { getStaffDuties, refreshStaffDuties, subscribeStaffDuties } from "@/lib/school/duty-store"
 import { migrateLegacyResearchDuties } from "@/lib/school/duty-model"
 import { getCatalog } from "@/lib/school/catalog-store"
 import { PERIODS } from "@/lib/timetable/data"
+import { schoolSyllabusCourses } from "@/lib/school/course-material"
 import { emptyDocument, emptyItem, type Actor, type Document, type ResearchState } from "./model"
 import { applyResearchCommand, type Command } from "./commands"
 import { researchSeed } from "./seed"
@@ -65,12 +66,15 @@ function persist(next: ResearchState, retainDraft = false) {
 }
 export function saveResearch(next: ResearchState) { if (!persist(next)) throw new Error(status.error) }
 export function researchCommand(actor: Actor, command: Command): { ok: true } | { ok: false; error: string } {
-  const current = getResearch()
-  const people = getStaffList()
-  const me = people.find(p => p.id === actor.staff)
-  const liveActor = { ...actor,enabled: actor.enabled && !!me && me.status !== "left" && me.accountStatus === "enabled" }
   try {
-    const next = applyResearchCommand(current,liveActor,command,getCatalog(),id => people.some(p => p.id === id && p.status !== "left" && p.accountStatus === "enabled"))
+    refreshStaffDuties()
+    const current = getResearch()
+    const people = getStaffList(actor.date)
+    const me = people.find(p => p.id === actor.staff)
+    const liveActor: Actor = { ...actor, schoolSyllabusCourses: [],enabled: actor.enabled && !!me && me.status !== "left" && me.accountStatus === "enabled" }
+    const catalog = getCatalog(true)
+    liveActor.schoolSyllabusCourses = schoolSyllabusCourses(people, liveActor, catalog)
+    const next = applyResearchCommand(current,liveActor,command,catalog,id => people.some(p => p.id === id && p.status !== "left" && p.accountStatus === "enabled"))
     if (!persist(next,command.type === "draft-document" || command.type === "form-draft")) return { ok: false,error: status.error }
     return { ok: true }
   } catch(error) { return { ok: false,error: error instanceof Error ? error.message : "操作失败，请重新核对。" } }

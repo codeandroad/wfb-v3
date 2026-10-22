@@ -4,7 +4,9 @@ import type { CatalogCourse, CatalogSubject, CatalogUnit } from "@/lib/demo/scho
 import { dutyEffective, type DutyActor, type StaffDutyAssignment } from "@/lib/school/duty-model"
 import { RESEARCH_GROUPS, type ResearchGroup } from "@/lib/school/responsibility-scopes"
 
-export type Actor = DutyActor
+export const SCHOOL_DOCUMENT_OWNER = "school-source-library"
+export type Actor = DutyActor & { schoolSyllabusCourses?: string[] }
+export function canMaintainSchoolSyllabus(actor: Actor, course: string) { return actor.enabled && !!actor.schoolSyllabusCourses?.includes(course) }
 export type Group = ResearchGroup
 export const groups = RESEARCH_GROUPS
 export type Access = { audience: "owner" | "group" | "school" | "specified"; groups: string[]; staff: string[] }
@@ -87,7 +89,7 @@ export function schoolScopes(state: ResearchState, actor: Actor, manage = false)
 export function canViewGroup(state: ResearchState, actor: Actor, group: string) { return actor.enabled && (!!membership(state, actor.staff, group, actor.date) || schoolScopes(state, actor).includes(group)) }
 export function canParticipateGroup(state: ResearchState, actor: Actor, group: string) { return actor.enabled && !!membership(state, actor.staff, group, actor.date) }
 export function canLeadGroup(state: ResearchState, actor: Actor, group: string) { return actor.enabled && membership(state, actor.staff, group, actor.date)?.type === "research_lead" }
-export function canEditGroup(state: ResearchState, actor: Actor, group: string) { return canLeadGroup(state, actor, group) }
+export function canEditGroup(state: ResearchState, actor: Actor, group: string) { return actor.enabled && groupDuties(state, group, actor.date).some(duty => duty.staffId === actor.staff && duty.type === "research_lead" && duty.workMode === "rw") }
 export function canUseAccess(state: ResearchState, actor: Actor, owner: string, access: Access, management = true) {
   if (!actor.enabled) return false
   if (owner === actor.staff) return true
@@ -102,7 +104,7 @@ export function canReadDocument(state: ResearchState, actor: Actor, doc: Documen
 }
 export function canReadSourceFile(state:ResearchState,actor:Actor,doc:Document,file:SourceFile){return canReadDocument(state,actor,doc)&&canUseAccess(state,actor,doc.owner,file.access,!doc.restricted)&&(!file.leaderGroup||canLeadGroup(state,actor,file.leaderGroup))}
 export function canEditDocument(state: ResearchState, actor: Actor, doc: Document) {
-  return canReadDocument(state, actor, doc) && (doc.owner === actor.staff || canEditGroup(state, actor, doc.owner))
+  return canReadDocument(state, actor, doc) && (doc.owner === actor.staff || canEditGroup(state, actor, doc.owner) || doc.owner === SCHOOL_DOCUMENT_OWNER && doc.kind === "大纲" && canMaintainSchoolSyllabus(actor, doc.course))
 }
 export function referenceReadable(state: ResearchState, actor: Actor, ref: SourceRef, personalOwner?: string) {
   const source = state.documents.find(d => d.id === ref.documentId) ?? state.revisions[`${ref.documentId}@${ref.version}`]

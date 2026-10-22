@@ -1,3 +1,31 @@
+# 2026-10-22 当前代码提交推送授权
+
+用户明确要求“请把当前代码提交并推送”，本次授权覆盖当前已审查的大纲归属／学校维护、组内课程资源导航及真题预览改进，取代此前临时不提交要求；不将此视为全部视觉或生产验收通过。33个实现与测试文件均与两轮独立审查指纹一致，原课表、主外壳和作业范围保持不变。
+
+即将把当前工作区形成代码提交，并在干净提交上运行完整测试、类型检查和构建，确认后普通推送 `origin/main`。实际提交、检查、备份及远端回执以 [发布证据](evidence/research-delivery-2026-10-22/publication.json) 为准；下方阶段记录中的“未提交”是当时状态，历史结论不倒写。当前人工视觉核验仍PENDING。
+
+---
+
+# 2026-10-22 真题预览样式与原文件空间优化
+
+用户要求按附件 HTML 恢复真题预览风格，保留现有右上角按钮，压缩原文件页顶部。已恢复220px题号目录、居中900px单列题卡、题干在上／答案在下；保留所有原操作。原文件改为紧凑页头和每栏独立文件选择，去掉重复返回及常驻实现说明，PDF使用剩余高度，窄屏可上下对照。原文件、个人批注、科组课程上下文和此前未提交大纲改进继续保留。
+
+基线main `d2530f155fbd03e65a4e409ea573737d01ee987e`加上此前未提交修改；本轮增量仅3个预览实现文件和1个测试文件。全套253项测试、类型检查、Webpack构建通过；最终独立审查、HTTP结果和范围指纹见 [证据](evidence/paper-preview-refresh/verification.json) 与 [审查](reviews/2026-10-22-paper-preview-refresh.md)。[设计与实现](design-history/2026-10-22-paper-preview-refresh/DESIGN_AND_IMPLEMENTATION.md)；[人工核验](milestones/paper-preview-refresh/MANUAL_VERIFICATION_GUIDE.md)。浏览器自动化和父make check NOT_RUN，人工核验PENDING；未提交、未推送。
+
+---
+
+# 2026-10-22 大纲归属与课程导航完善
+
+用户授权明确学校、组内与个人大纲的归属和权限，补齐学校维护入口，修复教学资源切换丢失导航/误入个人的问题；明确保留既有数据、暂不提交。基线 main `d2530f155fbd03e65a4e409ea573737d01ee987e`，本轮验证未提交工作区，不沿用此前课表人工接受结论。
+
+学校大纲接入真实 `course_material` 具体课程授权及统一职责存储；标准教务配置仅在 C101/C201 内可安排维护人，新授予不带再授权。学校原稿在我的教研内只读，通过明确入口前往 `/catalog?tab=syllabi` 新建/修订/归档；组内原稿仅有效可写组长维护，个人副本仅本人维护。命令重新核查最新授权，不迁改已有大纲 owner/ID/修订快照。
+
+课程五项导航保持 group/space/course；简化资源目录仅用于无课程内容上下文的入口。学校嵌套编辑留在课程管理，历年真题与个人副本明确外跳并提供返回入口。个人列表不再混入学校原稿，其他教师个人资料不再误标学校维护。
+
+详细设计与实际读取范围：[本轮文档](design-history/2026-10-22-syllabus-ownership-navigation/DESIGN_AND_IMPLEMENTATION.md)；[人工核验](milestones/syllabus-ownership-navigation/MANUAL_VERIFICATION_GUIDE.md)；[独立审查](reviews/2026-10-22-syllabus-ownership-navigation.md)；[验证证据](evidence/syllabus-ownership-navigation/verification.json)。最终246项测试、类型检查、构建、差异检查及4条入口HTTP检查通过；独立96项相关回归与7种实时撤权检查通过，无剩余必须修复项。27实现文件加3测试的指纹为 `06354a9b36f18630917c3af46d5e78e53a59058730ebcfcc7be57eb4543b9f32`，与独立审查一致。浏览器自动化和父 make check NOT_RUN，人工核验 PENDING。不提交、不推送。
+
+---
+
 # 2026-10-19 课表完整归档与提交推送
 
 用户当前反馈“核验没发现问题，暂时可以接受”，要求把所有课表改进整理成一份文档并提交推送。记录U-TT-20261019-01：当前原型暂时接受及提交推送授权；不延伸为所有浏览器/设备或生产启用验收。该授权取代本轮此前暂不提交的限制。

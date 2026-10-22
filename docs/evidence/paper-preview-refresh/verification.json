@@ -1,0 +1,161 @@
+{
+  "date": "2026-10-22",
+  "recorded_at": "2026-10-22T14:59:33.586763+08:00",
+  "user_request": "Match supplied HTML paper preview, retain current top-right actions, compact original-file preview header.",
+  "git_baseline": "d2530f155fbd03e65a4e409ea573737d01ee987e",
+  "tested_tree": "Uncommitted worktree, including previous syllabus ownership/navigation changes; no commit requested.",
+  "reference": {
+    "file": "past-papers-1.0 (7) 12.07.12.html",
+    "sha256": "33461268ed58ae9be0fea7f1b43f82dd3f423672e6bae3fa612cd4e91a838c3c",
+    "handling": "Read as design reference only; did not execute embedded scripts."
+  },
+  "files": {
+    "components/research/paper-reader.tsx": "9309b45ae48acf935a494c63f575cf508c4e45f97b598186ef41bc60a6a3d9b5",
+    "components/research/replica.module.css": "b23601c3eb6f6b21aa1ae38f43bd39ac50a0d640993b0a943bf0a34a7501ddfd",
+    "components/research/source-paper-reader.tsx": "730c7b6696f6f18c4a14159f68edb5623d7690603112962e784d0eff1d456964",
+    "tests/paper-preview.test.cjs": "7e126f881f2d63707b34c1408df19fd8cac720571be0754cca97fffd4e72981d"
+  },
+  "fingerprint": "ad5b41fd40c511de7f32ecec930715c2576a8f53c63d30d82b102752cb7c7944",
+  "review_fingerprint_match": true,
+  "checks": {
+    "test": {
+      "status": "PASS",
+      "command": "pnpm test",
+      "exit_code": 0,
+      "passed": 253,
+      "failed": 0,
+      "log": ".local-artifacts/paper-preview-refresh/tests.log"
+    },
+    "typecheck": {
+      "status": "PASS",
+      "command": "pnpm typecheck",
+      "exit_code": 0,
+      "log": ".local-artifacts/paper-preview-refresh/typecheck.log"
+    },
+    "build": {
+      "status": "PASS",
+      "command": "pnpm build --webpack",
+      "exit_code": 0,
+      "log": ".local-artifacts/paper-preview-refresh/build.log"
+    },
+    "diff_check": {
+      "status": "PASS",
+      "command": "git diff --check",
+      "exit_code": 0
+    },
+    "independent_review": {
+      "status": "PASS",
+      "report": "docs/reviews/2026-10-22-paper-preview-refresh.md",
+      "preview_tests": 7,
+      "asset_identity_tests": 3,
+      "registered_originals_hash_verified": 76
+    },
+    "http": {
+      "status": "PASS",
+      "log": ".local-artifacts/paper-preview-refresh/http.json",
+      "responses": [
+        {
+          "path": "/research?group=math&tab=courses&course=C101&view=papers",
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "pdf_signature": null
+        },
+        {
+          "path": "/research?group=math&tab=courses&course=C101&view=papers&doc=html-paper-9709-2024-%E6%98%A5%E5%AD%A3-Paper1-2",
+          "status": 200,
+          "content_type": "text/html; charset=utf-8",
+          "pdf_signature": null
+        },
+        {
+          "path": "/research-papers/fd0d6c0bf4a3-9709_m24_qp_12.pdf",
+          "status": 200,
+          "content_type": "application/pdf",
+          "pdf_signature": true
+        },
+        {
+          "path": "/research-papers/7687fb6170b2-9709_m24_ms_12.pdf",
+          "status": 200,
+          "content_type": "application/pdf",
+          "pdf_signature": true
+        }
+      ]
+    },
+    "browser_visual": {
+      "status": "NOT_RUN",
+      "reason": "Existing browser automation denial respected; SSR/events and static CSS review are not browser/PDF visual, focus or scroll verification."
+    },
+    "parent_make_check": {
+      "status": "NOT_RUN",
+      "reason": "This standalone prototype has no Makefile; package checks used; user requested uncommitted worktree."
+    },
+    "owner_manual": {
+      "status": "PENDING",
+      "guide": "docs/milestones/paper-preview-refresh/MANUAL_VERIFICATION_GUIDE.md"
+    },
+    "documentation": {
+      "status": "PASS",
+      "current_scope_document_links": 9,
+      "evidence_json_valid": true,
+      "prior_worktree_unchanged_files": 33,
+      "log": ".local-artifacts/paper-preview-refresh/docs-check.json"
+    }
+  },
+  "preserved_previous_worktree_files": {
+    "components/research/course-workspace.tsx": true,
+    "components/research/school-workspace.tsx": true,
+    "components/research/source-assessments.tsx": true,
+    "components/research/source-library.tsx": true,
+    "components/research/source-metadata.tsx": true,
+    "components/research/source-reader.tsx": true,
+    "components/research/source-versions.tsx": true,
+    "components/research/workspace.tsx": true,
+    "components/school/catalog-panel.tsx": true,
+    "components/school/duty-arrange-sheet.tsx": true,
+    "components/school/duty-detail-sheet.tsx": true,
+    "components/school/staff-duty-revision-form.tsx": true,
+    "lib/demo/staff.ts": true,
+    "lib/research/commands.ts": true,
+    "lib/research/context.ts": true,
+    "lib/research/model.ts": true,
+    "lib/research/navigation.ts": true,
+    "lib/research/store.ts": true,
+    "lib/school/catalog-store.ts": true,
+    "lib/school/duty-model.ts": true,
+    "lib/school/duty-store.ts": true,
+    "lib/school/staff-store.ts": true,
+    "tests/research-workflows.test.cjs": true,
+    "components/research/school-syllabi.tsx": true,
+    "components/research/source-access.tsx": true,
+    "docs/design-history/2026-10-22-syllabus-ownership-navigation/DESIGN_AND_IMPLEMENTATION.md": true,
+    "docs/evidence/syllabus-ownership-navigation/verification.json": true,
+    "docs/milestones/syllabus-ownership-navigation/MANUAL_VERIFICATION_GUIDE.md": true,
+    "docs/reviews/2026-10-22-syllabus-ownership-navigation.md": true,
+    "lib/research/document-presentation.ts": true,
+    "lib/school/course-material.ts": true,
+    "tests/research-navigation.test.cjs": true,
+    "tests/school-syllabus-permissions.test.cjs": true
+  },
+  "previous_shared_css": "Only reader-specific override block changed and original-file-specific rules added; syllabus access/permission styles preserved (independently reviewed).",
+  "data_actions": {
+    "storage_cleared": false,
+    "document_migration": false,
+    "original_assets_changed": false,
+    "source_html_changed": false,
+    "committed": false,
+    "pushed": false
+  },
+  "local_logs_sha256": {
+    "manifest.txt": "ad5b41fd40c511de7f32ecec930715c2576a8f53c63d30d82b102752cb7c7944",
+    "typecheck.log": "71322f3a5e902c7c296ca827d919591ea7b30265f382923d16c5ea0a8440b9e8",
+    "http.json": "dcdd8094dd8f50d12d9fca27b664db97dc9d3fb9ff6766f1d97e7851a8c7057f",
+    "review-asset-tests.log": "2ff0713fd0e3007caf8d6cc69867db4c746ae6d0777623973574e8d2f37cda81",
+    "review-source-paper-reader.tsx.diff": "a83068a08a5a7b4b3e89e883b60807ded46e28fcd08e66d519c30faaa1067c87",
+    "tests.log": "5b5ca0e3040e2a6fc80fcd2846254082e1741cc2e7d5b637bc56b7f17b8e3953",
+    "prior-worktree.json": "a5e30d3af04b9ace0418df09d876b0777a3fe1dd45d52c66393004db74ac14d3",
+    "review-replica.module.css.diff": "f7fbed0edde8435244d9d361db669fe2b98167ba2e2b873a7e75b322b26baf27",
+    "review-preview-tests.log": "148d176bd06a16c862bd34c12dcbe99dea42b9c49724f1a9f833759c2a7f8904",
+    "review-paper-reader.tsx.diff": "c6034103ee11a0941cd5a411e1b2e7bf7527195df01a283da4e3e546f2120bd7",
+    "build.log": "1f2ebc30ea3a707101cbea9ab6f290e90086f806d1e7c961eb1a35941f4ae403",
+    "docs-check.json": "55c5a5ab801d9a6377277bc982518ed4ff9044956598070261f3e61f92332548"
+  }
+}

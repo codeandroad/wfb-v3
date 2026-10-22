@@ -547,7 +547,8 @@ function CoursesList({
           onClose={() => setArrangeCourse(null)}
           mode="arrange"
           presetDuty="course_material"
-          presetScope={arrangeCourse.name.includes("数学") ? "course-caie-math" : "course-caie-phy"}
+          presetCourse={{ name: arrangeCourse.name, code: arrangeCourse.code }}
+          presetScope={arrangeCourse.code}
         />
       ) : null}
     </>

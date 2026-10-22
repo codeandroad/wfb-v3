@@ -6,6 +6,8 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { FieldGroup, FieldLegend, FieldSet } from "@/components/ui/field"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { applyStaffDutyCommand, createResearchDuty, dutyDateValid, isResearchDuty, manageableResearchGroups } from "@/lib/school/duty-model"
+import { useCatalog } from "@/lib/school/catalog-store"
+import { createCourseMaterialDuty, manageableMaterialCourses } from "@/lib/school/course-material"
 import { useStaffDutyContext } from "@/lib/school/staff-store"
 import { ResponsibilityDirectorySheet } from "./responsibility-directory-sheet"
 import { cn } from "@/lib/utils"
@@ -48,7 +50,7 @@ interface ArrangeProps {
   staff?: StaffProfile | null
   lockStaff?: boolean
   presetClass?: { id: string; name: string }
-  presetCourse?: { name: string }
+  presetCourse?: { name: string; code?: string }
   presetDuty?: DutyKey
   presetScope?: string
   presetPerson?: string // 新建员工后带入的人名（可能尚未在 STAFF 中）
@@ -77,21 +79,23 @@ export function DutyArrangeSheet(props: ArrangeProps) {
       : (Object.keys(DUTY_BY_KEY) as DutyKey[])
 
   const dutyContext = useStaffDutyContext()
+  const catalog = useCatalog()
+  const materialScope: ScopeConfig = { ...SCOPE_CANDIDATES.course_material, items: catalog.courses.map(course => ({ id: course.code, label: `${course.name} · ${course.code}`, parentPath: "学校课程目录", disabled: !manageableMaterialCourses(dutyContext.people, dutyContext.actor, catalog).includes(course.code), disabledReason: "不在当前身份可安排维护人的课程范围内" })) }
   const initialDuty = presetDuty ?? (allowedKeys.includes("research_participate") ? "research_participate" : allowedKeys[0])
   const [staffId, setStaffId] = useState(staff?.id ?? dutyContext.people.find(person => person.name === presetPerson)?.id ?? "")
   const [directoryOpen, setDirectoryOpen] = useState(false)
   // 业务分类下的职责为多选：可同时勾选多项，每项各自维护负责范围
   const [dutyKeys, setDutyKeys] = useState<DutyKey[]>([initialDuty])
   const [scopeByDuty, setScopeByDuty] = useState<Record<string, ScopeCandidate[]>>(() => {
-    if (!presetScope) return {}
-    const cfg = isResearchDuty(initialDuty) ? researchScopeConfig(dutyContext.state.groups) : SCOPE_CANDIDATES[initialDuty]
+    if (!presetScope && !presetCourse?.code) return {}
+    const cfg = isResearchDuty(initialDuty) ? researchScopeConfig(dutyContext.state.groups) : initialDuty === "course_material" ? materialScope : SCOPE_CANDIDATES[initialDuty]
     if (cfg.mode === "fixed") return {}
-    const hit = cfg.items.find((c) => c.id === presetScope && !c.disabled)
+    const hit = cfg.items.find((c) => c.id === (presetCourse?.code ?? presetScope) && !c.disabled)
     return hit ? { [initialDuty]: [hit] } : {}
   })
   const [queryByDuty, setQueryByDuty] = useState<Record<string, string>>({})
   const [guideOpen, setGuideOpen] = useState<Record<string, boolean>>({})
-  const [start, setStart] = useState(() => isResearchDuty(initialDuty) ? dutyContext.actor.date : DEMO_TODAY > defaultTenureFrom() ? DEMO_TODAY : defaultTenureFrom())
+  const [start, setStart] = useState(() => isResearchDuty(initialDuty) || initialDuty === "course_material" ? dutyContext.actor.date : DEMO_TODAY > defaultTenureFrom() ? DEMO_TODAY : defaultTenureFrom())
   const [hasEnd, setHasEnd] = useState(false)
   const [end, setEnd] = useState("")
   const [done, setDone] = useState(false)
@@ -122,6 +126,7 @@ export function DutyArrangeSheet(props: ArrangeProps) {
   }
 
   function scopeConfig(k: DutyKey) {
+    if (k === "course_material") return materialScope
     if (!isResearchDuty(k)) return SCOPE_CANDIDATES[k]
     const cfg = researchScopeConfig(dutyContext.state.groups)
     const allowed = manageableResearchGroups(dutyContext.state, dutyContext.people, dutyContext.actor, k)
@@ -132,7 +137,7 @@ export function DutyArrangeSheet(props: ArrangeProps) {
     const cfg = scopeConfig(k)
     if (cfg.mode === "fixed") return true
     const selected = effectiveScope(k)
-    if (isResearchDuty(k)) return dutyContext.ready && !dutyContext.error && !!selectedStaff && selectedStaff.status !== "left" && selected.length > 0 && selected.every(item => !item.disabled)
+    if (isResearchDuty(k) || k === "course_material") return dutyContext.ready && !dutyContext.error && !!selectedStaff && selectedStaff.status !== "left" && selected.length > 0 && selected.every(item => !item.disabled)
     return selected.length > 0
   }
   function effectiveScope(k: DutyKey) {
@@ -141,20 +146,22 @@ export function DutyArrangeSheet(props: ArrangeProps) {
   }
 
   const researchSelected = dutyKeys.some(isResearchDuty)
+  const persistedSelected = researchSelected || dutyKeys.includes("course_material")
   const anyPrimaryConflict = dutyKeys.includes("head_primary") && !!existingPrimaryHead
   const allHaveScope = dutyKeys.length > 0 && dutyKeys.every(hasScopeFor)
   const datesValid = dutyDateValid(start) && (!hasEnd || dutyDateValid(end) && end >= start)
   const researchAssignments = dutyKeys.filter(isResearchDuty).flatMap(key => effectiveScope(key).map(scope => createResearchDuty(`${token}:${key}:${scope.id}`, staffId, key, scope.id, start, hasEnd ? end : undefined, dutyContext.state.groups)))
+  const managedAssignments = [...researchAssignments, ...dutyKeys.filter(key => key === "course_material").flatMap(key => effectiveScope(key).map(scope => createCourseMaterialDuty(`${token}:${key}:${scope.id}`, staffId, [scope.id], start, hasEnd ? end : undefined, catalog)))]
   let researchValidation = ""
-  if (researchSelected && allHaveScope && datesValid) {
-    try { applyStaffDutyCommand(dutyContext.state, dutyContext.actor, { type: "arrange", assignments: researchAssignments }, dutyContext.people) }
+  if (persistedSelected && allHaveScope && datesValid) {
+    try { applyStaffDutyCommand(dutyContext.state, dutyContext.actor, { type: "arrange", assignments: managedAssignments }, dutyContext.people, catalog) }
     catch (error) { researchValidation = error instanceof Error ? error.message : "请核对职责任期与负责对象。" }
   }
   const canConfirm = !!personName && allHaveScope && datesValid && !anyPrimaryConflict && !researchValidation
 
   function toggleDuty(k: DutyKey) {
     const removing = dutyKeys.includes(k)
-    setDutyKeys(prev => removing ? prev.filter(key => key !== k) : [...prev.filter(key => isResearchDuty(key) === isResearchDuty(k)), k])
+    setDutyKeys(prev => removing ? prev.filter(key => key !== k) : [...prev.filter(key => (isResearchDuty(key) ? "research" : key === "course_material" ? "material" : "other") === (isResearchDuty(k) ? "research" : k === "course_material" ? "material" : "other")), k])
     if (removing) {
       setScopeByDuty((s) => {
         const n = { ...s }
@@ -193,8 +200,8 @@ export function DutyArrangeSheet(props: ArrangeProps) {
   function confirm() {
     setCommitError(null)
     if (!canConfirm) return
-    if (researchSelected) {
-      const result = dutyContext.command({ type: "arrange", assignments: researchAssignments })
+    if (persistedSelected) {
+      const result = dutyContext.command({ type: "arrange", assignments: managedAssignments })
       if (!result.ok) return setCommitError(result.error)
       setDone(true)
       return
@@ -244,10 +251,10 @@ export function DutyArrangeSheet(props: ArrangeProps) {
     <Sheet
       open={open}
       onClose={close}
-      title={done ? researchSelected ? "职责安排结果" : "安排结果（示例状态）" : title}
+      title={done ? persistedSelected ? "职责安排结果" : "安排结果（示例状态）" : title}
       desc={
         done
-          ? researchSelected ? "已保存本机演示职责；教职工详情与我的教研使用同一份任期记录，尚未接入正式服务端。" : "以下为预设示例结果，未写入真实系统。"
+          ? persistedSelected ? "已保存本机演示职责；教职工详情和相应工作区使用同一份任期记录，尚未接入正式服务端。" : "以下为预设示例结果，未写入真实系统。"
           : "选择人员、职责模板、各自负责对象与生效时间。教研组是工作对象，不是人事二级部门。"
       }
       width="max-w-xl"
@@ -306,7 +313,7 @@ export function DutyArrangeSheet(props: ArrangeProps) {
           start={start}
           end={hasEnd ? end : undefined}
           accountNotOpened={accountNotOpened}
-          persisted={researchSelected}
+          persisted={persistedSelected}
         />
       ) : (
         <div className="space-y-5">
@@ -342,7 +349,7 @@ export function DutyArrangeSheet(props: ArrangeProps) {
 
           {/* B 业务分类（下辖职责可多选） */}
           <Section step="职责模板">
-            <p className="mb-2 text-sm leading-relaxed text-muted-foreground">模板决定工作边界；负责对象决定在哪个教研组或具体范围内履职。教研职责可多选、可跨组，与任课等其他职责分次确认，避免跨业务部分保存。</p>
+            <p className="mb-2 text-sm leading-relaxed text-muted-foreground">模板决定工作边界；负责对象决定在哪个教研组或具体范围内履职。教研职责可多选、可跨组；课程资料维护按精确课程安排，与其他职责分次确认。维护人可以修订学校大纲，但不能再授权其他人。</p>
             <FieldGroup>
               {DUTY_GROUPS.filter(group => group.duties.some(duty => allowedKeys.includes(duty.key))).map(group => {
                 const keys = group.duties.filter(duty => allowedKeys.includes(duty.key)).map(duty => duty.key)
@@ -390,7 +397,7 @@ export function DutyArrangeSheet(props: ArrangeProps) {
           </Section>
 
           {!datesValid && <Alert variant="destructive"><AlertTitle>生效时间无效</AlertTitle><AlertDescription>请填写真实开始日期；指定结束日期时必须填写，且不得早于开始日期。</AlertDescription></Alert>}
-          {researchSelected && (dutyContext.error || researchValidation) && <Alert variant="destructive"><AlertTitle>职责暂不能安排</AlertTitle><AlertDescription>{dutyContext.error || researchValidation}</AlertDescription></Alert>}
+          {persistedSelected && (dutyContext.error || researchValidation) && <Alert variant="destructive"><AlertTitle>职责暂不能安排</AlertTitle><AlertDescription>{dutyContext.error || researchValidation}</AlertDescription></Alert>}
           {/* D 每个已选职责：负责范围 + 预览 */}
           <Section step="职责明细">
             {dutyKeys.length === 0 ? (
@@ -849,7 +856,7 @@ function ResultView({
       </div>
 
       <p className="text-xs text-muted-foreground">
-        {persisted ? "已保存到本机演示的统一职责记录，教职工职责与我的教研即时联动；每个负责对象单独保留任期。未生效、已结束或账号不可用时不会授予访问，尚未接入正式服务端。" : "这是预设示例结果，不建立真实系统访问来源。当前后端仍需完善。"}
+        {persisted ? "已保存到本机演示的统一职责记录，教职工职责与相应工作区即时联动；每个负责对象单独保留任期。未生效、已结束或账号不可用时不会授予访问，尚未接入正式服务端。" : "这是预设示例结果，不建立真实系统访问来源。当前后端仍需完善。"}
       </p>
     </div>
   )
