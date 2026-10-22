@@ -1,6 +1,6 @@
 # 我的教学 · 现行设计索引
 
-- [2026-10-22 当前大纲与真题预览交付状态](../evidence/research-delivery-2026-10-22/publication.json)：用户已授权提交推送；代码范围、干净提交验证及远端回执统一记录，人工视觉验收另行核验。
+- [2026-10-22 当前大纲与真题预览交付状态](../evidence/research-delivery-2026-10-22/publication.json)：代码 `906d636` 已通过干净提交验证并推送；范围及远端回执统一记录，人工视觉验收另行核验。
 
 - [2026-10-22 真题预览样式与原文件空间优化](2026-10-22-paper-preview-refresh/DESIGN_AND_IMPLEMENTATION.md)：参考HTML预览、现有操作保留、原文件顶部压缩；本地待人工核验，不提交。
 

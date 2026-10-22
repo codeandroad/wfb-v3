@@ -8,13 +8,41 @@
   "baseline": "d2530f155fbd03e65a4e409ea573737d01ee987e",
   "reviewed_files": 33,
   "reviewed_fingerprint": "2748c531c5398992fabe1466fb8324e595519fa2c46db675a29b340caa16c596",
-  "status": "PREPARED_FOR_CLEAN_COMMIT_VERIFICATION",
-  "code_commit": null,
+  "status": "CODE_VERIFIED_AND_PUSHED",
+  "code_commit": "906d636371cc1f8149d9020fbd4121dbb7de4259",
   "clean_commit_checks": {
-    "status": "PENDING"
+    "status": "PASS",
+    "test": {
+      "command": "pnpm test",
+      "passed": 253,
+      "failed": 0,
+      "exit_code": 0
+    },
+    "typecheck": {
+      "command": "pnpm typecheck",
+      "exit_code": 0
+    },
+    "build": {
+      "command": "pnpm build --webpack",
+      "exit_code": 0
+    },
+    "clean_before": true,
+    "clean_after": true,
+    "parent_make_check": {
+      "status": "NOT_RUN",
+      "reason": "Standalone prototype has no Makefile; package checks used."
+    },
+    "browser_visual": {
+      "status": "NOT_RUN",
+      "reason": "Existing browser automation denial respected; no new visual acceptance claimed."
+    }
   },
   "push": {
-    "status": "PENDING"
+    "status": "PASS",
+    "exit_code": 0,
+    "remote_ref": "origin/main",
+    "remote_sha": "906d636371cc1f8149d9020fbd4121dbb7de4259",
+    "verified_by": "git ls-remote origin refs/heads/main"
   },
   "owner_visual_acceptance": "PENDING",
   "review_documents": [
@@ -22,5 +50,26 @@
     "docs/reviews/2026-10-22-paper-preview-refresh.md"
   ],
   "local_evidence_directory": ".local-artifacts/research-delivery-2026-10-22",
-  "scope": "Syllabus ownership/maintenance permissions, group course resource navigation, paper preview layout and compact original-file controls; all previous prototype data preserved."
+  "scope": "Syllabus ownership/maintenance permissions, group course resource navigation, paper preview layout and compact original-file controls; all previous prototype data preserved.",
+  "source_backup": {
+    "path": ".local-artifacts/research-delivery-2026-10-22/source-906d636.tar.gz",
+    "bytes": 137626228,
+    "sha256": "51f2ad84d93d9bca4504d3a0b3ef2153dc119f138578a397e9638b6954a5aea9"
+  },
+  "independent_scope_recheck": {
+    "status": "PASS",
+    "reviewer": "paper_preview_review",
+    "files": 33,
+    "notes": "All combined product/test hashes match previous reviews; unrelated shell/homework/timetable/assets unchanged; logs ignored; no unexpected code or credential-like content found."
+  },
+  "documentation_followup": "This documentation-only follow-up records the verified code commit and its successful push. It does not alter the tested implementation. Historical no-commit states remain as prior stage records.",
+  "local_log_sha256": {
+    "clean-commit-checks.json": "d92332c489791fffaca5f2cfd8d52b9da7666fbe9fa6454ac73a9063a718acb2",
+    "typecheck.log": "71322f3a5e902c7c296ca827d919591ea7b30265f382923d16c5ea0a8440b9e8",
+    "tests.log": "9ad08a97a2aae6e278c103d0f4f756ab75cdc7bb7ed8c035d7e651755f6b9545",
+    "code-push.log": "00c3dfb105a66a70be0d3dc9826e195a87d3f66de028de3798eff5a2668d2511",
+    "preflight.json": "82e2399af711a9e10d6d4820547aeb0be29528218cfe02b92582297fec2930f4",
+    "build.log": "3cbf00102aa6b1608624673fd6de83191a6ae10b97b3c15d9bed4ff97db5b90e",
+    "reviewed-manifest.txt": "2748c531c5398992fabe1466fb8324e595519fa2c46db675a29b340caa16c596"
+  }
 }
